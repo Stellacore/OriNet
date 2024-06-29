@@ -26,6 +26,8 @@ set(ProgNames
 
 	_  # unit test program template
 
+	test_nearness
+
 	)
 
 foreach(ProgName ${ProgNames})
