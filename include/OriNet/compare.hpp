@@ -68,6 +68,35 @@ namespace orinet
 			// (-R*t*Rr) +/- R*ek*Rr 
 
 			// transform attitude changes for each of the +/- each basis vector
+			Vector const into_pe1_1{ xfm1( e1) };
+			Vector const into_pe1_2{ xfm2( e1) };
+
+			Vector const into_pe2_1{ xfm1( e2) };
+			Vector const into_pe2_2{ xfm2( e2) };
+
+			Vector const into_pe3_1{ xfm1( e3) };
+			Vector const into_pe3_2{ xfm2( e3) };
+
+			Vector const into_ne1_1{ xfm1(-e1) };
+			Vector const into_ne1_2{ xfm2(-e1) };
+
+			Vector const into_ne2_1{ xfm1(-e2) };
+			Vector const into_ne2_2{ xfm2(-e2) };
+
+			Vector const into_ne3_1{ xfm1(-e3) };
+			Vector const into_ne3_2{ xfm2(-e3) };
+
+			std::array<Vector, 6u> const diffs
+				{ ( into_pe1_1 - into_pe1_2 )
+				, ( into_pe2_1 - into_pe2_2 )
+				, ( into_pe3_1 - into_pe3_2 )
+				, ( into_ne1_1 - into_ne1_2 )
+				, ( into_ne2_1 - into_ne2_2 )
+				, ( into_ne3_1 - into_ne3_2 )
+				};
+
+#if 0
+			// transform attitude changes for each of the +/- each basis vector
 			Vector const into_e1_1{ xfm1.theAtt(e1) };
 			Vector const into_e1_2{ xfm2.theAtt(e1) };
 
@@ -76,6 +105,7 @@ namespace orinet
 
 			Vector const into_e3_1{ xfm1.theAtt(e3) };
 			Vector const into_e3_2{ xfm2.theAtt(e3) };
+
 
 			// apply rotation to the translation components of transformations
 			/*
@@ -127,6 +157,17 @@ namespace orinet
 				, into_rtr_delta + into_e3_delta
 				, into_rtr_delta - into_e3_delta
 				};
+#endif
+
+			/*
+			//std::cout << '\n';
+			std::cout << " lib:diff: ";
+			for (Vector const & diff : diffs)
+			{
+				std::cout << "  " << diff;
+			}
+			std::cout << '\n';
+			*/
 
 			// compute max delta
 			// first std::max() will change to positive magnitude
