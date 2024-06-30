@@ -56,9 +56,14 @@ namespace
 		for (std::size_t numXform{0u} ; numXform < numXforms ; ++numXform)
 		{
 			// Generate two transforms (the x[12]w0) to compare
+			using engabra::g3::pi;
+			std::pair<double, double> const locMinMax{ -10., 10. };
+			std::pair<double, double> const angMinMax{ -pi, pi };
 			using orinet::rand::uniformTransform;
-			rigibra::Transform const x1w0{ uniformTransform() };
-			rigibra::Transform const x2w1{ uniformTransform() };
+			rigibra::Transform const x1w0
+				{ uniformTransform(locMinMax, angMinMax) };
+			rigibra::Transform const x2w1
+				{ uniformTransform(locMinMax, angMinMax) };
 			rigibra::Transform const x2w0{ x2w1 * x1w0 };
 
 			// get max mag result error between transforms
@@ -77,6 +82,7 @@ namespace
 				Vector const into1{ x1w0(locFrom) };
 				Vector const into2{ x2w0(locFrom) };
 				Vector const diff{ into2 - into1 };
+std::cout << "diff: " << diff << '\n';
 				expMaxMag = std::max(expMaxMag, magnitude(diff));
 			}
 

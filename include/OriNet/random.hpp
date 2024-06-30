@@ -48,10 +48,10 @@ namespace orinet
 namespace rand
 {
 	// Range of translations - plus/minus this limit
-	constexpr double sLimLoc{ 10. };
+//	constexpr double sLimLoc{ 10. };
 
 	// Range of rotation angles - plus/minus this limit
-	constexpr double sLimAng{ engabra::g3::pi };
+//	constexpr double sLimAng{ engabra::g3::pi };
 
 	/*! \brief Estimate distribution of triad transform residual magnitudes.
 	 *
@@ -135,12 +135,19 @@ namespace rand
 	inline
 	rigibra::Transform
 	uniformTransform
-		()
+		( std::pair<double, double> const & locMinMax
+		, std::pair<double, double> const & angMinMax
+		)
 	{
+		double const & locMin = locMinMax.first;
+		double const & locMax = locMinMax.second;
+		double const & angMin = angMinMax.first;
+		double const & angMax = angMinMax.second;
+
 		// Configure pseudo-random number distribution generator
 		static std::mt19937 gen(74844020u);
-		std::uniform_real_distribution<> distLocs(-sLimLoc, sLimLoc);
-		std::uniform_real_distribution<> distAngs(-sLimAng, sLimAng);
+		std::uniform_real_distribution<> distLocs(locMin, locMax);
+		std::uniform_real_distribution<> distAngs(angMin, angMax);
 
 		// Use pseudo-random number generation to create transformation
 		return rigibra::Transform
@@ -176,6 +183,10 @@ namespace rand
 		, std::size_t const & numErr
 		, double const & sigmaLoc
 		, double const & sigmaAng
+		, std::pair<double, double> const & locMinMax
+			= { -10., 10. }
+		, std::pair<double, double> const & angMinMax
+			= { -engabra::g3::pi, engabra::g3::pi }
 		)
 	{
 		std::vector<rigibra::Transform> xforms;
@@ -195,7 +206,8 @@ namespace rand
 		// ... a few 'blunderous' measurements - from uniform probability
 		for (std::size_t nn{0u} ; nn < numErr ; ++nn)
 		{
-			rigibra::Transform const errXform{ uniformTransform() };
+			rigibra::Transform const errXform
+				{ uniformTransform(locMinMax, angMinMax) };
 			xforms.emplace_back(errXform);
 		}
 

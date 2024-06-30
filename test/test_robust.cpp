@@ -85,8 +85,11 @@ namespace
 		// ... a few 'blunderous' measurements - from uniform probability
 		for (std::size_t nn{0u} ; nn < numErr ; ++nn)
 		{
+			using engabra::g3::pi;
+			std::pair<double, double> const locMinMax{ -10., 10. };
+			std::pair<double, double> const angMinMax{ -pi, pi };
 			rigibra::Transform const errXform
-				{ orinet::rand::uniformTransform() };
+				{ orinet::rand::uniformTransform(locMinMax, angMinMax) };
 			xforms.emplace_back(errXform);
 		}
 
@@ -140,8 +143,11 @@ namespace
 		for (std::size_t numTrial{0u} ; numTrial < numTrials ; ++numTrial)
 		{
 			// establish an arbitrary starting transform test case
-			rigibra::Transform
-				const expXform{ orinet::rand::uniformTransform() };
+			using engabra::g3::pi;
+			std::pair<double, double> const locMinMax{ -10., 10. };
+			std::pair<double, double> const angMinMax{ -pi, pi };
+			rigibra::Transform const expXform
+				{ orinet::rand::uniformTransform(locMinMax, angMinMax) };
 
 			// simulate noisy observation data for this test case
 			std::vector<rigibra::Transform> const xforms
