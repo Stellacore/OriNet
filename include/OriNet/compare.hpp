@@ -54,6 +54,7 @@ namespace orinet
 	maxMagResultDifference
 		( rigibra::Transform const & xfm1
 		, rigibra::Transform const & xfm2
+		, bool const & useNormalizedCompare = false
 		)
 	{
 		double maxMag{ engabra::g3::null<double>() };
@@ -62,10 +63,11 @@ namespace orinet
 		{
 			using namespace engabra::g3;
 
-			// R*(x-t)*Rr
-			// R*x*Rr - R*t*Rr
-			// +/- R*ek*Rr - R*t*Rr
-			// (-R*t*Rr) +/- R*ek*Rr 
+
+			/*
+			//
+			// Full computation (lots of redundant operations)
+			//
 
 			// transform attitude changes for each of the +/- each basis vector
 			Vector const into_pe1_1{ xfm1( e1) };
@@ -94,70 +96,49 @@ namespace orinet
 				, ( into_ne2_1 - into_ne2_2 )
 				, ( into_ne3_1 - into_ne3_2 )
 				};
+			*/
 
-#if 0
+			//
+			// Reduced effort computation
+			// Ref theory/compare.lyx
+			//
+
+			// compute translation normalizing scale factor
+			double rho{ 1. };
+			if (useNormalizedCompare)
+			{
+				double const aveMag
+					{ .5 * (magnitude(xfm1.theLoc) + magnitude(xfm2.theLoc)) };
+				rho = std::max(1., aveMag);
+			}
+
+			// apply rotation to the translation components of transformations
+			Vector const into_t_1{ xfm1.theAtt(xfm1.theLoc) };
+			Vector const into_t_2{ xfm2.theAtt(xfm2.theLoc) };
+			Vector const delta_trans{ rho * (into_t_1 - into_t_2) };
+
 			// transform attitude changes for each of the +/- each basis vector
 			Vector const into_e1_1{ xfm1.theAtt(e1) };
 			Vector const into_e1_2{ xfm2.theAtt(e1) };
+			Vector const delta_e1{ into_e1_1 - into_e1_2 };
 
 			Vector const into_e2_1{ xfm1.theAtt(e2) };
 			Vector const into_e2_2{ xfm2.theAtt(e2) };
+			Vector const delta_e2{ into_e2_1 - into_e2_2 };
 
 			Vector const into_e3_1{ xfm1.theAtt(e3) };
 			Vector const into_e3_2{ xfm2.theAtt(e3) };
+			Vector const delta_e3{ into_e3_1 - into_e3_2 };
 
-
-			// apply rotation to the translation components of transformations
-			/*
-			Vector const into_rtr_1{ -xfm1.theAtt(xfm1.theLoc) };
-			Vector const into_rtr_2{ -xfm2.theAtt(xfm2.theLoc) };
-			Vector const into_rtr_delta{ into_rtr_2 - into_rtr_1 };
-			*/
-			Vector const into_rtr_1{ xfm1.theAtt(xfm1.theLoc) };
-			Vector const into_rtr_2{ xfm2.theAtt(xfm2.theLoc) };
-			Vector const into_rtr_delta{ into_rtr_1 - into_rtr_2 };
-
-			// compute corresponding vector differences
-			/*
-			std::array<Vector, 6u> const 
-				{ (into_rtr_2 + into_e1_2) - (into_rtr_1 + into_e1_1)
-				, (into_rtr_2 - into_e1_2) - (into_rtr_1 - into_e1_1)
-				, (into_rtr_2 + into_e2_2) - (into_rtr_1 + into_e2_1)
-				, (into_rtr_2 - into_e2_2) - (into_rtr_1 - into_e2_1)
-				, (into_rtr_2 + into_e3_2) - (into_rtr_1 + into_e3_1)
-				, (into_rtr_2 - into_e3_2) - (into_rtr_1 - into_e3_1)
-				};
-
-			std::array<Vector, 6u> const 
-				{ (into_rtr_2 - into_rtr_1) + into_e1_2 - into_e1_1
-				, (into_rtr_2 - into_rtr_1) - into_e1_2 + into_e1_1
-				, (into_rtr_2 - into_rtr_1) + into_e2_2 - into_e2_1
-				, (into_rtr_2 - into_rtr_1) - into_e2_2 + into_e2_1
-				, (into_rtr_2 - into_rtr_1) + into_e3_2 - into_e3_1
-				, (into_rtr_2 - into_rtr_1) - into_e3_2 + into_e3_1
-				};
+			// residual distances
 			std::array<Vector, 6u> const diffs
-				{ into_rtr_delta + into_e1_2 - into_e1_1
-				, into_rtr_delta - into_e1_2 + into_e1_1
-				, into_rtr_delta + into_e2_2 - into_e2_1
-				, into_rtr_delta - into_e2_2 + into_e2_1
-				, into_rtr_delta + into_e3_2 - into_e3_1
-				, into_rtr_delta - into_e3_2 + into_e3_1
+				{ delta_trans + delta_e1
+				, delta_trans - delta_e1
+				, delta_trans + delta_e2
+				, delta_trans - delta_e2
+				, delta_trans + delta_e3
+				, delta_trans - delta_e3
 				};
-			*/
-			Vector const into_e1_delta{ into_e1_2 - into_e1_1 };
-			Vector const into_e2_delta{ into_e2_2 - into_e2_1 };
-			Vector const into_e3_delta{ into_e3_2 - into_e3_1 };
-
-			std::array<Vector, 6u> const diffs
-				{ into_rtr_delta + into_e1_delta
-				, into_rtr_delta - into_e1_delta
-				, into_rtr_delta + into_e2_delta
-				, into_rtr_delta - into_e2_delta
-				, into_rtr_delta + into_e3_delta
-				, into_rtr_delta - into_e3_delta
-				};
-#endif
 
 			/*
 			//std::cout << '\n';
