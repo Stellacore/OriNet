@@ -24,7 +24,7 @@
 
 
 /*! \file
-\brief Unit tests (and example) code for Rigibra::NS::CN
+\brief Unit tests (and example) code for OriNet::CN
 */
 
 
