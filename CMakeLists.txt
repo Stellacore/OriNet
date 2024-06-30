@@ -61,4 +61,5 @@ message("### PROJECT_VERSION: " ${PROJECT_VERSION})
 ##
 
 add_subdirectory(test)
+add_subdirectory(demo)
 

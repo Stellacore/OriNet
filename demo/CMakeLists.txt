@@ -24,10 +24,7 @@
 
 set(ProgNames
 
-	_  # unit test program template
-
-	test_nearness
-	test_robust
+	# _  # template for demo programs
 
 	)
 
@@ -61,11 +58,6 @@ foreach(ProgName ${ProgNames})
 		PRIVATE
 			Rigibra::Rigibra
 			Engabra::Engabra
-		)
-
-	add_test(
-		${ProgName}  # test name
-		${ProgName}  # command to run it
 		)
 
 endforeach(ProgName ${ProgNames})
