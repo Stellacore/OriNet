@@ -30,45 +30,20 @@
 
 #include "OriNet/compare.hpp"
 
+#include "random.hpp"
+
+#include <Engabra>
 #include <Rigibra>
 
 #include <algorithm>
+#include <array>
 #include <iomanip>
 #include <iostream>
-#include <random>
 #include <sstream>
-#include <vector>
 
 
 namespace
 {
-	//! A transformation with arbitrary parameters values
-	inline
-	rigibra::Transform
-	aRandomTransform
-		()
-	{
-		// Range of translations - plus/minus this limit
-		constexpr double limLoc{ 10. };
-		// Range of rotation angles - plus/minus this limit
-		constexpr double limAng{ engabra::g3::pi };
-
-		// Configure pseudo-random number distribution generator
-		static std::mt19937 gen(7484020u);
-		static std::uniform_real_distribution<> distLocs(-limLoc, limLoc);
-		static std::uniform_real_distribution<> distAngs(-limAng, limAng);
-
-		// Use pseudo-random number generation to create transformation
-		using namespace engabra::g3;
-		return rigibra::Transform
-			{ Vector{ distLocs(gen), distLocs(gen), distLocs(gen) }
-			, rigibra::Attitude
-				{ rigibra::PhysAngle
-					{ distLocs(gen), distLocs(gen), distLocs(gen) }
-				}
-			};
-	}
-
 	//! Check computation of transform result differences
 	void
 	test0
@@ -82,8 +57,8 @@ namespace
 		for (std::size_t numXform{0u} ; numXform < numXforms ; ++numXform)
 		{
 			// Generate two transforms (the x[12]w0) to compare
-			rigibra::Transform const x1w0{ aRandomTransform() };
-			rigibra::Transform const x2w1{ aRandomTransform() };
+			rigibra::Transform const x1w0{ orinet::aRandomTransform() };
+			rigibra::Transform const x2w1{ orinet::aRandomTransform() };
 			rigibra::Transform const x2w0{ x2w1 * x1w0 };
 
 			// get max mag result error between transforms
@@ -92,7 +67,7 @@ namespace
 			// the error associated with the +/- e_k values and therefore
 			// not affect the test case. (error at the transformed zero
 			// should be an interpolation of the error at the extrema)
-			std::vector<Vector> const locFroms
+			std::array<Vector, 7u> const locFroms
 				{ -e1, -e2, -e3, zero<Vector>(), e1, e2, e3 };
 			double expMaxMag{ -1 };
 			// evaluate the difference with explicit application of
@@ -150,7 +125,7 @@ namespace
 
 		// transform collection of vectors using each of the two transforms
 		using namespace engabra::g3;
-		std::vector<Vector> const locFroms
+		std::array<Vector, 7u> const locFroms
 			{ -e1, -e2, -e3, zero<Vector>(), e1, e2, e3 };
 		// compute maximum magnitude vector difference of transformed vectors
 		// maxMag is a measure of maximum difference between transform results
