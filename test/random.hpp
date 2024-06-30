@@ -52,6 +52,46 @@ namespace rand
 	// Range of rotation angles - plus/minus this limit
 	constexpr double sLimAng{ engabra::g3::pi };
 
+	/*! \brief Estimate distribution of triad transform residual magnitudes.
+	 *
+	 * For terminology, define a "hexad" as a collection of the six
+	 * vectors associated with +/- versions of coordinate basis vectors.
+	 * E.g. for standard Cartesian basis, the hexad are the six points 
+	 * defined by +/-e1, +/-e2, +/-e3.
+	 *
+	 * For two different transformations, each transforms generally
+	 * produces a different resulting hexad. This function attempts
+	 * to estimate the RMSE magnitude of the respective difference
+	 * vectors between each transformed hexad.
+	 *
+	 * Assume that the two transforms are generated with standard
+	 * deviation of sigmaLoc in their offset vector components and with
+	 * standard deviation sigmaAng in their physical angle component.
+	 *
+	 * This function provides a heuristic estimate what to expect for
+	 * the stdandard deviation of vector magnitude between the two
+	 * transformed hexads.
+	 */
+	inline
+	double
+	sigmaMagForSigmaLocAng
+		( double const & sigmaLoc
+			//!< Standard deviation of each transform offset vector component
+		, double const & sigmaAng
+			//!< Standard deviation of each transform angle bivector component
+		)
+	{
+		// Unclear what's best, but following seems not unreasonable.
+		// Error in location should translate directly to maxMag result
+		// error.  Error in angle components should change maxMag by
+		// angle error time basis vector length (unity). Therefore,
+		// the two errors seem like they should add 'rmse' style.
+		using engabra::g3::sq;
+		double const estSigma
+			{ std::sqrt(3.*sq(sigmaLoc) + 3.*sq(sigmaAng)) };
+		return estSigma;
+	}
+
 	//! \brief A transformation with uniformly distributed parameters values
 	inline
 	rigibra::Transform

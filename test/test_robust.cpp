@@ -156,14 +156,10 @@ namespace
 		rigibra::Transform const gotXform
 			{ orinet::robustTransformFrom(xforms.cbegin(), xforms.cend()) };
 
-		// Unclear what's best, but following seems not unreasonable.
-		// Error in location should translate directly to maxMag result
-		// error.  Error in angle components should change maxMag by
-		// angle error time basis vector length (unity). Therefore,
-		// the two errors seem like they should add 'rmse' style.
 		constexpr double numSigmas{ 3. }; // test case sensitive
+		using orinet::rand::sigmaMagForSigmaLocAng;
 		double const tol
-			{ numSigmas * std::sqrt(sigmaLoc*sigmaLoc + sigmaAng*sigmaAng) };
+			{ numSigmas * sigmaMagForSigmaLocAng(sigmaLoc, sigmaAng) };
 		if (! orinet::similarResult(gotXform, expXform, tol) )
 		{
 			oss << "Failure of robust fit to mea+err data\n";
@@ -192,14 +188,14 @@ namespace
 		( std::ostream & oss
 		)
 	{
+		constexpr std::size_t numTrials{ 10u };
 		constexpr std::size_t numMea{ 3u };
 		constexpr std::size_t numErr{ 2u };
 		constexpr double sigmaLoc{ (1./100.) * 1.5 }; // e.g. cm at 1.5 m
 		constexpr double sigmaAng{ (5./1000.) }; // e.g. 5 pix at 1000 pix
 
-std::set<std::size_t> testGoods;
-std::set<std::size_t> testFails;
-std::size_t const numTrials{ 1024u };
+		std::set<std::size_t> testGoods;
+		std::set<std::size_t> testFails;
 		for (std::size_t numTrial{0u} ; numTrial < numTrials ; ++numTrial)
 		{
 			// establish an arbitrary starting transform test case
@@ -218,19 +214,17 @@ std::size_t const numTrials{ 1024u };
 					(xforms.cbegin(), xforms.cend())
 				};
 
-			// Unclear what's best, but following seems not unreasonable.
-			// Error in location should translate directly to maxMag result
-			// error.  Error in angle components should change maxMag by
-			// angle error time basis vector length (unity). Therefore,
-			// the two errors seem like they should add 'rmse' style.
+			// TODO - figure out what distribution and DOFs are involved.
 			constexpr double numSigmas{ 3. }; // test case sensitive
 			using engabra::g3::sq;
-			double const tol
-				{ numSigmas * std::sqrt(sq(sigmaLoc) + sq(sigmaAng)) };
-			double maxMag; // set in function
+			double const estSigma
+				{ orinet::rand::sigmaMagForSigmaLocAng(sigmaLoc, sigmaAng) };
+			double const tol{ numSigmas * estSigma };
+			double maxMag; // set in function next line
 			if (! orinet::similarResult(gotXform, expXform, tol, &maxMag) )
 			{
-testFails.insert(numTrial);
+				testFails.insert(numTrial);
+				double const ratio{ maxMag / estSigma };
 				oss << '\n';
 				oss << "Failure of robust fit trial no. " << numTrial << '\n';
 				oss << "numMea: " << numMea << '\n';
@@ -239,33 +233,43 @@ testFails.insert(numTrial);
 				oss << "sigAng: " << engabra::g3::io::fixed(sigmaAng) << '\n';
 				oss << "   tol: " << engabra::g3::io::fixed(tol) << '\n';
 				oss << "maxMag: " << engabra::g3::io::fixed(maxMag) << '\n';
+				oss << "estSig: " << engabra::g3::io::fixed(estSigma) << '\n';
+				oss << " ratio: " << engabra::g3::io::fixed(ratio) << '\n';
 				oss << "   exp: " << expXform << '\n';
 				oss << "   got: " << gotXform << '\n';
-//				break;
+			//	break;
 			}
-else
-{
-testGoods.insert(numTrial);
-}
+			else
+			{
+				testGoods.insert(numTrial);
+			}
 
 			/*
 			std::cout << '\n';
 			for (rigibra::Transform const & xform : xforms)
 			{
-				std::cout << "xform: " << xform << '\n';
+				using engabra::g3::magnitude;
+				double const magAng
+					{ magnitude(xform.theAtt.physAngle().theBiv) };
+				std::cout << "xform: " << xform
+					<< "  magAng: " << magAng
+					<< '\n';
 			}
 			*/
 		}
 
-oss << '\n';
-oss << "Good Count: " << std::setw(5u) << testGoods.size()
-	<< "  Good Percent: "
-	<< 100.*(double)testGoods.size()/(double)numTrials
-	<< '\n';
-oss << "Fail Count: " << std::setw(5u) << testFails.size()
-	<< "  Fail Percent: "
-	<< 100.*(double)testFails.size()/(double)numTrials
-	<< '\n';
+		if (! testFails.empty())
+		{
+			oss << '\n';
+			oss << "Good Count: " << std::setw(5u) << testGoods.size()
+				<< "  Good Percent: "
+				<< 100.*(double)testGoods.size()/(double)numTrials
+				<< '\n';
+			oss << "Fail Count: " << std::setw(5u) << testFails.size()
+				<< "  Fail Percent: "
+				<< 100.*(double)testFails.size()/(double)numTrials
+				<< '\n';
+		}
 
 	}
 
