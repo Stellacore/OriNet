@@ -56,79 +56,85 @@ namespace orinet
 		, rigibra::Transform const & xfm2
 		)
 	{
-		using namespace engabra::g3;
+		double maxMag{ engabra::g3::null<double>() };
 
-		// R*(x-t)*Rr
-		// R*x*Rr - R*t*Rr
-		// +/- R*ek*Rr - R*t*Rr
-		// (-R*t*Rr) +/- R*ek*Rr 
-
-		// transform attitude changes for each of the +/- each basis vector
-		Vector const into_e1_1{ xfm1.theAtt(e1) };
-		Vector const into_e1_2{ xfm2.theAtt(e1) };
-
-		Vector const into_e2_1{ xfm1.theAtt(e2) };
-		Vector const into_e2_2{ xfm2.theAtt(e2) };
-
-		Vector const into_e3_1{ xfm1.theAtt(e3) };
-		Vector const into_e3_2{ xfm2.theAtt(e3) };
-
-		// apply rotation to the translation components of transformations
-		/*
-		Vector const into_rtr_1{ -xfm1.theAtt(xfm1.theLoc) };
-		Vector const into_rtr_2{ -xfm2.theAtt(xfm2.theLoc) };
-		Vector const into_rtr_delta{ into_rtr_2 - into_rtr_1 };
-		*/
-		Vector const into_rtr_1{ xfm1.theAtt(xfm1.theLoc) };
-		Vector const into_rtr_2{ xfm2.theAtt(xfm2.theLoc) };
-		Vector const into_rtr_delta{ into_rtr_1 - into_rtr_2 };
-
-		// compute corresponding vector differences
-		/*
-		std::array<Vector, 6u> const 
-			{ (into_rtr_2 + into_e1_2) - (into_rtr_1 + into_e1_1)
-			, (into_rtr_2 - into_e1_2) - (into_rtr_1 - into_e1_1)
-			, (into_rtr_2 + into_e2_2) - (into_rtr_1 + into_e2_1)
-			, (into_rtr_2 - into_e2_2) - (into_rtr_1 - into_e2_1)
-			, (into_rtr_2 + into_e3_2) - (into_rtr_1 + into_e3_1)
-			, (into_rtr_2 - into_e3_2) - (into_rtr_1 - into_e3_1)
-			};
-
-		std::array<Vector, 6u> const 
-			{ (into_rtr_2 - into_rtr_1) + into_e1_2 - into_e1_1
-			, (into_rtr_2 - into_rtr_1) - into_e1_2 + into_e1_1
-			, (into_rtr_2 - into_rtr_1) + into_e2_2 - into_e2_1
-			, (into_rtr_2 - into_rtr_1) - into_e2_2 + into_e2_1
-			, (into_rtr_2 - into_rtr_1) + into_e3_2 - into_e3_1
-			, (into_rtr_2 - into_rtr_1) - into_e3_2 + into_e3_1
-			};
-		std::array<Vector, 6u> const diffs
-			{ into_rtr_delta + into_e1_2 - into_e1_1
-			, into_rtr_delta - into_e1_2 + into_e1_1
-			, into_rtr_delta + into_e2_2 - into_e2_1
-			, into_rtr_delta - into_e2_2 + into_e2_1
-			, into_rtr_delta + into_e3_2 - into_e3_1
-			, into_rtr_delta - into_e3_2 + into_e3_1
-			};
-		*/
-		Vector const into_e1_delta{ into_e1_2 - into_e1_1 };
-		Vector const into_e2_delta{ into_e2_2 - into_e2_1 };
-		Vector const into_e3_delta{ into_e3_2 - into_e3_1 };
-
-		std::array<Vector, 6u> const diffs
-			{ into_rtr_delta + into_e1_delta
-			, into_rtr_delta - into_e1_delta
-			, into_rtr_delta + into_e2_delta
-			, into_rtr_delta - into_e2_delta
-			, into_rtr_delta + into_e3_delta
-			, into_rtr_delta - into_e3_delta
-			};
-
-		// compute max delta
-		double maxMag{ -1. };
-		for (Vector const & diff : diffs)
+		if (isValid(xfm1) && isValid(xfm2))
 		{
-			maxMag = std::max(maxMag, magnitude(diff));
+			using namespace engabra::g3;
+
+			// R*(x-t)*Rr
+			// R*x*Rr - R*t*Rr
+			// +/- R*ek*Rr - R*t*Rr
+			// (-R*t*Rr) +/- R*ek*Rr 
+
+			// transform attitude changes for each of the +/- each basis vector
+			Vector const into_e1_1{ xfm1.theAtt(e1) };
+			Vector const into_e1_2{ xfm2.theAtt(e1) };
+
+			Vector const into_e2_1{ xfm1.theAtt(e2) };
+			Vector const into_e2_2{ xfm2.theAtt(e2) };
+
+			Vector const into_e3_1{ xfm1.theAtt(e3) };
+			Vector const into_e3_2{ xfm2.theAtt(e3) };
+
+			// apply rotation to the translation components of transformations
+			/*
+			Vector const into_rtr_1{ -xfm1.theAtt(xfm1.theLoc) };
+			Vector const into_rtr_2{ -xfm2.theAtt(xfm2.theLoc) };
+			Vector const into_rtr_delta{ into_rtr_2 - into_rtr_1 };
+			*/
+			Vector const into_rtr_1{ xfm1.theAtt(xfm1.theLoc) };
+			Vector const into_rtr_2{ xfm2.theAtt(xfm2.theLoc) };
+			Vector const into_rtr_delta{ into_rtr_1 - into_rtr_2 };
+
+			// compute corresponding vector differences
+			/*
+			std::array<Vector, 6u> const 
+				{ (into_rtr_2 + into_e1_2) - (into_rtr_1 + into_e1_1)
+				, (into_rtr_2 - into_e1_2) - (into_rtr_1 - into_e1_1)
+				, (into_rtr_2 + into_e2_2) - (into_rtr_1 + into_e2_1)
+				, (into_rtr_2 - into_e2_2) - (into_rtr_1 - into_e2_1)
+				, (into_rtr_2 + into_e3_2) - (into_rtr_1 + into_e3_1)
+				, (into_rtr_2 - into_e3_2) - (into_rtr_1 - into_e3_1)
+				};
+
+			std::array<Vector, 6u> const 
+				{ (into_rtr_2 - into_rtr_1) + into_e1_2 - into_e1_1
+				, (into_rtr_2 - into_rtr_1) - into_e1_2 + into_e1_1
+				, (into_rtr_2 - into_rtr_1) + into_e2_2 - into_e2_1
+				, (into_rtr_2 - into_rtr_1) - into_e2_2 + into_e2_1
+				, (into_rtr_2 - into_rtr_1) + into_e3_2 - into_e3_1
+				, (into_rtr_2 - into_rtr_1) - into_e3_2 + into_e3_1
+				};
+			std::array<Vector, 6u> const diffs
+				{ into_rtr_delta + into_e1_2 - into_e1_1
+				, into_rtr_delta - into_e1_2 + into_e1_1
+				, into_rtr_delta + into_e2_2 - into_e2_1
+				, into_rtr_delta - into_e2_2 + into_e2_1
+				, into_rtr_delta + into_e3_2 - into_e3_1
+				, into_rtr_delta - into_e3_2 + into_e3_1
+				};
+			*/
+			Vector const into_e1_delta{ into_e1_2 - into_e1_1 };
+			Vector const into_e2_delta{ into_e2_2 - into_e2_1 };
+			Vector const into_e3_delta{ into_e3_2 - into_e3_1 };
+
+			std::array<Vector, 6u> const diffs
+				{ into_rtr_delta + into_e1_delta
+				, into_rtr_delta - into_e1_delta
+				, into_rtr_delta + into_e2_delta
+				, into_rtr_delta - into_e2_delta
+				, into_rtr_delta + into_e3_delta
+				, into_rtr_delta - into_e3_delta
+				};
+
+			// compute max delta
+			// first std::max() will change to positive magnitude
+			maxMag = -1.;
+			for (Vector const & diff : diffs)
+			{
+				maxMag = std::max(maxMag, magnitude(diff));
+			}
 		}
 
 		return maxMag;
@@ -156,9 +162,15 @@ namespace orinet
 		, double const & tol = std::numeric_limits<double>::epsilon()
 		)
 	{
-		// compute max delta
-		double const maxMag{ maxMagResultDifference(xfm1, xfm2) };
-		return (maxMag < tol);
+		bool same{ false };
+		if (isValid(xfm1) && isValid(xfm2))
+		{
+			// compute max delta
+			double const maxMag{ maxMagResultDifference(xfm1, xfm2) };
+			// compare with specified tolerance
+			same = (maxMag < tol);
+		}
+		return same;
 	}
 
 } // [orinet]
