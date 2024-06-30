@@ -99,30 +99,35 @@ namespace rand
 	perturbedTransform
 		( engabra::g3::Vector const & meanLoc
 		, rigibra::PhysAngle const & meanAng
-		, double const & sigmaLoc = (1./100.) * sLimLoc
-		, double const & sigmaAng = (1./100.) * sLimAng
+		, double const & sigmaLoc
+		, double const & sigmaAng
 		)
 	{	
-		// Configure pseudo-random number distribution generator
-		static std::mt19937 gen(31035893u);
-		static std::normal_distribution<> distLocs(0., sigmaLoc);
-		static std::normal_distribution<> distAngs(0., sigmaAng);
+		rigibra::Transform xform{ rigibra::null<rigibra::Transform>() };
+		if (! ((sigmaLoc < 0.) || (sigmaAng < 0.)) )
+		{
+			// Configure pseudo-random number distribution generator
+			static std::mt19937 gen(31035893u);
+			std::normal_distribution<> distLocs(0., sigmaLoc);
+			std::normal_distribution<> distAngs(0., sigmaAng);
 
-		// Use pseudo-random number generation to create transformation
-		return rigibra::Transform
-			{ engabra::g3::Vector
-				{ meanLoc[0] + distLocs(gen)
-				, meanLoc[1] + distLocs(gen)
-				, meanLoc[2] + distLocs(gen)
-				}
-			, rigibra::Attitude
-				{ rigibra::PhysAngle
-					{ meanAng.theBiv[0] + distAngs(gen)
-					, meanAng.theBiv[1] + distAngs(gen)
-					, meanAng.theBiv[2] + distAngs(gen)
+			// Use pseudo-random number generation to create transformation
+			xform = rigibra::Transform
+				{ engabra::g3::Vector
+					{ meanLoc[0] + distLocs(gen)
+					, meanLoc[1] + distLocs(gen)
+					, meanLoc[2] + distLocs(gen)
 					}
-				}
-			};
+				, rigibra::Attitude
+					{ rigibra::PhysAngle
+						{ meanAng.theBiv[0] + distAngs(gen)
+						, meanAng.theBiv[1] + distAngs(gen)
+						, meanAng.theBiv[2] + distAngs(gen)
+						}
+					}
+				};
+		}
+		return xform;
 	}
 
 
@@ -134,8 +139,8 @@ namespace rand
 	{
 		// Configure pseudo-random number distribution generator
 		static std::mt19937 gen(74844020u);
-		static std::uniform_real_distribution<> distLocs(-sLimLoc, sLimLoc);
-		static std::uniform_real_distribution<> distAngs(-sLimAng, sLimAng);
+		std::uniform_real_distribution<> distLocs(-sLimLoc, sLimLoc);
+		std::uniform_real_distribution<> distAngs(-sLimAng, sLimAng);
 
 		// Use pseudo-random number generation to create transformation
 		return rigibra::Transform
@@ -167,10 +172,10 @@ namespace rand
 	std::vector<rigibra::Transform>
 	noisyTransforms
 		( rigibra::Transform const & expXform
-		, std::size_t const & numMea = 3u
-		, std::size_t const & numErr = 2u
-		, double const & sigmaLoc = ((1./100.) * 1.5) // e.g. cm at 1.5 m
-		, double const & sigmaAng = ((5./1000.)) // e.g. 5 pix at 1000 pix
+		, std::size_t const & numMea
+		, std::size_t const & numErr
+		, double const & sigmaLoc
+		, double const & sigmaAng
 		)
 	{
 		std::vector<rigibra::Transform> xforms;
