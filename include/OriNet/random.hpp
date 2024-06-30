@@ -39,6 +39,7 @@ Example:
 #include <Rigibra>
 
 #include <random>
+#include <vector>
 
 
 namespace orinet
@@ -145,6 +146,55 @@ namespace rand
 					{ distAngs(gen), distAngs(gen), distAngs(gen) }
 				}
 			};
+	}
+
+	/*! \brief Simulate observation data including measurements and blunders
+	 *
+	 * The collection of transformations include samples from two
+	 * populations.
+	 *
+	 * The first population generates multiple simulated "measured"
+	 * transforms in which each instance should be "near" to the provided
+	 * expXform one with the discrepancy determined by normally
+	 * distributed (pseudo)random noise having deviation sigmaLoc on
+	 * the position and sigmaAng on the angle components.
+	 *
+	 * The second population represents blunder transformations which
+	 * are created from component data values that uniformly span the
+	 * range of allowed values (as specified in the function
+	 * orinet::rand::uniformTransform().
+	 */
+	std::vector<rigibra::Transform>
+	noisyTransforms
+		( rigibra::Transform const & expXform
+		, std::size_t const & numMea = 3u
+		, std::size_t const & numErr = 2u
+		, double const & sigmaLoc = ((1./100.) * 1.5) // e.g. cm at 1.5 m
+		, double const & sigmaAng = ((5./1000.)) // e.g. 5 pix at 1000 pix
+		)
+	{
+		std::vector<rigibra::Transform> xforms;
+		xforms.reserve(numMea + numErr);
+
+		engabra::g3::Vector const expLoc = expXform.theLoc;
+		rigibra::PhysAngle const expAng{ expXform.theAtt.physAngle() };
+
+		// ... a number of typical measurements - with Gaussian noise
+		for (std::size_t nn{0u} ; nn < numMea ; ++nn)
+		{
+			rigibra::Transform const meaXform
+				{ perturbedTransform (expLoc, expAng, sigmaLoc, sigmaAng) };
+			xforms.emplace_back(meaXform);
+		}
+
+		// ... a few 'blunderous' measurements - from uniform probability
+		for (std::size_t nn{0u} ; nn < numErr ; ++nn)
+		{
+			rigibra::Transform const errXform{ uniformTransform() };
+			xforms.emplace_back(errXform);
+		}
+
+		return xforms;
 	}
 
 } // [rand]
