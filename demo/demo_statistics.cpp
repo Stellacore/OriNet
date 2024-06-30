@@ -89,59 +89,65 @@ main
 	}
 	std::ofstream ofs(argv[1]);
 
-std::cout << "Hi from " << __FILE__ << '\n';
 
-
-	constexpr std::size_t numMea{ 19u };
+	constexpr std::size_t numBaseXforms{ 32u };
+	constexpr std::size_t numMea{ 9u };
 	constexpr std::size_t numErr{ 0u }; // don't want blunders here
 
-	/*
 	std::vector<double> const sigmaLocs
-		{ samples( 16u, std::make_pair(0.,  4./16.)) };
+		{ samples( 16u, std::make_pair(0.,  8./16.)) };
 	std::vector<double> const sigmaAngs
-		{ samples( 16u, std::make_pair(0., 4./128.)) };
-	*/
-	std::vector<double> const sigmaLocs
-		{ samples( 2u, std::make_pair(0., 1./1024.)) };
-	std::vector<double> const sigmaAngs
-		{ samples( 2u, std::make_pair(0., 3.1415)) };
+		{ samples( 16u, std::make_pair(0., 64./128.)) };
 
 	using engabra::g3::pi;
 	std::pair<double, double> const locMinMax{ -10., 10. };
 	std::pair<double, double> const angMinMax{ -pi, pi };
-	rigibra::Transform const xformBase
-		{ orinet::rand::uniformTransform(locMinMax, angMinMax) };
 
-	for (double const & sigmaLoc : sigmaLocs)
+	// generate statistics releative to multiple base transforms
+	for (std::size_t numBase{0u} ; numBase < numBaseXforms ; ++numBase)
 	{
-		for (double const & sigmaAng : sigmaAngs)
+		// compute base transform
+		rigibra::Transform const xformBase
+			{ orinet::rand::uniformTransform(locMinMax, angMinMax) };
+
+		for (double const & sigmaLoc : sigmaLocs)
 		{
-			std::vector<rigibra::Transform> const xformSamps
-				{ orinet::rand::noisyTransforms
-					(xformBase, numMea, numErr, sigmaLoc, sigmaAng)
-				};
-
-std::cout << "\n\n";
-std::cout << "xformBase: " << xformBase << '\n';
-for (rigibra::Transform const & xformSamp : xformSamps)
-{
-	std::cout << "xformSamp: " << xformSamp << '\n';
-}
-
-			for (rigibra::Transform const & xformSamp : xformSamps)
+			for (double const & sigmaAng : sigmaAngs)
 			{
-				double const maxMag
-					{ orinet::maxMagResultDifference(xformSamp, xformBase) };
+				std::vector<rigibra::Transform> const xformSamps
+					{ orinet::rand::noisyTransforms
+						(xformBase, numMea, numErr, sigmaLoc, sigmaAng)
+					};
 
-				using namespace engabra::g3::io;
-				ofs
-					<< ' ' << fixed(sigmaLoc)
-					<< ' ' << fixed(sigmaAng)
-					<< ' ' << fixed(maxMag)
-					<< '\n';
+				/*
+				std::cout << "\n\n";
+				std::cout << "xformBase: " << xformBase << '\n';
+				std::cout << '\n';
+				for (rigibra::Transform const & xformSamp : xformSamps)
+				{
+					std::cout << "xformSamp: " << xformSamp << '\n';
+				}
+				*/
+
+				for (rigibra::Transform const & xformSamp : xformSamps)
+				{
+					double const maxMag
+						{ orinet::maxMagResultDifference(xformSamp, xformBase) };
+
+					double const aveMag
+						{ orinet::aveMagResultDifference(xformSamp, xformBase) };
+
+					using namespace engabra::g3::io;
+					ofs
+						<< ' ' << fixed(sigmaLoc)
+						<< ' ' << fixed(sigmaAng)
+						<< ' ' << fixed(maxMag)
+						<< ' ' << fixed(aveMag)
+						<< '\n';
+				}
+				ofs << "\n\n";
+
 			}
-			ofs << "\n\n";
-
 		}
 	}
 }
