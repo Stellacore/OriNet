@@ -57,8 +57,9 @@ namespace
 		for (std::size_t numXform{0u} ; numXform < numXforms ; ++numXform)
 		{
 			// Generate two transforms (the x[12]w0) to compare
-			rigibra::Transform const x1w0{ orinet::aRandomTransform() };
-			rigibra::Transform const x2w1{ orinet::aRandomTransform() };
+			using orinet::rand::uniformTransform;
+			rigibra::Transform const x1w0{ uniformTransform() };
+			rigibra::Transform const x2w1{ uniformTransform() };
 			rigibra::Transform const x2w0{ x2w1 * x1w0 };
 
 			// get max mag result error between transforms

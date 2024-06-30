@@ -43,26 +43,63 @@ Example:
 
 namespace orinet
 {
-	//! A transformation with arbitrary parameters values
+
+namespace rand
+{
+	// Range of translations - plus/minus this limit
+	constexpr double sLimLoc{ 10. };
+
+	// Range of rotation angles - plus/minus this limit
+	constexpr double sLimAng{ engabra::g3::pi };
+
+	//! \brief A transformation with uniformly distributed parameters values
 	inline
 	rigibra::Transform
-	aRandomTransform
-		()
-	{
-		// Range of translations - plus/minus this limit
-		constexpr double limLoc{ 10. };
-		// Range of rotation angles - plus/minus this limit
-		constexpr double limAng{ engabra::g3::pi };
-
+	perturbedTransform
+		( engabra::g3::Vector const & meanLoc
+		, rigibra::PhysAngle const & meanAng
+		, double const & sigmaLoc = (1./100.) * sLimLoc
+		, double const & sigmaAng = (1./100.) * sLimAng
+		)
+	{	
 		// Configure pseudo-random number distribution generator
-		static std::mt19937 gen(7484020u);
-		static std::uniform_real_distribution<> distLocs(-limLoc, limLoc);
-		static std::uniform_real_distribution<> distAngs(-limAng, limAng);
+		static std::mt19937 gen(31035893u);
+		static std::normal_distribution<> distLocs(0., sigmaLoc);
+		static std::normal_distribution<> distAngs(0., sigmaAng);
 
 		// Use pseudo-random number generation to create transformation
-		using namespace engabra::g3;
 		return rigibra::Transform
-			{ Vector{ distLocs(gen), distLocs(gen), distLocs(gen) }
+			{ engabra::g3::Vector
+				{ meanLoc[0] + distLocs(gen)
+				, meanLoc[1] + distLocs(gen)
+				, meanLoc[2] + distLocs(gen)
+				}
+			, rigibra::Attitude
+				{ rigibra::PhysAngle
+					{ meanAng.theBiv[0] + distAngs(gen)
+					, meanAng.theBiv[1] + distAngs(gen)
+					, meanAng.theBiv[2] + distAngs(gen)
+					}
+				}
+			};
+	}
+
+
+	//! \brief A transformation with uniformly distributed parameters values
+	inline
+	rigibra::Transform
+	uniformTransform
+		()
+	{
+		// Configure pseudo-random number distribution generator
+		static std::mt19937 gen(74844020u);
+		static std::uniform_real_distribution<> distLocs(-sLimLoc, sLimLoc);
+		static std::uniform_real_distribution<> distAngs(-sLimAng, sLimAng);
+
+		// Use pseudo-random number generation to create transformation
+		return rigibra::Transform
+			{ engabra::g3::Vector
+				{ distLocs(gen), distLocs(gen), distLocs(gen) }
 			, rigibra::Attitude
 				{ rigibra::PhysAngle
 					{ distAngs(gen), distAngs(gen), distAngs(gen) }
@@ -70,6 +107,7 @@ namespace orinet
 			};
 	}
 
+} // [rand]
 
 } // [orinet]
 
