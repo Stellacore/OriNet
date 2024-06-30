@@ -160,15 +160,21 @@ namespace orinet
 		( rigibra::Transform const & xfm1
 		, rigibra::Transform const & xfm2
 		, double const & tol = std::numeric_limits<double>::epsilon()
+		, double * const & ptMaxMag = nullptr
 		)
 	{
 		bool same{ false };
+		double maxMag{ engabra::g3::null<double>() };
 		if (isValid(xfm1) && isValid(xfm2))
 		{
 			// compute max delta
-			double const maxMag{ maxMagResultDifference(xfm1, xfm2) };
+			maxMag = maxMagResultDifference(xfm1, xfm2);
 			// compare with specified tolerance
 			same = (maxMag < tol);
+		}
+		if (ptMaxMag)
+		{
+			*ptMaxMag = maxMag;
 		}
 		return same;
 	}
