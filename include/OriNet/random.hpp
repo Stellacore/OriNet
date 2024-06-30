@@ -39,6 +39,7 @@ Example:
 #include <Rigibra>
 
 #include <random>
+#include <vector>
 
 
 namespace orinet
@@ -47,10 +48,10 @@ namespace orinet
 namespace rand
 {
 	// Range of translations - plus/minus this limit
-	constexpr double sLimLoc{ 10. };
+//	constexpr double sLimLoc{ 10. };
 
 	// Range of rotation angles - plus/minus this limit
-	constexpr double sLimAng{ engabra::g3::pi };
+//	constexpr double sLimAng{ engabra::g3::pi };
 
 	/*! \brief Estimate distribution of triad transform residual magnitudes.
 	 *
@@ -98,30 +99,35 @@ namespace rand
 	perturbedTransform
 		( engabra::g3::Vector const & meanLoc
 		, rigibra::PhysAngle const & meanAng
-		, double const & sigmaLoc = (1./100.) * sLimLoc
-		, double const & sigmaAng = (1./100.) * sLimAng
+		, double const & sigmaLoc
+		, double const & sigmaAng
 		)
 	{	
-		// Configure pseudo-random number distribution generator
-		static std::mt19937 gen(31035893u);
-		static std::normal_distribution<> distLocs(0., sigmaLoc);
-		static std::normal_distribution<> distAngs(0., sigmaAng);
+		rigibra::Transform xform{ rigibra::null<rigibra::Transform>() };
+		if (! ((sigmaLoc < 0.) || (sigmaAng < 0.)) )
+		{
+			// Configure pseudo-random number distribution generator
+			static std::mt19937 gen(31035893u);
+			std::normal_distribution<> distLocs(0., sigmaLoc);
+			std::normal_distribution<> distAngs(0., sigmaAng);
 
-		// Use pseudo-random number generation to create transformation
-		return rigibra::Transform
-			{ engabra::g3::Vector
-				{ meanLoc[0] + distLocs(gen)
-				, meanLoc[1] + distLocs(gen)
-				, meanLoc[2] + distLocs(gen)
-				}
-			, rigibra::Attitude
-				{ rigibra::PhysAngle
-					{ meanAng.theBiv[0] + distAngs(gen)
-					, meanAng.theBiv[1] + distAngs(gen)
-					, meanAng.theBiv[2] + distAngs(gen)
+			// Use pseudo-random number generation to create transformation
+			xform = rigibra::Transform
+				{ engabra::g3::Vector
+					{ meanLoc[0] + distLocs(gen)
+					, meanLoc[1] + distLocs(gen)
+					, meanLoc[2] + distLocs(gen)
 					}
-				}
-			};
+				, rigibra::Attitude
+					{ rigibra::PhysAngle
+						{ meanAng.theBiv[0] + distAngs(gen)
+						, meanAng.theBiv[1] + distAngs(gen)
+						, meanAng.theBiv[2] + distAngs(gen)
+						}
+					}
+				};
+		}
+		return xform;
 	}
 
 
@@ -129,12 +135,19 @@ namespace rand
 	inline
 	rigibra::Transform
 	uniformTransform
-		()
+		( std::pair<double, double> const & locMinMax
+		, std::pair<double, double> const & angMinMax
+		)
 	{
+		double const & locMin = locMinMax.first;
+		double const & locMax = locMinMax.second;
+		double const & angMin = angMinMax.first;
+		double const & angMax = angMinMax.second;
+
 		// Configure pseudo-random number distribution generator
 		static std::mt19937 gen(74844020u);
-		static std::uniform_real_distribution<> distLocs(-sLimLoc, sLimLoc);
-		static std::uniform_real_distribution<> distAngs(-sLimAng, sLimAng);
+		std::uniform_real_distribution<> distLocs(locMin, locMax);
+		std::uniform_real_distribution<> distAngs(angMin, angMax);
 
 		// Use pseudo-random number generation to create transformation
 		return rigibra::Transform
@@ -145,6 +158,60 @@ namespace rand
 					{ distAngs(gen), distAngs(gen), distAngs(gen) }
 				}
 			};
+	}
+
+	/*! \brief Simulate observation data including measurements and blunders
+	 *
+	 * The collection of transformations include samples from two
+	 * populations.
+	 *
+	 * The first population generates multiple simulated "measured"
+	 * transforms in which each instance should be "near" to the provided
+	 * expXform one with the discrepancy determined by normally
+	 * distributed (pseudo)random noise having deviation sigmaLoc on
+	 * the position and sigmaAng on the angle components.
+	 *
+	 * The second population represents blunder transformations which
+	 * are created from component data values that uniformly span the
+	 * range of allowed values (as specified in the function
+	 * orinet::rand::uniformTransform().
+	 */
+	std::vector<rigibra::Transform>
+	noisyTransforms
+		( rigibra::Transform const & expXform
+		, std::size_t const & numMea
+		, std::size_t const & numErr
+		, double const & sigmaLoc
+		, double const & sigmaAng
+		, std::pair<double, double> const & locMinMax
+			= { -10., 10. }
+		, std::pair<double, double> const & angMinMax
+			= { -engabra::g3::pi, engabra::g3::pi }
+		)
+	{
+		std::vector<rigibra::Transform> xforms;
+		xforms.reserve(numMea + numErr);
+
+		engabra::g3::Vector const expLoc = expXform.theLoc;
+		rigibra::PhysAngle const expAng{ expXform.theAtt.physAngle() };
+
+		// ... a number of typical measurements - with Gaussian noise
+		for (std::size_t nn{0u} ; nn < numMea ; ++nn)
+		{
+			rigibra::Transform const meaXform
+				{ perturbedTransform (expLoc, expAng, sigmaLoc, sigmaAng) };
+			xforms.emplace_back(meaXform);
+		}
+
+		// ... a few 'blunderous' measurements - from uniform probability
+		for (std::size_t nn{0u} ; nn < numErr ; ++nn)
+		{
+			rigibra::Transform const errXform
+				{ uniformTransform(locMinMax, angMinMax) };
+			xforms.emplace_back(errXform);
+		}
+
+		return xforms;
 	}
 
 } // [rand]

@@ -41,6 +41,160 @@
 
 namespace orinet
 {
+	/*! \brief Max mag difference in basis vectors transformed by each xfm[12]
+	 *
+	 * Specifically, each data argument is used to transform the endpoints
+	 * of a "hexad" comprising six basis vectors (i.e. +/- e_{1,2,3}).
+	 * Vector differences are computed between corresponding hexad entities
+	 * and returnedin the array.
+	 */
+	inline
+	std::array<engabra::g3::Vector, 6u>
+	hexadResultDifferences
+		( rigibra::Transform const & xfm1
+		, rigibra::Transform const & xfm2
+		, bool const & useNormalizedCompare = false
+		)
+	{
+		using namespace engabra::g3;
+		std::array<Vector, 6u> diffs
+			{ null<Vector>()
+			, null<Vector>()
+			, null<Vector>()
+			, null<Vector>()
+			, null<Vector>()
+			, null<Vector>()
+			};
+
+		if (isValid(xfm1) && isValid(xfm2))
+		{
+			/*
+			//
+			// Full computation (lots of redundant operations)
+			//
+
+			// transform attitude changes for each of the +/- each basis vector
+			Vector const into_pe1_1{ xfm1( e1) };
+			Vector const into_pe1_2{ xfm2( e1) };
+
+			Vector const into_pe2_1{ xfm1( e2) };
+			Vector const into_pe2_2{ xfm2( e2) };
+
+			Vector const into_pe3_1{ xfm1( e3) };
+			Vector const into_pe3_2{ xfm2( e3) };
+
+			Vector const into_ne1_1{ xfm1(-e1) };
+			Vector const into_ne1_2{ xfm2(-e1) };
+
+			Vector const into_ne2_1{ xfm1(-e2) };
+			Vector const into_ne2_2{ xfm2(-e2) };
+
+			Vector const into_ne3_1{ xfm1(-e3) };
+			Vector const into_ne3_2{ xfm2(-e3) };
+
+			diffs = std::array<Vector, 6u>
+				{ ( into_pe1_1 - into_pe1_2 )
+				, ( into_pe2_1 - into_pe2_2 )
+				, ( into_pe3_1 - into_pe3_2 )
+				, ( into_ne1_1 - into_ne1_2 )
+				, ( into_ne2_1 - into_ne2_2 )
+				, ( into_ne3_1 - into_ne3_2 )
+				};
+			*/
+
+			//
+			// Reduced effort computation
+			// Ref theory/compare.lyx
+			//
+
+			// compute translation normalizing scale factor
+			double rho{ 1. };
+			if (useNormalizedCompare)
+			{
+				double const aveMag
+					{ .5 * (magnitude(xfm1.theLoc) + magnitude(xfm2.theLoc)) };
+				rho = std::max(1., aveMag);
+			}
+
+			// apply rotation to the translation components of transformations
+			Vector const into_t_1{ xfm1.theAtt(xfm1.theLoc) };
+			Vector const into_t_2{ xfm2.theAtt(xfm2.theLoc) };
+			Vector const delta_trans{ rho * (into_t_1 - into_t_2) };
+
+			// transform attitude changes for each of the +/- each basis vector
+			Vector const into_e1_1{ xfm1.theAtt(e1) };
+			Vector const into_e1_2{ xfm2.theAtt(e1) };
+			Vector const delta_e1{ into_e1_1 - into_e1_2 };
+
+			Vector const into_e2_1{ xfm1.theAtt(e2) };
+			Vector const into_e2_2{ xfm2.theAtt(e2) };
+			Vector const delta_e2{ into_e2_1 - into_e2_2 };
+
+			Vector const into_e3_1{ xfm1.theAtt(e3) };
+			Vector const into_e3_2{ xfm2.theAtt(e3) };
+			Vector const delta_e3{ into_e3_1 - into_e3_2 };
+
+			// residual distances
+			diffs = std::array<Vector, 6u>
+				{ delta_trans + delta_e1
+				, delta_trans - delta_e1
+				, delta_trans + delta_e2
+				, delta_trans - delta_e2
+				, delta_trans + delta_e3
+				, delta_trans - delta_e3
+				};
+
+			/*
+			//std::cout << '\n';
+			std::cout << " lib:diff: ";
+			for (Vector const & diff : diffs)
+			{
+				std::cout << "  " << diff;
+			}
+			std::cout << '\n';
+			*/
+
+		}
+		return diffs;
+	}
+
+	/*! \brief Expected mag difference in transform of basis hexad
+	 *
+	 * Specifically, each data argument is used to transform the endpoints
+	 * of six basis vectors (i.e. +/- e_{1,2,3}). Vector differences are
+	 * computed between corresponding entities, and the expected (mean)
+	 * magnitude of the six difference vectors is returned.
+	 */
+	inline
+	double
+	aveMagResultDifference
+		( rigibra::Transform const & xfm1
+		, rigibra::Transform const & xfm2
+		, bool const & useNormalizedCompare = false
+		)
+	{
+		double aveMag{ engabra::g3::null<double>() };
+
+		if (isValid(xfm1) && isValid(xfm2))
+		{
+			using namespace engabra::g3;
+
+			// residual distances
+			std::array<Vector, 6u> const diffs
+				{ hexadResultDifferences(xfm1, xfm2, useNormalizedCompare) };
+
+			// compute max delta
+			// first std::max() will change to positive magnitude
+			double sumMag{ 0. };
+			for (Vector const & diff : diffs)
+			{
+				sumMag += magnitude(diff);
+			}
+			aveMag = (1./6.) * sumMag;
+		}
+
+		return aveMag;
+	}
 
 	/*! \brief Max mag difference in basis vectors transformed by each xfm[12]
 	 *
@@ -54,6 +208,7 @@ namespace orinet
 	maxMagResultDifference
 		( rigibra::Transform const & xfm1
 		, rigibra::Transform const & xfm2
+		, bool const & useNormalizedCompare = false
 		)
 	{
 		double maxMag{ engabra::g3::null<double>() };
@@ -62,71 +217,9 @@ namespace orinet
 		{
 			using namespace engabra::g3;
 
-			// R*(x-t)*Rr
-			// R*x*Rr - R*t*Rr
-			// +/- R*ek*Rr - R*t*Rr
-			// (-R*t*Rr) +/- R*ek*Rr 
-
-			// transform attitude changes for each of the +/- each basis vector
-			Vector const into_e1_1{ xfm1.theAtt(e1) };
-			Vector const into_e1_2{ xfm2.theAtt(e1) };
-
-			Vector const into_e2_1{ xfm1.theAtt(e2) };
-			Vector const into_e2_2{ xfm2.theAtt(e2) };
-
-			Vector const into_e3_1{ xfm1.theAtt(e3) };
-			Vector const into_e3_2{ xfm2.theAtt(e3) };
-
-			// apply rotation to the translation components of transformations
-			/*
-			Vector const into_rtr_1{ -xfm1.theAtt(xfm1.theLoc) };
-			Vector const into_rtr_2{ -xfm2.theAtt(xfm2.theLoc) };
-			Vector const into_rtr_delta{ into_rtr_2 - into_rtr_1 };
-			*/
-			Vector const into_rtr_1{ xfm1.theAtt(xfm1.theLoc) };
-			Vector const into_rtr_2{ xfm2.theAtt(xfm2.theLoc) };
-			Vector const into_rtr_delta{ into_rtr_1 - into_rtr_2 };
-
-			// compute corresponding vector differences
-			/*
-			std::array<Vector, 6u> const 
-				{ (into_rtr_2 + into_e1_2) - (into_rtr_1 + into_e1_1)
-				, (into_rtr_2 - into_e1_2) - (into_rtr_1 - into_e1_1)
-				, (into_rtr_2 + into_e2_2) - (into_rtr_1 + into_e2_1)
-				, (into_rtr_2 - into_e2_2) - (into_rtr_1 - into_e2_1)
-				, (into_rtr_2 + into_e3_2) - (into_rtr_1 + into_e3_1)
-				, (into_rtr_2 - into_e3_2) - (into_rtr_1 - into_e3_1)
-				};
-
-			std::array<Vector, 6u> const 
-				{ (into_rtr_2 - into_rtr_1) + into_e1_2 - into_e1_1
-				, (into_rtr_2 - into_rtr_1) - into_e1_2 + into_e1_1
-				, (into_rtr_2 - into_rtr_1) + into_e2_2 - into_e2_1
-				, (into_rtr_2 - into_rtr_1) - into_e2_2 + into_e2_1
-				, (into_rtr_2 - into_rtr_1) + into_e3_2 - into_e3_1
-				, (into_rtr_2 - into_rtr_1) - into_e3_2 + into_e3_1
-				};
+			// residual distances
 			std::array<Vector, 6u> const diffs
-				{ into_rtr_delta + into_e1_2 - into_e1_1
-				, into_rtr_delta - into_e1_2 + into_e1_1
-				, into_rtr_delta + into_e2_2 - into_e2_1
-				, into_rtr_delta - into_e2_2 + into_e2_1
-				, into_rtr_delta + into_e3_2 - into_e3_1
-				, into_rtr_delta - into_e3_2 + into_e3_1
-				};
-			*/
-			Vector const into_e1_delta{ into_e1_2 - into_e1_1 };
-			Vector const into_e2_delta{ into_e2_2 - into_e2_1 };
-			Vector const into_e3_delta{ into_e3_2 - into_e3_1 };
-
-			std::array<Vector, 6u> const diffs
-				{ into_rtr_delta + into_e1_delta
-				, into_rtr_delta - into_e1_delta
-				, into_rtr_delta + into_e2_delta
-				, into_rtr_delta - into_e2_delta
-				, into_rtr_delta + into_e3_delta
-				, into_rtr_delta - into_e3_delta
-				};
+				{ hexadResultDifferences(xfm1, xfm2, useNormalizedCompare) };
 
 			// compute max delta
 			// first std::max() will change to positive magnitude

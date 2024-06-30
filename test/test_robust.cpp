@@ -40,64 +40,6 @@
 #include <sstream>
 
 
-namespace sim
-{
-
-	/*! \brief Simulate observation data including measurements and blunders
-	 *
-	 * The collection of transformations include samples from two
-	 * populations.
-	 *
-	 * The first population generates multiple simulated "measured"
-	 * transforms in which each instance should be "near" to the provided
-	 * expXform one with the discrepancy determined by normally
-	 * distributed (pseudo)random noise having deviation sigmaLoc on
-	 * the position and sigmaAng on the angle components.
-	 *
-	 * The second population represents blunder transformations which
-	 * are created from component data values that uniformly span the
-	 * range of allowed values (as specified in the function
-	 * orinet::rand::uniformTransform().
-	 */
-	std::vector<rigibra::Transform>
-	noisyTransforms
-		( rigibra::Transform const & expXform
-		, std::size_t const & numMea = 3u
-		, std::size_t const & numErr = 2u
-		, double const & sigmaLoc = ((1./100.) * 1.5) // e.g. cm at 1.5 m
-		, double const & sigmaAng = ((5./1000.)) // e.g. 5 pix at 1000 pix
-		)
-	{
-		std::vector<rigibra::Transform> xforms;
-		xforms.reserve(numMea + numErr);
-
-		engabra::g3::Vector const expLoc = expXform.theLoc;
-		rigibra::PhysAngle const expAng{ expXform.theAtt.physAngle() };
-
-		// ... a number of typical measurements - with Gaussian noise
-		for (std::size_t nn{0u} ; nn < numMea ; ++nn)
-		{
-			rigibra::Transform const meaXform
-				{ orinet::rand::perturbedTransform
-					(expLoc, expAng, sigmaLoc, sigmaAng)
-				};
-			xforms.emplace_back(meaXform);
-		}
-
-		// ... a few 'blunderous' measurements - from uniform probability
-		for (std::size_t nn{0u} ; nn < numErr ; ++nn)
-		{
-			rigibra::Transform const errXform
-				{ orinet::rand::uniformTransform() };
-			xforms.emplace_back(errXform);
-		}
-
-		return xforms;
-	}
-
-} // [sim]
-
-
 namespace
 {
 	//! Examples for documentation - evaluate once
@@ -143,8 +85,11 @@ namespace
 		// ... a few 'blunderous' measurements - from uniform probability
 		for (std::size_t nn{0u} ; nn < numErr ; ++nn)
 		{
+			using engabra::g3::pi;
+			std::pair<double, double> const locMinMax{ -10., 10. };
+			std::pair<double, double> const angMinMax{ -pi, pi };
 			rigibra::Transform const errXform
-				{ orinet::rand::uniformTransform() };
+				{ orinet::rand::uniformTransform(locMinMax, angMinMax) };
 			xforms.emplace_back(errXform);
 		}
 
@@ -198,12 +143,15 @@ namespace
 		for (std::size_t numTrial{0u} ; numTrial < numTrials ; ++numTrial)
 		{
 			// establish an arbitrary starting transform test case
-			rigibra::Transform
-				const expXform{ orinet::rand::uniformTransform() };
+			using engabra::g3::pi;
+			std::pair<double, double> const locMinMax{ -10., 10. };
+			std::pair<double, double> const angMinMax{ -pi, pi };
+			rigibra::Transform const expXform
+				{ orinet::rand::uniformTransform(locMinMax, angMinMax) };
 
 			// simulate noisy observation data for this test case
 			std::vector<rigibra::Transform> const xforms
-				{ sim::noisyTransforms
+				{ orinet::rand::noisyTransforms
 					(expXform, numMea, numErr, sigmaLoc, sigmaAng)
 				};
 
