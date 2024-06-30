@@ -33,13 +33,15 @@ set(ProgNames
 
 foreach(ProgName ${ProgNames})
 
+	set(TestTarget TestTarget_${ProgName})
+
 	add_executable(
-		${ProgName}
+		${TestTarget}
 		${ProgName}.cpp
 		)
 
 	target_compile_options(
-		${ProgName}
+		${TestTarget}
 		PRIVATE
 			$<$<CXX_COMPILER_ID:Clang>:${BUILD_FLAGS_FOR_CXX_CLANG}>
 			$<$<CXX_COMPILER_ID:GNU>:${BUILD_FLAGS_FOR_CXX_GCC}>
@@ -47,7 +49,7 @@ foreach(ProgName ${ProgNames})
 		)
 
 	target_include_directories(
-		${ProgName}
+		${TestTarget}
 		PUBLIC
 			${CMAKE_CURRENT_SOURCE_DIR}/../include # public interface
 		PRIVATE
@@ -57,7 +59,7 @@ foreach(ProgName ${ProgNames})
 		)
 
 	target_link_libraries(
-		${ProgName}
+		${TestTarget}
 		PRIVATE
 			Rigibra::Rigibra
 			Engabra::Engabra
