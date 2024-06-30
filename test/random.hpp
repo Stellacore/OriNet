@@ -65,7 +65,7 @@ namespace orinet
 			{ Vector{ distLocs(gen), distLocs(gen), distLocs(gen) }
 			, rigibra::Attitude
 				{ rigibra::PhysAngle
-					{ distLocs(gen), distLocs(gen), distLocs(gen) }
+					{ distAngs(gen), distAngs(gen), distAngs(gen) }
 				}
 			};
 	}
