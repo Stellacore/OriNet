@@ -29,8 +29,7 @@
 
 
 #include "OriNet/compare.hpp"
-
-#include "random.hpp"
+#include "OriNet/random.hpp"
 
 #include <Engabra>
 #include <Rigibra>

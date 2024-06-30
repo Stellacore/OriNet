@@ -29,9 +29,8 @@
 
 
 #include "OriNet/compare.hpp"
+#include "OriNet/random.hpp" // for simulation support
 #include "OriNet/robust.hpp"
-
-#include "random.hpp" // for simulation support
 
 #include <Rigibra>
 
