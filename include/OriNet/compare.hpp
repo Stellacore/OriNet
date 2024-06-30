@@ -143,8 +143,57 @@ namespace orinet
 				, delta_trans + delta_e3
 				, delta_trans - delta_e3
 				};
+
+			/*
+			//std::cout << '\n';
+			std::cout << " lib:diff: ";
+			for (Vector const & diff : diffs)
+			{
+				std::cout << "  " << diff;
+			}
+			std::cout << '\n';
+			*/
+
 		}
 		return diffs;
+	}
+
+	/*! \brief Expected mag difference in transform of basis hexad
+	 *
+	 * Specifically, each data argument is used to transform the endpoints
+	 * of six basis vectors (i.e. +/- e_{1,2,3}). Vector differences are
+	 * computed between corresponding entities, and the expected (mean)
+	 * magnitude of the six difference vectors is returned.
+	 */
+	inline
+	double
+	aveMagResultDifference
+		( rigibra::Transform const & xfm1
+		, rigibra::Transform const & xfm2
+		, bool const & useNormalizedCompare = false
+		)
+	{
+		double aveMag{ engabra::g3::null<double>() };
+
+		if (isValid(xfm1) && isValid(xfm2))
+		{
+			using namespace engabra::g3;
+
+			// residual distances
+			std::array<Vector, 6u> const diffs
+				{ hexadResultDifferences(xfm1, xfm2, useNormalizedCompare) };
+
+			// compute max delta
+			// first std::max() will change to positive magnitude
+			double sumMag{ 0. };
+			for (Vector const & diff : diffs)
+			{
+				sumMag += magnitude(diff);
+			}
+			aveMag = (1./6.) * sumMag;
+		}
+
+		return aveMag;
 	}
 
 	/*! \brief Max mag difference in basis vectors transformed by each xfm[12]
@@ -171,16 +220,6 @@ namespace orinet
 			// residual distances
 			std::array<Vector, 6u> const diffs
 				{ hexadResultDifferences(xfm1, xfm2, useNormalizedCompare) };
-
-			/*
-			//std::cout << '\n';
-			std::cout << " lib:diff: ";
-			for (Vector const & diff : diffs)
-			{
-				std::cout << "  " << diff;
-			}
-			std::cout << '\n';
-			*/
 
 			// compute max delta
 			// first std::max() will change to positive magnitude
