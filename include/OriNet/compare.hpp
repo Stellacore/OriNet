@@ -41,29 +41,33 @@
 
 namespace orinet
 {
-
 	/*! \brief Max mag difference in basis vectors transformed by each xfm[12]
 	 *
 	 * Specifically, each data argument is used to transform the endpoints
-	 * of six basis vectors (i.e. +/- e_{1,2,3}). Vector differences are
-	 * computed between corresponding entities, and the maximum magnitude
-	 * of the six difference vectors is returned.
+	 * of a "hexad" comprising six basis vectors (i.e. +/- e_{1,2,3}).
+	 * Vector differences are computed between corresponding hexad entities
+	 * and returnedin the array.
 	 */
 	inline
-	double
-	maxMagResultDifference
+	std::array<engabra::g3::Vector, 6u>
+	hexadResultDifferences
 		( rigibra::Transform const & xfm1
 		, rigibra::Transform const & xfm2
 		, bool const & useNormalizedCompare = false
 		)
 	{
-		double maxMag{ engabra::g3::null<double>() };
+		using namespace engabra::g3;
+		std::array<Vector, 6u> diffs
+			{ null<Vector>()
+			, null<Vector>()
+			, null<Vector>()
+			, null<Vector>()
+			, null<Vector>()
+			, null<Vector>()
+			};
 
 		if (isValid(xfm1) && isValid(xfm2))
 		{
-			using namespace engabra::g3;
-
-
 			/*
 			//
 			// Full computation (lots of redundant operations)
@@ -88,7 +92,7 @@ namespace orinet
 			Vector const into_ne3_1{ xfm1(-e3) };
 			Vector const into_ne3_2{ xfm2(-e3) };
 
-			std::array<Vector, 6u> const diffs
+			diffs = std::array<Vector, 6u>
 				{ ( into_pe1_1 - into_pe1_2 )
 				, ( into_pe2_1 - into_pe2_2 )
 				, ( into_pe3_1 - into_pe3_2 )
@@ -131,7 +135,7 @@ namespace orinet
 			Vector const delta_e3{ into_e3_1 - into_e3_2 };
 
 			// residual distances
-			std::array<Vector, 6u> const diffs
+			diffs = std::array<Vector, 6u>
 				{ delta_trans + delta_e1
 				, delta_trans - delta_e1
 				, delta_trans + delta_e2
@@ -139,6 +143,34 @@ namespace orinet
 				, delta_trans + delta_e3
 				, delta_trans - delta_e3
 				};
+		}
+		return diffs;
+	}
+
+	/*! \brief Max mag difference in basis vectors transformed by each xfm[12]
+	 *
+	 * Specifically, each data argument is used to transform the endpoints
+	 * of six basis vectors (i.e. +/- e_{1,2,3}). Vector differences are
+	 * computed between corresponding entities, and the maximum magnitude
+	 * of the six difference vectors is returned.
+	 */
+	inline
+	double
+	maxMagResultDifference
+		( rigibra::Transform const & xfm1
+		, rigibra::Transform const & xfm2
+		, bool const & useNormalizedCompare = false
+		)
+	{
+		double maxMag{ engabra::g3::null<double>() };
+
+		if (isValid(xfm1) && isValid(xfm2))
+		{
+			using namespace engabra::g3;
+
+			// residual distances
+			std::array<Vector, 6u> const diffs
+				{ hexadResultDifferences(xfm1, xfm2, useNormalizedCompare) };
 
 			/*
 			//std::cout << '\n';
