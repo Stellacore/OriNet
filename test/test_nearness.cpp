@@ -82,7 +82,6 @@ namespace
 				Vector const into1{ x1w0(locFrom) };
 				Vector const into2{ x2w0(locFrom) };
 				Vector const diff{ into2 - into1 };
-std::cout << "diff: " << diff << '\n';
 				expMaxMag = std::max(expMaxMag, magnitude(diff));
 			}
 
