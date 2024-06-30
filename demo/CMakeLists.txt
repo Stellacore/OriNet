@@ -26,6 +26,8 @@ set(ProgNames
 
 	# _  # template for demo programs
 
+	demo_statistics
+
 	)
 
 foreach(ProgName ${ProgNames})
