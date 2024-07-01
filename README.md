@@ -1,4 +1,4 @@
-# OriNet - Network of rigid body orientations
+# OriNet - Computations for rigid body orientation network
 
 
 ### Build commands
