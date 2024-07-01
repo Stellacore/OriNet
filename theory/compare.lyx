@@ -307,7 +307,7 @@ d=R\left\{ \left(t-DqD^{\dagger}\right)+\left(DxD^{\dagger}-x\right)\right\} R^{
 
 \begin_layout Standard
 If two transformations are being compared, then it is reasonable to expect
- they should be be somewhat similar.
+ they should be somewhat similar.
  In such a case the spinor, 
 \begin_inset Formula $D$
 \end_inset
@@ -692,13 +692,26 @@ As an alternative, the normalization factor,
 \end_layout
 
 \begin_layout Standard
-However, note that this is only practical for transformations that have
- meaningful translation.
- Otherwise, as 
-\begin_inset Formula $\rho\rightarrow0$
+However, note that this is most useful for transformations that have meaningful
+ translation and for which 
+\begin_inset Formula $\rho$
 \end_inset
 
-, the angle error is disregarded no matter how big it may be.
+ is order magnitude of 
+\begin_inset Formula $\left|x\right|$
+\end_inset
+
+ or larger.
+ Otherwise, as 
+\begin_inset Formula $\left\{ \left|t\right|,\left|q\right|\right\} \rightarrow0$
+\end_inset
+
+, the value of 
+\begin_inset Formula $\rho$
+\end_inset
+
+ becomes artificially clipped (because of the maximum selection in its definitio
+n).
 \end_layout
 
 \begin_layout Standard
@@ -706,7 +719,7 @@ In this case, the scaled and rotated difference,
 \begin_inset Formula $\rho R^{\dagger}dR$
 \end_inset
 
-, might be considered as the physical significance of how much difference
+, can be interpreted as the physical significance of how much difference
  the two transforms introduce to points that are at about the same distance
  from the body as the origin of the frame in which the transformations are
  expressed
