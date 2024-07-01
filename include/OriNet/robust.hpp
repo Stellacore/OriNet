@@ -45,6 +45,9 @@ Example:
 
 namespace orinet
 {
+namespace transform
+{
+
 	/*! Return the median value of array of \b NOT_CONSTANT values.
 	 *
 	 * For non-empty collection containing 'N' elements:
@@ -145,12 +148,20 @@ namespace orinet
 	template <typename FwdIter>
 	inline
 	rigibra::Transform
-	robustTransformFrom
+	robustViaParameters
 		( FwdIter const & beg
 		, FwdIter const & end
 		)
 	{
 		rigibra::Transform median{ rigibra::null<rigibra::Transform>() };
+
+// TODO change name on this function - e.g. robustFromParms() or something
+// TODO create a new robust compare function that:
+// - transforms two orthogonal vectors (e.g. e1,e2)
+// - creates a resultant point cloud of each
+// - computes median vector location within point cloud
+// - constructs median attitude by rotation onto the two median vectors
+// - use median of translation vectors for translation offset
 
 		std::size_t const numXforms{ static_cast<std::size_t>(end - beg) };
 		if (0u < numXforms)
@@ -209,6 +220,8 @@ namespace orinet
 
 		return median;
 	}
+
+} // [transform]
 
 } // [orinet]
 

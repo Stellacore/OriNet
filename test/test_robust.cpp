@@ -97,8 +97,9 @@ namespace
 		// Get result of robust estimation
 		//
 
+		using orinet::transform::robustViaParameters;
 		rigibra::Transform const gotXform
-			{ orinet::robustTransformFrom(xforms.cbegin(), xforms.cend()) };
+			{ robustViaParameters(xforms.cbegin(), xforms.cend()) };
 
 		constexpr double numSigmas{ 3. }; // test case sensitive
 		using orinet::rand::sigmaMagForSigmaLocAng;
@@ -162,10 +163,9 @@ constexpr std::size_t numTrials{ 10u };
 				};
 
 			// obtain robustly estimated transformation
+			using orinet::transform::robustViaParameters;
 			rigibra::Transform const gotXform
-				{ orinet::robustTransformFrom
-					(xforms.cbegin(), xforms.cend())
-				};
+				{ robustViaParameters(xforms.cbegin(), xforms.cend()) };
 
 			// TODO - figure out what distribution and DOFs are involved.
 			constexpr double numSigmas{ 4. }; // test case sensitive
