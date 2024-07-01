@@ -87,7 +87,7 @@ namespace
 
 			// get computed values (which use abreviated formulae)
 			double const gotMaxMag
-				{ orinet::maxMagResultDifference(x1w0, x2w0) };
+				{ orinet::maxMagResultDifference(x1w0, x2w0, false) };
 
 			// check if the two methods of computation agree
 			// allow for computation noise (quadratic operations in attitude)
@@ -149,7 +149,8 @@ namespace
 		double const tolA{ maxMag - 1./1024. };
 		constexpr bool expNearA{ false };
 
-		bool const gotNearA{ orinet::similarResult(xform1, xform2, tolA) };
+		bool const gotNearA
+			{ orinet::similarResult(xform1, xform2, false, tolA) };
 		if (! (expNearA == gotNearA))
 		{
 			oss << "Failure of similarResult test 'A'\n";
@@ -162,7 +163,8 @@ namespace
 		// ... for case where tolerance is more than actual maxMax error
 		double const tolB{ maxMag + 1./1024. };
 		constexpr bool expNearB{ true };
-		bool const gotNearB{ orinet::similarResult(xform1, xform2, tolB) };
+		bool const gotNearB
+			{ orinet::similarResult(xform1, xform2, false, tolB) };
 		if (! (expNearB == gotNearB))
 		{
 			oss << "Failure of similarResult test 'B'\n";

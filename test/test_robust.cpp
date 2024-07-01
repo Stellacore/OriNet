@@ -104,7 +104,7 @@ namespace
 		using orinet::rand::sigmaMagForSigmaLocAng;
 		double const tol
 			{ numSigmas * sigmaMagForSigmaLocAng(sigmaLoc, sigmaAng) };
-		if (! orinet::similarResult(gotXform, expXform, tol) )
+		if (! orinet::similarResult(gotXform, expXform, false, tol) )
 		{
 			oss << "Failure of robust fit to mea+err data\n";
 			oss << "numMea: " << numMea << '\n';
@@ -168,7 +168,8 @@ namespace
 				{ orinet::rand::sigmaMagForSigmaLocAng(sigmaLoc, sigmaAng) };
 			double const tol{ numSigmas * estSigma };
 			double maxMag; // set in function next line
-			if (! orinet::similarResult(gotXform, expXform, tol, &maxMag) )
+			using orinet::similarResult;
+			if (! similarResult(gotXform, expXform, false, tol, &maxMag) )
 			{
 				testFails.insert(numTrial);
 				double const ratio{ maxMag / estSigma };
