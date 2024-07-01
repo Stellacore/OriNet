@@ -53,7 +53,7 @@ namespace orinet
 	hexadResultDifferences
 		( rigibra::Transform const & xfm1
 		, rigibra::Transform const & xfm2
-		, bool const & useNormalizedCompare = false
+		, bool const & useNormalizedCompare
 		)
 	{
 		using namespace engabra::g3;
@@ -119,20 +119,20 @@ namespace orinet
 			// apply rotation to the translation components of transformations
 			Vector const into_t_1{ xfm1.theAtt(xfm1.theLoc) };
 			Vector const into_t_2{ xfm2.theAtt(xfm2.theLoc) };
-			Vector const delta_trans{ rho * (into_t_1 - into_t_2) };
+			Vector const delta_trans{ (into_t_1 - into_t_2) };
 
 			// transform attitude changes for each of the +/- each basis vector
 			Vector const into_e1_1{ xfm1.theAtt(e1) };
 			Vector const into_e1_2{ xfm2.theAtt(e1) };
-			Vector const delta_e1{ into_e1_1 - into_e1_2 };
+			Vector const delta_e1{ rho * (into_e1_1 - into_e1_2) };
 
 			Vector const into_e2_1{ xfm1.theAtt(e2) };
 			Vector const into_e2_2{ xfm2.theAtt(e2) };
-			Vector const delta_e2{ into_e2_1 - into_e2_2 };
+			Vector const delta_e2{ rho * (into_e2_1 - into_e2_2) };
 
 			Vector const into_e3_1{ xfm1.theAtt(e3) };
 			Vector const into_e3_2{ xfm2.theAtt(e3) };
-			Vector const delta_e3{ into_e3_1 - into_e3_2 };
+			Vector const delta_e3{ rho * (into_e3_1 - into_e3_2) };
 
 			// residual distances
 			diffs = std::array<Vector, 6u>
@@ -170,7 +170,7 @@ namespace orinet
 	aveMagResultDifference
 		( rigibra::Transform const & xfm1
 		, rigibra::Transform const & xfm2
-		, bool const & useNormalizedCompare = false
+		, bool const & useNormalizedCompare
 		)
 	{
 		double aveMag{ engabra::g3::null<double>() };
@@ -208,7 +208,7 @@ namespace orinet
 	maxMagResultDifference
 		( rigibra::Transform const & xfm1
 		, rigibra::Transform const & xfm2
-		, bool const & useNormalizedCompare = false
+		, bool const & useNormalizedCompare
 		)
 	{
 		double maxMag{ engabra::g3::null<double>() };
@@ -252,6 +252,7 @@ namespace orinet
 	similarResult
 		( rigibra::Transform const & xfm1
 		, rigibra::Transform const & xfm2
+		, bool const & useNormalizedCompare
 		, double const & tol = std::numeric_limits<double>::epsilon()
 		, double * const & ptMaxMag = nullptr
 		)
@@ -261,7 +262,7 @@ namespace orinet
 		if (isValid(xfm1) && isValid(xfm2))
 		{
 			// compute max delta
-			maxMag = maxMagResultDifference(xfm1, xfm2);
+			maxMag = maxMagResultDifference(xfm1, xfm2, useNormalizedCompare);
 			// compare with specified tolerance
 			same = (maxMag < tol);
 		}
