@@ -68,7 +68,7 @@
 \dynamic_quotes 0
 \papercolumns 1
 \papersides 1
-\paperpagestyle default
+\paperpagestyle fancy
 \tracking_changes false
 \output_changes false
 \html_math_output 0
@@ -88,6 +88,10 @@ Dave Knopp
 \end_inset
 
 Stellacore Corporation
+\end_layout
+
+\begin_layout Publication ID
+OriNet Project: 06/30/2024
 \end_layout
 
 \begin_layout Section
