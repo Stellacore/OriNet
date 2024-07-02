@@ -109,10 +109,12 @@ namespace orinet
 					{ std::min_element(itMid + 1u, itEnd) };
 				if (itEnd == itNext)
 				{
-					std::cerr << "robust.hpp - fatal error itEnd==itNext\n";
-					exit(1);
+					std::cerr << __FILE__ << " - fatal error itEnd==itNext\n";
 				}
-				median = .5 * ((*itMid) + (*itNext));
+				else
+				{
+					median = .5 * ((*itMid) + (*itNext));
+				}
 			}
 		}
 
@@ -176,6 +178,10 @@ namespace orinet
 					compVecs[3].emplace_back(physAngle.theBiv[0]);
 					compVecs[4].emplace_back(physAngle.theBiv[1]);
 					compVecs[5].emplace_back(physAngle.theBiv[2]);
+				}
+				else
+				{
+					std::cerr << __FILE__ << " - bad transform\n";
 				}
 			}
 
