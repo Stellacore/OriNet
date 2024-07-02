@@ -124,7 +124,11 @@ namespace transform
 		return median;
 	}
 
-	/*! \brief A rosbustly computed transform consistent with collection.
+	/*! \brief Rosbustly computed transform consistent with xform collection.
+	 *
+	 * This implementation evaluates similarity by comparing transformation
+	 * parameter component values (three vector offset components, and three
+	 * bivector angle components).
 	 *
 	 * Special cases include collection of:
 	 * \arg zero items (empty) - return null transform
@@ -143,7 +147,7 @@ namespace transform
 	 * transformation result is a new synthesized transformation defined
 	 * using the six computed median results.
 	 *
-	 * Dereferencing to (* FwdIter) must be a rigibra::Trasnformation.
+	 * \note Dereferencing to (* FwdIter) must be a rigibra::Trasnformation.
 	 */
 	template <typename FwdIter>
 	inline
@@ -154,14 +158,6 @@ namespace transform
 		)
 	{
 		rigibra::Transform median{ rigibra::null<rigibra::Transform>() };
-
-// TODO change name on this function - e.g. robustFromParms() or something
-// TODO create a new robust compare function that:
-// - transforms two orthogonal vectors (e.g. e1,e2)
-// - creates a resultant point cloud of each
-// - computes median vector location within point cloud
-// - constructs median attitude by rotation onto the two median vectors
-// - use median of translation vectors for translation offset
 
 		std::size_t const numXforms{ static_cast<std::size_t>(end - beg) };
 		if (0u < numXforms)
@@ -216,6 +212,98 @@ namespace transform
 						}
 					};
 			}
+		}
+
+		return median;
+	}
+
+	/*! \brief Rosbustly computed transform consistent with xform collection.
+	 *
+	 * This implementation evaluates similarity using the *effect* that
+	 * the transform has on data vectors.
+	 *
+	 * Special cases include collection of:
+	 * \arg zero items (empty) - return null transform
+	 * \arg one item - return same transform as the collection item
+	 * \arg two item - return an "average" of the two
+	 * \arg three or more items - return a 'median transform' described below
+	 *
+
+// TODO create a new robust compare function that:
+// - transforms two orthogonal vectors (e.g. e1,e2)
+// - creates a resultant point cloud of each
+// - computes median vector location within point cloud
+// - constructs median attitude by rotation onto the two median vectors
+// - use median of translation vectors for translation offset
+
+	 * The resulting "Median Transform" is defined as TODO
+	 *
+	 *
+	 * \note Dereferencing to (* FwdIter) must be a rigibra::Trasnformation.
+	 */
+	template <typename FwdIter>
+	inline
+	rigibra::Transform
+	robustViaEffect
+		( FwdIter const & beg
+		, FwdIter const & end
+		)
+	{
+		rigibra::Transform median{ rigibra::null<rigibra::Transform>() };
+
+		std::size_t const numXforms{ static_cast<std::size_t>(end - beg) };
+		if (0u < numXforms)
+		{
+			//
+			// Copy the available parameter components into mutable collections
+			//
+// TODO
+//			std::array<std::vector<double>, 6u> compVecs;
+//			compVecs[0].reserve(numXforms);
+//			compVecs[1].reserve(numXforms);
+//			compVecs[2].reserve(numXforms);
+//			compVecs[3].reserve(numXforms);
+//			compVecs[4].reserve(numXforms);
+//			compVecs[5].reserve(numXforms);
+			for (FwdIter iter{beg} ; end != iter ; ++iter)
+			{
+				if (rigibra::isValid(*iter))
+				{
+// TODO
+//					engabra::g3::Vector const & loc = iter->theLoc;
+//					rigibra::PhysAngle
+//						const physAngle{ iter->theAtt.physAngle() };
+//					compVecs[0].emplace_back(loc[0]);
+//					compVecs[1].emplace_back(loc[1]);
+//					compVecs[2].emplace_back(loc[2]);
+//					compVecs[3].emplace_back(physAngle.theBiv[0]);
+//					compVecs[4].emplace_back(physAngle.theBiv[1]);
+//					compVecs[5].emplace_back(physAngle.theBiv[2]);
+				}
+			}
+
+/* TODO
+			if (! compVecs[0].empty()) // all six have same size
+			{
+				//
+				// Form a new transformation from the component means
+				//
+				median = rigibra::Transform
+					{ engabra::g3::Vector
+						{ medianOf(compVecs[0])
+						, medianOf(compVecs[1])
+						, medianOf(compVecs[2])
+						}
+					, rigibra::Attitude
+						{ rigibra::PhysAngle
+							{ medianOf(compVecs[3])
+							, medianOf(compVecs[4])
+							, medianOf(compVecs[5])
+							}
+						}
+					};
+			}
+*/
 		}
 
 		return median;
