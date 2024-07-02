@@ -93,6 +93,56 @@ namespace rand
 		return estSigma;
 	}
 
+	inline
+	engabra::g3::Vector
+	perturbedLocation
+		( engabra::g3::Vector const & meanLoc
+		, double const & sigmaLoc
+		)
+	{
+		engabra::g3::Vector loc{ engabra::g3::null<engabra::g3::Vector>() };
+		if (! (sigmaLoc < 0.))
+		{
+			// Configure pseudo-random number distribution generator
+			static std::mt19937 gen(82035133u);
+			std::normal_distribution<> distLocs(0., sigmaLoc);
+
+			// Use pseudo-random number generation to create transformation
+			loc = engabra::g3::Vector
+				{ meanLoc[0] + distLocs(gen)
+				, meanLoc[1] + distLocs(gen)
+				, meanLoc[2] + distLocs(gen)
+				};
+		}
+		return loc;
+	}
+
+	inline
+	rigibra::Attitude
+	perturbedAttitude
+		( rigibra::PhysAngle const & meanAng
+		, double const & sigmaAng
+		)
+	{
+		rigibra::Attitude att{ rigibra::null<rigibra::Attitude>() };
+		if (! (sigmaAng < 0.))
+		{
+			// Configure pseudo-random number distribution generator
+			static std::mt19937 gen(18448574u);
+			std::normal_distribution<> distAngs(0., sigmaAng);
+
+			// Use pseudo-random number generation to create transformation
+			att = rigibra::Attitude
+				{ rigibra::PhysAngle
+					{ meanAng.theBiv[0] + distAngs(gen)
+					, meanAng.theBiv[1] + distAngs(gen)
+					, meanAng.theBiv[2] + distAngs(gen)
+					}
+				};
+		}
+		return att;
+	}
+
 	//! \brief A transformation with uniformly distributed parameters values
 	inline
 	rigibra::Transform
@@ -106,25 +156,10 @@ namespace rand
 		rigibra::Transform xform{ rigibra::null<rigibra::Transform>() };
 		if (! ((sigmaLoc < 0.) || (sigmaAng < 0.)) )
 		{
-			// Configure pseudo-random number distribution generator
-			static std::mt19937 gen(31035893u);
-			std::normal_distribution<> distLocs(0., sigmaLoc);
-			std::normal_distribution<> distAngs(0., sigmaAng);
-
 			// Use pseudo-random number generation to create transformation
 			xform = rigibra::Transform
-				{ engabra::g3::Vector
-					{ meanLoc[0] + distLocs(gen)
-					, meanLoc[1] + distLocs(gen)
-					, meanLoc[2] + distLocs(gen)
-					}
-				, rigibra::Attitude
-					{ rigibra::PhysAngle
-						{ meanAng.theBiv[0] + distAngs(gen)
-						, meanAng.theBiv[1] + distAngs(gen)
-						, meanAng.theBiv[2] + distAngs(gen)
-						}
-					}
+				{ perturbedLocation(meanLoc, sigmaLoc)
+				, perturbedAttitude(meanAng, sigmaAng)
 				};
 		}
 		return xform;
