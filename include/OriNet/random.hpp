@@ -234,9 +234,19 @@ namespace rand
 		static std::mt19937 gen(48169386u);
 		std::uniform_real_distribution<> distAngs(angMin, angMax);
 
+		// keep angle size within principle range
+		using namespace engabra::g3;
+		BiVector angle{ distAngs(gen), distAngs(gen), distAngs(gen) };
+		double mag{ magnitude(angle) };
+		if (turnHalf < mag)
+		{
+			BiVector const dir{ direction(angle) };
+			mag = fmod(mag, turnHalf);
+			angle = mag * dir;
+		}
+
 		// Use pseudo-random number generation to create transformation
-		att = Attitude
-			{ PhysAngle{ distAngs(gen), distAngs(gen), distAngs(gen) } };
+		att = Attitude{ PhysAngle{ angle } };
 
 		return att;
 	}
