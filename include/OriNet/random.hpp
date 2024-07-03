@@ -30,7 +30,7 @@
 \brief Functions for generating pseudo-random data values
 
 Example:
-\snippet test_CN.cpp DoxyExample01
+\snippet test_robust.cpp DoxyExample02
 
 */
 
