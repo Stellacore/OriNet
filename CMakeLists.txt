@@ -25,8 +25,6 @@
 
 cmake_minimum_required(VERSION 3.13)
 
-set(thisProjLib "orinetLIB")
-
 # Get source code identifier (e.g. hash code from git repo)
 include(./cmake/func_setReleaseTag.cmake)
 setReleaseTag(aSourceIdentity)
@@ -35,8 +33,26 @@ project(
 	OriNet
 	VERSION 0.1.0
 	DESCRIPTION "OriNet - Computations for rigid body orientation networks"
+	HOMEPAGE_URL
+		"https://github.com/Stellacore/OriNet"
 	LANGUAGES CXX
 	)
+
+set(thisProjLib ${PROJECT_NAME})
+
+set(thePackageDescription
+	[[
+	The 'OriNet' package contains C++ code for manipulating rigid
+	body orientation data such as needed for survey or photogrammetric
+	network computations.
+	Capabilities in this initial version focus on robust determination
+	of orientation between two bodies when multiple orientation
+	measurements are available and are assumed to be affected by
+	outlier data.
+	]]
+	)
+set(thePackageVendor "Stellacore Corporation")
+set(thePackageContact ${PROJECT_HOMEPAGE_URL})
 
 include(CTest)
 enable_testing()
@@ -83,4 +99,45 @@ add_subdirectory(doc)
 add_subdirectory(src) # project source code
 add_subdirectory(test)
 add_subdirectory(demo)
+
+# ===
+# === Packaging
+# ===
+
+set(CPACK_STRIP_FILES YES)
+
+set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_DESCRIPTION}")
+set(CPACK_PACKAGE_DESCRIPTION "${thePackageDescription}")
+set(CPACK_PACKAGE_VENDOR "${thePackageVendor}")
+set(CPACK_PACKAGE_CONTACT "${thePackageContact}")
+
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "${CPACK_PACKAGE_NAME}")
+set(CPACK_VERBATIM_VARIABLES TRUE)
+
+## NOTE: default CMAKE_INSTALL_PREFIX will be /usr/local on linux
+set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
+
+	## Debian specific info
+	## Useful info:
+	##   https://decovar.dev/blog/2021/09/23/cmake-cpack-package-deb-apt
+	## 
+	set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS YES) # adds libc, libstdc dependents
+	set(CPACK_DEBIAN_PACKAGE_MAINTAINER "${CPACK_PACKAGE_CONTACT}")
+	set(APT_PACKAGE_DEPLIST
+		#	"rigibra (>= ${Rigibra_VERSION})"
+		#	"engabra (>= ${Engabra_VERSION})"
+		)
+	set(CPACK_DEBIAN_PACKAGE_DEPENDS ${APT_PACKAGE_DEPLIST})
+
+set(CPACK_GENERATOR "DEB")
+
+# Create cmake source code for building package
+if(PROJECT_IS_TOP_LEVEL)
+	# This command writes a CPackConfig.cmake file (at top of build tree)
+	# using the previously defined packaging variable values.
+	include(CPack)
+endif(PROJECT_IS_TOP_LEVEL)
+
+message("CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX}")
 
