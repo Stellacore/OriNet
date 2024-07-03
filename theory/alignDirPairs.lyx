@@ -1,0 +1,1193 @@
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass IEEEtran
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures true
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine biblatex
+\cite_engine_type authoryear
+\biblatex_bibstyle authoryear
+\biblatex_citestyle authoryear
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\use_minted 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Rigid Body Attitude from Direction Pairs
+\end_layout
+
+\begin_layout Author
+Dave Knopp
+\begin_inset Newline newline
+\end_inset
+
+Stellacore Corporation
+\end_layout
+
+\begin_layout Publication ID
+OriNet Project July 2024
+\end_layout
+
+\begin_layout Section
+Introduction
+\end_layout
+
+\begin_layout Standard
+The attitude of a body posed in three dimensional (3D) space can be established
+ by the corresponding pairs independent directions.
+ I.e.
+ if an expression for direction pair is known in a body coordinate frame
+ (e.g.
+ 
+\begin_inset Formula $\left(a,b\right)_{1}$
+\end_inset
+
+), and a cooresponding expression for this same direction pair 
+\begin_inset Formula $\left(a,b\right)_{0}$
+\end_inset
+
+ is known in a reference frame, then the attitude of the body with respect
+ to the reference frame can be determined uniquely (provided directions
+ 
+\begin_inset Formula $a$
+\end_inset
+
+ and 
+\begin_inset Formula $b$
+\end_inset
+
+ are not (anti)parallel with each other.
+\end_layout
+
+\begin_layout Standard
+In practice, the directions in one, or both of the pairs, are obtained by
+ measurement processes which introduce noise.
+ As a result, there is no attitude of the body which will provide a perfect
+ fit between both directions simultaneously.
+ However, a reasonable 
+\begin_inset Quotes eld
+\end_inset
+
+compromise
+\begin_inset Quotes erd
+\end_inset
+
+ solution, elucidated in the following, can often be very useful in practical
+ applications.
+\end_layout
+
+\begin_layout Section
+Methodology
+\end_layout
+
+\begin_layout Subsection
+Situation
+\end_layout
+
+\begin_layout Standard
+In 3D space, each direction vector is associated with 2 degrees of measurement
+ (dom) and is often represented by a 3 component vector.
+ This vector has 3 degrees of freedom (dof) in the components, but they
+ are restricted by 1 degree of constraint (1 doc) in requiring the direction
+ vector to have unit length (e.g.
+ here as in 
+\begin_inset Formula $\left|a\right|=\left|b\right|=1$
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Standard
+Simple counting on the degrees of measurement, indicates that each pair
+ has 4 dom (6 dof - 2 doc).
+ The attitude of a rigid body in 3D space is associated with 3 dof.
+ Therefore, the pair of pairs, 
+\begin_inset Formula $\left(a,b\right)_{0}$
+\end_inset
+
+, 
+\begin_inset Formula $\left(a,b\right)_{1}$
+\end_inset
+
+, contain more measurement information (4 dom) than can be accommodated
+ in the rigid body attitude (3 dof).
+\end_layout
+
+\begin_layout Subsection
+Observations
+\end_layout
+
+\begin_layout Standard
+A solution is to consider the following observations that apply to any two
+ directions, 
+\begin_inset Formula $a$
+\end_inset
+
+ and 
+\begin_inset Formula $b$
+\end_inset
+
+, that are not (anti)parallel but otherwise are completely arbitrary:
+\end_layout
+
+\begin_layout Enumerate
+The two directions always determine a unique plane.
+ (Which may be expressed in terms of the outer product, 
+\begin_inset Formula $a\wedge b$
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Enumerate
+The position of 
+\emph on
+any linear combination of
+\emph default
+ direction 
+\begin_inset Formula $a$
+\end_inset
+
+ and direction 
+\begin_inset Formula $b$
+\end_inset
+
+, can be used to define a unique rotation within that plane - i.e.
+ to resolve a scalar parameter, 
+\begin_inset Formula $\omega$
+\end_inset
+
+, associated with a rotation involving a spinor, 
+\begin_inset Formula $L$
+\end_inset
+
+, of the form 
+\begin_inset Formula $L=\exp\left(\omega\frac{a\wedge b}{2\left|a\wedge b\right|}\right)$
+\end_inset
+
+ .
+\end_layout
+
+\begin_layout Enumerate
+If directions, 
+\begin_inset Formula $a$
+\end_inset
+
+ and 
+\begin_inset Formula $b$
+\end_inset
+
+, are perturbed by arbitrary, noise, then, in general, the size of the angle
+ between 
+\begin_inset Formula $a$
+\end_inset
+
+ and 
+\begin_inset Formula $b$
+\end_inset
+
+, will change depending on the noise.
+\end_layout
+
+\begin_deeper
+\begin_layout Enumerate
+The included angle size will, in general, be different within pair, 
+\begin_inset Formula $\left(a,b\right)_{0}$
+\end_inset
+
+, than it is within pair 
+\begin_inset Formula $\left(a,b\right)_{1}$
+\end_inset
+
+.
+\end_layout
+
+\end_deeper
+\begin_layout Subsection
+Desiderata
+\end_layout
+
+\begin_layout Standard
+The importance of the first two points is manifest.
+ The third point indicates where the excess degree of measurement causes
+ problems.
+ I.e.
+ 
+\end_layout
+
+\begin_layout Enumerate
+For a 
+\emph on
+rigid
+\emph default
+ body transformation, the intrinsic shape of the object remains unchanged
+\end_layout
+
+\begin_layout Enumerate
+The size of the included angle can be associated with an internal shape
+ parameter of the object in each domain
+\end_layout
+
+\begin_layout Enumerate
+The size of the included angle should be preserved by (the attitude aspect
+ of) a rigid body transformation.
+\end_layout
+
+\begin_layout Enumerate
+Overall, the included angle between 
+\begin_inset Formula $a$
+\end_inset
+
+ and 
+\begin_inset Formula $b$
+\end_inset
+
+, is a geometry attribute that must be preserved by the 3 dof of a rigid
+ body attitude transformation, but the included angle size is not necessarily
+ preserved within the 4 dom of the measurements of these directions.
+\end_layout
+
+\begin_layout Subsection
+Approach
+\end_layout
+
+\begin_layout Standard
+Overall, it is the potential change in the included angle between directions
+ 
+\begin_inset Formula $\left(a,b\right)$
+\end_inset
+
+ that represents a superfluous degree of measurement (dom) that can be discarded.
+\end_layout
+
+\begin_layout Subsubsection
+Alignment of Planes
+\end_layout
+
+\begin_layout Standard
+In mathematical terms, the (3D bivector) included angle, 
+\begin_inset Formula $\Theta_{0}$
+\end_inset
+
+, between (unitary) directions, 
+\begin_inset Formula $a_{0}$
+\end_inset
+
+ and 
+\begin_inset Formula $b_{0}$
+\end_inset
+
+, may be expressed, in the reference frame, as
+\begin_inset Formula 
+\[
+\Theta_{0}=\ln\left(b_{0}a_{0}\right)
+\]
+
+\end_inset
+
+and similarly in the body frame as
+\begin_inset Formula 
+\[
+\Theta_{1}=\ln\left(b_{1}a_{1}\right)
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Preservation of Included Angle Size
+\end_layout
+
+\begin_layout Standard
+Dispensing with the deformative dom associated with the included angle size
+ can be accomplished by requiring the scalar magnitude of each of these
+ angles to be the same.
+ I.e.
+\begin_inset Formula 
+\[
+\vartheta_{1}\equiv\sqrt{\Theta_{1}\Theta_{1}^{\dagger}}=\sqrt{\Theta_{0}\Theta_{0}^{\dagger}}\equiv\vartheta_{0}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+If the bivector angles, 
+\begin_inset Formula $\Theta_{0}$
+\end_inset
+
+ and 
+\begin_inset Formula $\Theta_{1}$
+\end_inset
+
+, have the same magnitude, then the relationship between them can be expressed
+ as a rigid body rotation of the form
+\begin_inset Formula 
+\[
+\Theta_{1}=P\Theta_{0}P^{\dagger}
+\]
+
+\end_inset
+
+The spinor, 
+\begin_inset Formula $P$
+\end_inset
+
+, is a unitary spinor that represents rotation of the body frame (subscript
+ 
+\begin_inset Quotes eld
+\end_inset
+
+1
+\begin_inset Quotes erd
+\end_inset
+
+) relative to the reference frame (subscript 
+\begin_inset Quotes eld
+\end_inset
+
+0
+\begin_inset Quotes erd
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Standard
+Now, consider the (unitary) direction constituents,
+\begin_inset Formula 
+\[
+\hat{\Theta}_{1}\equiv\frac{\Theta_{1}}{\sqrt{\Theta_{1}\Theta_{1}^{\dagger}}}
+\]
+
+\end_inset
+
+and
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\hat{\Theta}_{0}\equiv\frac{\Theta_{0}}{\sqrt{\Theta_{0}\Theta_{0}^{\dagger}}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Primary Rotation Step
+\end_layout
+
+\begin_layout Standard
+There are an infinity of rotations by which 
+\begin_inset Formula $P$
+\end_inset
+
+ can transform 
+\begin_inset Formula $\hat{\Theta}_{0}$
+\end_inset
+
+ into 
+\begin_inset Formula $\hat{\Theta}_{1}$
+\end_inset
+
+.
+ However, the spinor representing rotation with the shortest path (smallest
+ magnitude rotation angle) is obtained readily as
+\begin_inset Formula 
+\[
+\check{P}=\sqrt{-\hat{\Theta}_{1}\hat{\Theta}_{0}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Since 
+\begin_inset Formula $\hat{\Theta}_{1,2}$
+\end_inset
+
+ are both unitary, that spinor 
+\begin_inset Formula $\check{P}$
+\end_inset
+
+ also has unit magnitude.
+ I.e.
+ 
+\begin_inset Formula $\check{P}\check{P}^{\dagger}=1$
+\end_inset
+
+.
+ Therefore, the operation, 
+\begin_inset Formula $\Theta_{1}=\check{P}\Theta_{0}\check{P}^{\dagger}$
+\end_inset
+
+, preserves magnitudes and this rotation aligns the directional planes of
+ the 3D angle between 
+\begin_inset Formula $a$
+\end_inset
+
+ and 
+\begin_inset Formula $b$
+\end_inset
+
+, while preserving the size of the scalar included angle, 
+\begin_inset Formula $\vartheta_{1}=\vartheta_{2}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsubsection
+Transitory Frame
+\end_layout
+
+\begin_layout Standard
+This same rotation can now be applied to vector pair 
+\begin_inset Formula $\left(a,b\right)_{0}$
+\end_inset
+
+, to express this pair in a temporary frame (subscript 
+\begin_inset Quotes eld
+\end_inset
+
+t
+\begin_inset Quotes erd
+\end_inset
+
+) that is aligned with direction 
+\begin_inset Formula $\hat{\Theta}_{t}=\check{P}\hat{\Theta}_{t}\check{P}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Define transformed vectors, 
+\begin_inset Formula $a_{t}$
+\end_inset
+
+ and 
+\begin_inset Formula $b_{t}$
+\end_inset
+
+, which both lie in the 
+\begin_inset Formula $\hat{\Theta}_{t}$
+\end_inset
+
+ plane,
+\begin_inset Formula 
+\begin{align*}
+a_{t} & =\check{P}a_{0}\check{P}^{\dagger}\\
+b_{t} & =\check{P}b_{0}\check{P}^{\dagger}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Remaining Rotation Requirement
+\end_layout
+
+\begin_layout Standard
+This rotation step represented by spinor, 
+\begin_inset Formula $\check{P}$
+\end_inset
+
+, establishes 2 of the 3 dof for the desired general attitude transformation.
+ The remaining dof is associated with a rotation within the 
+\begin_inset Formula $\hat{\Theta}_{t}$
+\end_inset
+
+ plane.
+ I.e.
+ an azimuth style rotation that can be represented by spinor, 
+\begin_inset Formula $Q$
+\end_inset
+
+, of the form
+\begin_inset Formula 
+\[
+Q=e^{\frac{1}{2}\omega\hat{\Theta}_{t}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Removing Excess DOM
+\end_layout
+
+\begin_layout Standard
+However, it is not possible, in general, to perform this rotation such that
+ 
+\emph on
+both
+\emph default
+ the transitory directions, 
+\begin_inset Formula $a_{t}$
+\end_inset
+
+ and 
+\begin_inset Formula $b_{t}$
+\end_inset
+
+, will end up aligned with the target directions, 
+\begin_inset Formula $a_{1}$
+\end_inset
+
+ and 
+\begin_inset Formula $b_{1}$
+\end_inset
+
+.
+ I.e.
+ one possibility would be to require 
+\emph on
+either
+\emph default
+
+\begin_inset Formula 
+\begin{align*}
+a_{1} & =Qa_{t}Q^{\dagger}
+\end{align*}
+
+\end_inset
+
+
+\emph on
+or
+\emph default
+
+\begin_inset Formula 
+\[
+b_{1}=Qb_{t}Q^{\dagger}
+\]
+
+\end_inset
+
+but not both.
+\end_layout
+
+\begin_layout Standard
+An obvious compromise is to require the azimuth attitude transformation
+ to produce an alignment of a mean unitary direction, 
+\begin_inset Formula $m$
+\end_inset
+
+, defined as
+\begin_inset Formula 
+\[
+m=\frac{a+b}{\left|a+b\right|}
+\]
+
+\end_inset
+
+I.e.
+ require the spinor, 
+\begin_inset Formula $Q$
+\end_inset
+
+, satisfy
+\begin_inset Formula 
+\[
+m_{1}=Qm_{t}Q^{\dagger}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Secondary Rotation Step
+\end_layout
+
+\begin_layout Standard
+Since 
+\begin_inset Formula $a_{t}$
+\end_inset
+
+, 
+\begin_inset Formula $b_{t}$
+\end_inset
+
+, 
+\begin_inset Formula $a_{1}$
+\end_inset
+
+ and 
+\begin_inset Formula $b_{1}$
+\end_inset
+
+ are all coplanar (in the 
+\begin_inset Formula $\hat{\Theta}_{1}$
+\end_inset
+
+ plane), vectors, 
+\begin_inset Formula $m_{t}$
+\end_inset
+
+ and 
+\begin_inset Formula $m_{1}$
+\end_inset
+
+ are also in this same plane.
+ Therefore, spinor 
+\begin_inset Formula $Q$
+\end_inset
+
+, should represent the shortest (smallest angle magnitude) rotation from
+ 
+\begin_inset Formula $m_{t}$
+\end_inset
+
+ into 
+\begin_inset Formula $m_{1}$
+\end_inset
+
+.
+ Noting that both 
+\begin_inset Formula $m_{1}$
+\end_inset
+
+ and 
+\begin_inset Formula $m_{t}$
+\end_inset
+
+ are unitary vectors, specify the desired solution spinor, 
+\begin_inset Formula $\check{Q}$
+\end_inset
+
+ as
+\begin_inset Formula 
+\[
+\check{Q}=e^{\omega\hat{\Theta}_{t}}=\sqrt{m_{1}m_{t}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The scalar angle size, 
+\begin_inset Formula $\omega$
+\end_inset
+
+, may be isolated by taking logarithms of both sides followed by multiplication
+ from the right by the unitary bivector inverse, 
+\begin_inset Formula $\hat{\Theta}_{t}^{-1}=-\hat{\Theta}_{t}$
+\end_inset
+
+.
+ This yields the desired solution for 
+\begin_inset Formula $\omega$
+\end_inset
+
+ as
+\begin_inset Formula 
+\[
+\omega=-\frac{1}{2}\ln\left(m_{1}m_{t}\right)\hat{\Theta}_{1}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Summary
+\end_layout
+
+\begin_layout Standard
+To recap the above, the first spinor, 
+\begin_inset Formula $\hat{P}$
+\end_inset
+
+, embodies the first two degrees of freedom of the desired rigid body attitude
+ transformation, and the spinor, 
+\begin_inset Formula $\hat{Q}$
+\end_inset
+
+, captures the remaining 1 dof (via the scalar, 
+\begin_inset Formula $\omega$
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Standard
+The desired full 3 dof rigid body rotation can be represented by unitary
+ spinor, 
+\begin_inset Formula $R$
+\end_inset
+
+, defined in terms of the sequential rotations associated with 
+\begin_inset Formula $P$
+\end_inset
+
+ and 
+\begin_inset Formula $Q$
+\end_inset
+
+,
+\begin_inset Formula 
+\[
+\check{R}=\check{Q}\check{P}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Recipe for computation
+\end_layout
+
+\begin_layout Standard
+The rotation that 
+\begin_inset Quotes eld
+\end_inset
+
+best
+\begin_inset Quotes erd
+\end_inset
+
+ aligns rotated reference frame direction pair, 
+\begin_inset Formula $\left(a,b\right)_{0}$
+\end_inset
+
+, with body direction vector pair 
+\begin_inset Formula $\left(a,b\right)_{1}$
+\end_inset
+
+ may be computed with the following steps.
+\end_layout
+
+\begin_layout Itemize
+Given two pairs of unitary direction vectors, 
+\begin_inset Formula $\left(a_{0},b_{0}\right)$
+\end_inset
+
+ and 
+\begin_inset Formula $\left(a_{1},b_{1}\right)$
+\end_inset
+
+, in the reference frame (subscript 
+\begin_inset Quotes eld
+\end_inset
+
+0
+\begin_inset Quotes erd
+\end_inset
+
+) and in the body frame (subscript 
+\begin_inset Quotes eld
+\end_inset
+
+1
+\begin_inset Quotes erd
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Itemize
+Compute the first partial rotation spinor from corresponding planes
+\begin_inset Formula 
+\begin{align*}
+\check{P} & =\sqrt{-\hat{\Theta}_{1}\hat{\Theta}_{0}}\\
+\hat{\Theta}_{0} & =\ln\left(b_{0}a_{0}\right)\\
+\hat{\Theta}_{1} & =\ln\left(b_{1}a_{1}\right)
+\end{align*}
+
+\end_inset
+
+or directly from the two wedge products,
+\begin_inset Formula 
+\[
+\check{P}=\sqrt{-\frac{b_{0}\wedge a_{0}}{\left|b_{0}\wedge a_{0}\right|}\frac{b_{1}\wedge a_{1}}{\left|b_{1}\wedge a_{1}\right|}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+Compute an expression for the direction vector pair in transitory frame
+ aligned with 
+\begin_inset Formula $\hat{\Theta}_{t}$
+\end_inset
+
+,
+\begin_inset Formula 
+\begin{align*}
+a_{t} & =\check{P}a_{0}\check{P}^{\dagger}\\
+b_{t} & =\check{P}b_{0}\check{P}^{\dagger}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+Determine the two mean directions
+\begin_inset Formula 
+\begin{align*}
+m_{t} & =\frac{a_{t}+b_{t}}{\left|a_{t}+b_{t}\right|}\\
+m_{1} & =\frac{a_{1}+b_{1}}{\left|a_{1}+b_{1}\right|}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+Compute the second partial rotation spinor
+\begin_inset Formula 
+\[
+\check{Q}=\sqrt{m_{1}m_{t}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+Compute the full rotation spinor as
+\begin_inset Formula 
+\[
+\check{R}=\check{Q}\check{P}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Results
+\end_layout
+
+\begin_layout Standard
+The preceding approach and formulae are implemented in software (OriNet
+ open source project in program test_alignDirPairs.cpp).
+\end_layout
+
+\begin_layout Standard
+Appendix
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "subsec:Generating-Simulation-Data"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ presents one method for generating simulation data consistent with the
+ 4 degrees of measurement present in an arbitrary direction pair, while
+ still being easy to relate to the underlying 3 degree-of-freedom transformation.
+ This method is utilized in the test_alignDirPairs simulation program.
+\end_layout
+
+\begin_layout Section
+\start_of_appendix
+Appendices
+\end_layout
+
+\begin_layout Subsection
+\begin_inset CommandInset label
+LatexCommand label
+name "subsec:Generating-Simulation-Data"
+
+\end_inset
+
+Generating Simulation Data
+\end_layout
+
+\begin_layout Standard
+The pair of unitary vectors, 
+\begin_inset Formula $a$
+\end_inset
+
+ and 
+\begin_inset Formula $b$
+\end_inset
+
+, can be associated with sum and difference vectors, 
+\begin_inset Formula $s$
+\end_inset
+
+ and 
+\begin_inset Formula $d$
+\end_inset
+
+, as
+\begin_inset Formula 
+\begin{align*}
+a & =s+d\\
+b & =s-d
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+From which 
+\begin_inset Formula $s$
+\end_inset
+
+ and 
+\begin_inset Formula $d$
+\end_inset
+
+ may be defined as
+\begin_inset Formula 
+\begin{align*}
+s & =\frac{1}{2}\left(a+b\right)\\
+d & =\frac{1}{2}\left(a-b\right)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+For vectors in the reference frame (subscript 
+\begin_inset Quotes eld
+\end_inset
+
+0
+\begin_inset Quotes erd
+\end_inset
+
+) and body frame (subscript 
+\begin_inset Quotes eld
+\end_inset
+
+1
+\begin_inset Quotes erd
+\end_inset
+
+), the following relationships apply
+\begin_inset Formula 
+\begin{align*}
+s_{1} & =Rs_{0}R^{\dagger}\\
+d_{1} & =Rd_{0}R^{\dagger}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To generate simulated test data, transform the sum vector, and preserve
+ it's length.
+ For the difference vector, transform it's direction, 
+\begin_inset Formula $\hat{d}$
+\end_inset
+
+, but allow the magnitude to vary as if due to noise.
+\end_layout
+
+\begin_layout Standard
+I.e.
+\end_layout
+
+\begin_layout Itemize
+Given 
+\begin_inset Formula $a_{0}$
+\end_inset
+
+ and 
+\begin_inset Formula $b_{0}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+Compute a pristine transformed sum vector
+\begin_inset Formula 
+\[
+s_{1}=\frac{1}{2}R\left(a_{0}+b_{0}\right)R^{\dagger}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+Compute a perturbed difference vector
+\begin_inset Formula 
+\[
+d_{1}=\nu\frac{1}{2}R\left(a_{0}-b_{0}\right)R^{\dagger}
+\]
+
+\end_inset
+
+where scalar value, 
+\begin_inset Formula $\nu$
+\end_inset
+
+, with 
+\begin_inset Formula $0<\nu$
+\end_inset
+
+, represents a noise factor (that models the 4th degree of measurement present
+ in the direction pair and that should be discarded by a correct solution)
+\end_layout
+
+\begin_layout Itemize
+Constitute the 
+\begin_inset Quotes eld
+\end_inset
+
+noisy
+\begin_inset Quotes erd
+\end_inset
+
+ body frame direction pair
+\begin_inset Formula 
+\begin{align*}
+a_{1} & =s_{1}+d_{1}\\
+b_{1} & =s_{1}-d_{1}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+These steps can be combined as
+\begin_inset Note Comment
+status collapsed
+
+\begin_layout Plain Layout
+\begin_inset Formula 
+\begin{align*}
+a_{1} & =\frac{1}{2}R\left[\left(a_{0}+b_{0}\right)+\nu\left(a_{0}-b_{0}\right)\right]R^{\dagger}\\
+b_{1} & =\frac{1}{2}R\left[\left(a_{0}+b_{0}\right)-\nu\left(a_{0}-b_{0}\right)\right]R^{\dagger}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{align*}
+a_{1} & =\frac{1}{2}R\left[\left(1+\nu\right)a_{0}+\left(1-\nu\right)b_{0}\right]R^{\dagger}\\
+b_{1} & =\frac{1}{2}R\left[\left(1-\nu\right)a_{0}+\left(1+\nu\right)b_{0}\right]R^{\dagger}
+\end{align*}
+
+\end_inset
+
+where 
+\begin_inset Formula $\nu$
+\end_inset
+
+ is a positive arbitrary (e.g.
+ random) scalar noise factor.
+\end_layout
+
+\end_body
+\end_document
