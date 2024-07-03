@@ -25,6 +25,12 @@
 
 cmake_minimum_required(VERSION 3.13)
 
+set(thisProjLib "orinetLIB")
+
+# Get source code identifier (e.g. hash code from git repo)
+include(./cmake/func_setReleaseTag.cmake)
+setReleaseTag(aSourceIdentity)
+
 project(
 	OriNet
 	VERSION 0.1.0
@@ -60,7 +66,21 @@ message("### PROJECT_VERSION: " ${PROJECT_VERSION})
 ## Project structure
 ##
 
+##
+## -- project source tree description
+##
+
+set(EXPORT_ALIAS_NAME ${PROJECT_NAME}::${PROJECT_NAME})
+set(EXPORT_TARGETS_NAME ${PROJECT_NAME}Targets)
+set(EXPORT_FILENAME ${EXPORT_TARGETS_NAME}.cmake)
+message("### EXPORT_ALIAS_NAME: " ${EXPORT_ALIAS_NAME})
+message("### EXPORT_TARGETS_NAME: " ${EXPORT_TARGETS_NAME})
+message("### EXPORT_FILENAME: " ${EXPORT_FILENAME})
+
+
+add_subdirectory(cmake)
 add_subdirectory(doc)
+add_subdirectory(src) # project source code
 add_subdirectory(test)
 add_subdirectory(demo)
 

@@ -281,6 +281,7 @@ namespace rand
 	 * range of allowed values (as specified in the function
 	 * orinet::rand::uniformTransform().
 	 */
+	inline
 	std::vector<rigibra::Transform>
 	noisyTransforms
 		( rigibra::Transform const & expXform
