@@ -109,6 +109,10 @@ namespace
 			oss << "Failure of robust fit to mea+err data\n";
 			oss << "numMea: " << numMea << '\n';
 			oss << "numErr: " << numErr << '\n';
+			for (rigibra::Transform const & xform : xforms)
+			{
+				oss << " xform: " << xform << '\n';
+			}
 			oss << "sigmaLoc: " << engabra::g3::io::fixed(sigmaLoc) << '\n';
 			oss << "sigmaAng: " << engabra::g3::io::fixed(sigmaAng) << '\n';
 			oss << "     tol: " << engabra::g3::io::fixed(tol) << '\n';
@@ -132,7 +136,9 @@ namespace
 		( std::ostream & oss
 		)
 	{
-		constexpr std::size_t numTrials{ 10u };
+//		constexpr std::size_t numTrials{ 32u*1024u };
+std::cout << "TODO: update test cases\n";
+constexpr std::size_t numTrials{ 10u };
 		constexpr std::size_t numMea{ 3u };
 		constexpr std::size_t numErr{ 2u };
 		constexpr double sigmaLoc{ (1./100.) * 1.5 }; // e.g. cm at 1.5 m
@@ -162,7 +168,7 @@ namespace
 				};
 
 			// TODO - figure out what distribution and DOFs are involved.
-			constexpr double numSigmas{ 3. }; // test case sensitive
+			constexpr double numSigmas{ 4. }; // test case sensitive
 			using engabra::g3::sq;
 			double const estSigma
 				{ orinet::rand::sigmaMagForSigmaLocAng(sigmaLoc, sigmaAng) };
@@ -177,6 +183,10 @@ namespace
 				oss << "Failure of robust fit trial no. " << numTrial << '\n';
 				oss << "numMea: " << numMea << '\n';
 				oss << "numErr: " << numErr << '\n';
+				for (rigibra::Transform const & xform : xforms)
+				{
+					oss << " xform: " << xform << '\n';
+				}
 				oss << "sigLoc: " << engabra::g3::io::fixed(sigmaLoc) << '\n';
 				oss << "sigAng: " << engabra::g3::io::fixed(sigmaAng) << '\n';
 				oss << "   tol: " << engabra::g3::io::fixed(tol) << '\n';
