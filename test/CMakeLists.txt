@@ -26,6 +26,7 @@ set(ProgNames
 
 	_  # unit test program template
 
+	test_alignDirPair
 	test_nearness
 	test_robust
 
