@@ -30,6 +30,7 @@
 
 #include "OriNet/align.hpp"
 
+#include "OriNet/compare.hpp"
 #include "OriNet/random.hpp"
 
 #include <Engabra>
@@ -41,6 +42,33 @@
 
 namespace
 {
+	//! \brief Angle between first and second direction in pair.
+	inline
+	engabra::g3::BiVector
+	angleBetween
+		( orinet::DirPair const & dirs
+		)
+	{
+		using namespace engabra::g3;
+		Vector const & d1 = dirs.first;
+		Vector const & d2 = dirs.second;
+		return logG2(d1 * d2).theBiv;
+	}
+
+	//! \brief Display info on internal angle between directions in pair.
+	inline
+	std::string
+	dirInfo
+		( orinet::DirPair const & dirs
+		)
+	{
+		std::ostringstream oss;
+		using namespace engabra::g3;
+		BiVector const angle{ angleBetween(dirs) };
+		oss << angle << "  mag: " << magnitude(angle);
+		return oss.str();
+	}
+
 
 namespace sim
 {
@@ -48,7 +76,8 @@ namespace sim
 	inline
 	orinet::DirPair
 	directionPair
-		()
+		( std::pair<double, double> const & minMaxAngleMag = { .1, 3. }
+		)
 	{
 		using namespace engabra::g3;
 		orinet::DirPair dirPair{ null<Vector>(), null<Vector>() };
@@ -57,9 +86,14 @@ namespace sim
 			using orinet::rand::randomDirection;
 			Vector const aDir{ randomDirection() };
 			Vector const bDir{ randomDirection() };
-			double const dot{ (aDir * bDir).theSca[0] };
-			constexpr double tol{ 1. - 1.e-9 }; // avoid (anti)parallel dirs
-			if (std::abs(dot) < tol)
+
+			BiVector const angle{ logG2(aDir * bDir).theBiv };
+			double const angleMag{ magnitude(angle) };
+
+			// avoid (anti)parallel dirs
+			double const & minAngleMag = minMaxAngleMag.first;
+			double const & maxAngleMag = minMaxAngleMag.second;
+			if ((minAngleMag < angleMag) && (angleMag < maxAngleMag))
 			{
 				dirPair = std::make_pair(aDir, bDir);
 				break;
@@ -85,13 +119,13 @@ namespace sim
 		// perturb measurements by random error (the 4th measurement DOM)
 		// ref. theory/alignDifPairs.lyx
 		static std::mt19937 gen(47562958u);
-		std::uniform_real_distribution<> dist(1./1024., 1.);
+		std::uniform_real_distribution<> dist(1./128., 32./128.);
 		double const nu{ dist(gen) };
 		double const wp{ 1. + nu };
 		double const wn{ 1. - nu };
 		// perturbed values that remain coplaner with (a0,b0)
-		Vector const aTmp{ .5 * (wp * a0 + wn * b0) };
-		Vector const bTmp{ .5 * (wn * a0 + wp * b0) };
+		Vector const aTmp{ direction(.5 * (wp * a0 + wn * b0)) };
+		Vector const bTmp{ direction(.5 * (wn * a0 + wp * b0)) };
 
 		// measurements in body frame
 		Vector const a1{ attBodWrtRef(aTmp) };
@@ -102,8 +136,56 @@ namespace sim
 
 } // [sim]
 
+	//! Compare two attitude instances and report details if different
+	inline
+	void
+	checkAtt
+		( std::ostream & oss
+		, rigibra::Attitude const & expAtt
+		, rigibra::Attitude const & gotAtt
+		, std::string const & testName
+		, orinet::DirPair const & refDirs = {}
+		, orinet::DirPair const & bodDirs = {}
+		)
+	{
+		// reconstruction of test case can be sensistive (e.g. for
+		// very different sizes of the two included angle sizes)
+		// and for attitude cases that represent near a half turn
+		// Since alignment algorithm involves quadratic products, it
+		// seems reasonable to set this to sqrt of machine epsilon.
+		// In practice, errors seem to be less than about 1e-11.
+		static double const tol
+			{ std::sqrt(std::numeric_limits<double>::epsilon()) };
 
-	//! Examples for documentation
+		using namespace rigibra;
+		using namespace engabra::g3;
+		double maxMag;
+		if (! orinet::similarResult(gotAtt, expAtt, tol, &maxMag))
+		{
+			PhysAngle const gotPhys{ gotAtt.physAngle() };
+			PhysAngle const expPhys{ expAtt.physAngle() };
+			BiVector const diffPhys{ gotPhys.theBiv - expPhys.theBiv };
+			oss << '\n';
+			oss << "Failure of " << testName << " test\n";
+			oss << "    exp: " << expAtt
+				<< "  mag: " << magnitude(expPhys.theBiv) << '\n';
+			oss << "    got: " << gotAtt
+				<< "  mag: " << magnitude(gotPhys.theBiv) << '\n';
+			oss << "refDirs: " << refDirs
+				<< "  incl.Angle: " << dirInfo(refDirs)
+				<< '\n';
+			oss << "bodDirs: " << bodDirs
+				<< "  incl.Angle: " << dirInfo(bodDirs)
+				<< '\n';
+			oss << "    dif: " << io::enote(diffPhys) << '\n';
+			oss << "    tol: " << io::enote(tol) << '\n';
+			oss << " maxMag: " << io::enote(maxMag) << '\n';
+			constexpr double eps{ std::numeric_limits<double>::epsilon() };
+			oss << "  ratio: " << io::fixed(maxMag/eps) << '\n';
+		}
+	}
+
+	//! Check simple canse and provide example for documentation
 	void
 	test0
 		( std::ostream & oss
@@ -126,19 +208,83 @@ namespace sim
 
 		// [DoxyExample01]
 
-		constexpr double tol{ 4. * std::numeric_limits<double>::epsilon() };
-		if (! nearlyEquals(gotAtt, expAtt, tol))
+		checkAtt(oss, expAtt, gotAtt, "alignDirPair individual");
+	}
+
+	//! check special cases
+	void
+	test1
+		( std::ostream & oss
+		)
+	{
+		// half turn rotation
 		{
-			rigibra::PhysAngle const gotPhys{ gotAtt.physAngle() };
-			rigibra::PhysAngle const expPhys{ expAtt.physAngle() };
-			BiVector const diffPhys{ gotPhys.theBiv - expPhys.theBiv };
-			oss << "Failure of alignDirPair individual test\n";
-			oss << "exp: " << expAtt << '\n';
-			oss << "got: " << gotAtt << '\n';
-			oss << "dif: " << io::enote(diffPhys) << '\n';
+			// arbitrary rigid body attitude
+			using namespace engabra::g3;
+			rigibra::Attitude const expAtt{ rigibra::PhysAngle{ pi * e12 } };
+
+			// simulate measurement data
+			orinet::DirPair const refDirs{ e1, direction(e1+e2) };
+			// exact 180 deg rotation
+			orinet::DirPair const bodDirs
+				{ expAtt(refDirs.first), expAtt(refDirs.second) };
+
+			using orinet::alignDirPair;
+			rigibra::Attitude const gotAtt{ alignDirPair(refDirs, bodDirs) };
+
+			checkAtt(oss, expAtt, gotAtt, "alignDirPair pi*e12");
+		}
+
+		// no rotation
+		{
+			// arbitrary rigid body attitude
+			using namespace rigibra;
+			Attitude const expAtt{ identity<Attitude>() };
+
+			// simulate measurement data
+			using namespace engabra::g3;
+			orinet::DirPair const refDirs{ e1, direction(e1+e2) };
+			// exact 180 deg rotation
+			orinet::DirPair const & bodDirs = refDirs;
+
+			using orinet::alignDirPair;
+			rigibra::Attitude const gotAtt{ alignDirPair(refDirs, bodDirs) };
+
+			checkAtt(oss, expAtt, gotAtt, "alignDirPair identity");
 		}
 	}
 
+	//! check large number of cases
+	void
+	test2
+		( std::ostream & oss
+		)
+	{
+		constexpr std::size_t numRuns{ 128u*1024u };
+
+		for (std::size_t numRun{0u} ; numRun < numRuns ; ++numRun)
+		{
+			// arbitrary rigid body attitude
+			using namespace engabra::g3;
+			std::pair<double, double> const angMinMax{ -pi, pi };
+
+			// simulate random test case
+			using namespace rigibra;
+			Attitude const expAtt{ orinet::rand::uniformAttitude(angMinMax) };
+			orinet::DirPair const refDirs{ sim::directionPair() };
+			orinet::DirPair const bodDirs
+				{ sim::bodyDirectionPair(refDirs, expAtt) };
+
+			// compute best fit attitude
+			rigibra::Attitude const gotAtt
+				{ orinet::alignDirPair(refDirs, bodDirs) };
+
+			// check solution
+			std::ostringstream tmsg;
+			tmsg << "alignDirPair volume run " << numRun;
+			checkAtt(oss, expAtt, gotAtt, tmsg.str(), refDirs, bodDirs);
+		}
+	}
 }
 
 //! Check behavior of NS
@@ -150,6 +296,8 @@ main
 	std::stringstream oss;
 
 	test0(oss);
+	test1(oss);
+	test2(oss);
 
 	if (oss.str().empty()) // Only pass if no errors were encountered
 	{
