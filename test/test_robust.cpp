@@ -97,6 +97,8 @@ namespace
 		// Get result of robust estimation
 		//
 
+		// Fit via median of transform location and angle components
+		// NOTE: this function is only appropriate for small rotations
 		using orinet::transform::robustViaParameters;
 		rigibra::Transform const gotXform
 			{ robustViaParameters(xforms.cbegin(), xforms.cend()) };
@@ -137,11 +139,12 @@ namespace
 		( std::ostream & oss
 		)
 	{
-//		constexpr std::size_t numTrials{ 32u*1024u };
-std::cout << "TODO: update test cases\n";
-constexpr std::size_t numTrials{ 10u };
-		constexpr std::size_t numMea{ 3u };
-		constexpr std::size_t numErr{ 2u };
+		// Test needs a larger number of measurement/errors for statistics
+		// to stabilize (for estimating expected measurement noise which
+		// is used in test condition below).
+		constexpr std::size_t numTrials{ 10u*1024u };
+		constexpr std::size_t numMea{ 24u };
+		constexpr std::size_t numErr{ 16u };
 		constexpr double sigmaLoc{ (1./100.) * 1.5 }; // e.g. cm at 1.5 m
 		constexpr double sigmaAng{ (5./1000.) }; // e.g. 5 pix at 1000 pix
 
@@ -156,6 +159,8 @@ constexpr std::size_t numTrials{ 10u };
 			rigibra::Transform const expXform
 				{ orinet::rand::uniformTransform(locMinMax, angMinMax) };
 
+			// [DoxyExample02]
+
 			// simulate noisy observation data for this test case
 			std::vector<rigibra::Transform> const xforms
 				{ orinet::rand::noisyTransforms
@@ -163,11 +168,14 @@ constexpr std::size_t numTrials{ 10u };
 				};
 
 			// obtain robustly estimated transformation
-			using orinet::transform::robustViaParameters;
+			// Fit via median of transformation *results*
+			// NOTE: this function is appropriate for any size rotation
+			using orinet::transform::robustViaEffect;
 			rigibra::Transform const gotXform
-				{ robustViaParameters(xforms.cbegin(), xforms.cend()) };
+				{ robustViaEffect(xforms.cbegin(), xforms.cend()) };
 
-			// TODO - figure out what distribution and DOFs are involved.
+			// [DoxyExample02]
+
 			constexpr double numSigmas{ 4. }; // test case sensitive
 			using engabra::g3::sq;
 			double const estSigma

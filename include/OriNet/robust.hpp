@@ -29,11 +29,10 @@
 /*! \file
 \brief Contains Function to determine robust transformation estimates
 
-Example:
-\snippet test_robust.cpp DoxyExample01
-
 */
 
+
+#include "OriNet/align.hpp"
 
 #include <Engabra>
 #include <Rigibra>
@@ -148,6 +147,9 @@ namespace transform
 	 * using the six computed median results.
 	 *
 	 * \note Dereferencing to (* FwdIter) must be a rigibra::Trasnformation.
+	 *
+	 * Example:
+	 * \snippet test_robust.cpp DoxyExample01
 	 */
 	template <typename FwdIter>
 	inline
@@ -228,18 +230,17 @@ namespace transform
 	 * \arg two item - return an "average" of the two
 	 * \arg three or more items - return a 'median transform' described below
 	 *
-
-// TODO create a new robust compare function that:
-// - transforms two orthogonal vectors (e.g. e1,e2)
-// - creates a resultant point cloud of each
-// - computes median vector location within point cloud
-// - constructs median attitude by rotation onto the two median vectors
-// - use median of translation vectors for translation offset
-
-	 * The resulting "Median Transform" is defined as TODO
-	 *
+	 * Algorithm involves:
+	 * \arg use median of translation vectors for translation offset
+	 * \arg transform two orthogonal vectors (e.g. e1,e2)
+	 * \arg create a resultant point cloud of each
+	 * \arg compute median of each vector location within point cloud
+	 * \arg construct median attitude by rotation onto the two median vectors
 	 *
 	 * \note Dereferencing to (* FwdIter) must be a rigibra::Trasnformation.
+	 *
+	 * Example:
+	 * \snippet test_robust.cpp DoxyExample02
 	 */
 	template <typename FwdIter>
 	inline
@@ -254,56 +255,85 @@ namespace transform
 		std::size_t const numXforms{ static_cast<std::size_t>(end - beg) };
 		if (0u < numXforms)
 		{
+			using namespace engabra::g3;
+			// pair of vectors to track through different transforms
+			static Vector const a0{ e1 };
+			static Vector const b0{ e2 };
+			static DirPair const refDirPair{ a0, b0 };
+
 			//
-			// Copy the available parameter components into mutable collections
+			// Copy translation parameter components into mutable collections
 			//
-// TODO
-//			std::array<std::vector<double>, 6u> compVecs;
-//			compVecs[0].reserve(numXforms);
-//			compVecs[1].reserve(numXforms);
-//			compVecs[2].reserve(numXforms);
-//			compVecs[3].reserve(numXforms);
-//			compVecs[4].reserve(numXforms);
-//			compVecs[5].reserve(numXforms);
+			std::array<std::vector<double>, 3u> compVecs;
+			compVecs[0].reserve(numXforms);
+			compVecs[1].reserve(numXforms);
+			compVecs[2].reserve(numXforms);
+			std::array<std::vector<double>, 3u> comp_a1s;
+			comp_a1s[0].reserve(numXforms);
+			comp_a1s[1].reserve(numXforms);
+			comp_a1s[2].reserve(numXforms);
+			std::array<std::vector<double>, 3u> comp_b1s;
+			comp_b1s[0].reserve(numXforms);
+			comp_b1s[1].reserve(numXforms);
+			comp_b1s[2].reserve(numXforms);
+
 			for (FwdIter iter{beg} ; end != iter ; ++iter)
 			{
 				if (rigibra::isValid(*iter))
 				{
-// TODO
-//					engabra::g3::Vector const & loc = iter->theLoc;
-//					rigibra::PhysAngle
-//						const physAngle{ iter->theAtt.physAngle() };
-//					compVecs[0].emplace_back(loc[0]);
-//					compVecs[1].emplace_back(loc[1]);
-//					compVecs[2].emplace_back(loc[2]);
-//					compVecs[3].emplace_back(physAngle.theBiv[0]);
-//					compVecs[4].emplace_back(physAngle.theBiv[1]);
-//					compVecs[5].emplace_back(physAngle.theBiv[2]);
+					// gather translation vector components
+					Vector const & loc = iter->theLoc;
+					compVecs[0].emplace_back(loc[0]);
+					compVecs[1].emplace_back(loc[1]);
+					compVecs[2].emplace_back(loc[2]);
+
+					// gather transformed basis pair components
+					using namespace rigibra;
+					Attitude const & att = iter->theAtt;
+					Vector const a1{ att(a0) };
+					Vector const b1{ att(b0) };
+					//
+					comp_a1s[0].emplace_back(a1[0]);
+					comp_a1s[1].emplace_back(a1[1]);
+					comp_a1s[2].emplace_back(a1[2]);
+					//
+					comp_b1s[0].emplace_back(b1[0]);
+					comp_b1s[1].emplace_back(b1[1]);
+					comp_b1s[2].emplace_back(b1[2]);
+
 				}
 			}
 
-/* TODO
 			if (! compVecs[0].empty()) // all six have same size
 			{
+				Vector const medianLoc
+					{ medianOf(compVecs[0])
+					, medianOf(compVecs[1])
+					, medianOf(compVecs[2])
+					};
+
+				// robust estimate for transformed direction pair
+				Vector const median_a1
+					{ medianOf(comp_a1s[0])
+					, medianOf(comp_a1s[1])
+					, medianOf(comp_a1s[2])
+					};
+				Vector const median_b1
+					{ medianOf(comp_b1s[0])
+					, medianOf(comp_b1s[1])
+					, medianOf(comp_b1s[2])
+					};
+				DirPair const bodDirPair{ median_a1, median_b1 };
+
+				// attitude transforming reference pair onto body pair
+				rigibra::Attitude const medianAtt
+					{ alignDirPair(refDirPair, bodDirPair) };
+
 				//
 				// Form a new transformation from the component means
 				//
-				median = rigibra::Transform
-					{ engabra::g3::Vector
-						{ medianOf(compVecs[0])
-						, medianOf(compVecs[1])
-						, medianOf(compVecs[2])
-						}
-					, rigibra::Attitude
-						{ rigibra::PhysAngle
-							{ medianOf(compVecs[3])
-							, medianOf(compVecs[4])
-							, medianOf(compVecs[5])
-							}
-						}
-					};
+				median = rigibra::Transform{ medianLoc, medianAtt };
 			}
-*/
 		}
 
 		return median;
