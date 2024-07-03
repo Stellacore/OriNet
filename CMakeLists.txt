@@ -28,7 +28,7 @@ cmake_minimum_required(VERSION 3.13)
 project(
 	OriNet
 	VERSION 0.1.0
-	DESCRIPTION "OriNet - Network of rigid body orientations."
+	DESCRIPTION "OriNet - Computations for rigid body orientation networks"
 	LANGUAGES CXX
 	)
 
@@ -60,6 +60,7 @@ message("### PROJECT_VERSION: " ${PROJECT_VERSION})
 ## Project structure
 ##
 
+add_subdirectory(doc)
 add_subdirectory(test)
 add_subdirectory(demo)
 
