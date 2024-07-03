@@ -53,6 +53,34 @@ namespace rand
 	// Range of rotation angles - plus/minus this limit
 //	constexpr double sLimAng{ engabra::g3::pi };
 
+	//! \brief A random unitary direction vector
+	inline
+	engabra::g3::Vector
+	randomDirection
+		()
+	{
+		using namespace engabra::g3;
+		Vector dir{ null<Vector>() };
+		for (;;)
+		{
+			static std::mt19937 gen(36742620u);
+			std::uniform_real_distribution<> dist(-1., 1.);
+			Vector const aVec
+				{ dist(gen)
+				, dist(gen)
+				, dist(gen)
+				};
+			double const mag{ magnitude(aVec) };
+			if (! (1. < mag))
+			{
+				dir = (1./mag) * aVec;
+				break;
+			}
+		}
+		return dir;
+	}
+
+
 	/*! \brief Estimate distribution of triad transform residual magnitudes.
 	 *
 	 * For terminology, define a "hexad" as a collection of the six
@@ -93,6 +121,58 @@ namespace rand
 		return estSigma;
 	}
 
+	//! \brief Location from normally distributed components
+	inline
+	engabra::g3::Vector
+	perturbedLocation
+		( engabra::g3::Vector const & meanLoc
+		, double const & sigmaLoc
+		)
+	{
+		engabra::g3::Vector loc{ engabra::g3::null<engabra::g3::Vector>() };
+		if (! (sigmaLoc < 0.))
+		{
+			// Configure pseudo-random number distribution generator
+			static std::mt19937 gen(82035133u);
+			std::normal_distribution<> distLocs(0., sigmaLoc);
+
+			// Use pseudo-random number generation to create transformation
+			loc = engabra::g3::Vector
+				{ meanLoc[0] + distLocs(gen)
+				, meanLoc[1] + distLocs(gen)
+				, meanLoc[2] + distLocs(gen)
+				};
+		}
+		return loc;
+	}
+
+	//! \brief Attitude from normally distributed Physical angle components
+	inline
+	rigibra::Attitude
+	perturbedAttitude
+		( rigibra::PhysAngle const & meanAng
+		, double const & sigmaAng
+		)
+	{
+		rigibra::Attitude att{ rigibra::null<rigibra::Attitude>() };
+		if (! (sigmaAng < 0.))
+		{
+			// Configure pseudo-random number distribution generator
+			static std::mt19937 gen(18448574u);
+			std::normal_distribution<> distAngs(0., sigmaAng);
+
+			// Use pseudo-random number generation to create transformation
+			att = rigibra::Attitude
+				{ rigibra::PhysAngle
+					{ meanAng.theBiv[0] + distAngs(gen)
+					, meanAng.theBiv[1] + distAngs(gen)
+					, meanAng.theBiv[2] + distAngs(gen)
+					}
+				};
+		}
+		return att;
+	}
+
 	//! \brief A transformation with uniformly distributed parameters values
 	inline
 	rigibra::Transform
@@ -106,25 +186,10 @@ namespace rand
 		rigibra::Transform xform{ rigibra::null<rigibra::Transform>() };
 		if (! ((sigmaLoc < 0.) || (sigmaAng < 0.)) )
 		{
-			// Configure pseudo-random number distribution generator
-			static std::mt19937 gen(31035893u);
-			std::normal_distribution<> distLocs(0., sigmaLoc);
-			std::normal_distribution<> distAngs(0., sigmaAng);
-
 			// Use pseudo-random number generation to create transformation
 			xform = rigibra::Transform
-				{ engabra::g3::Vector
-					{ meanLoc[0] + distLocs(gen)
-					, meanLoc[1] + distLocs(gen)
-					, meanLoc[2] + distLocs(gen)
-					}
-				, rigibra::Attitude
-					{ rigibra::PhysAngle
-						{ meanAng.theBiv[0] + distAngs(gen)
-						, meanAng.theBiv[1] + distAngs(gen)
-						, meanAng.theBiv[2] + distAngs(gen)
-						}
-					}
+				{ perturbedLocation(meanLoc, sigmaLoc)
+				, perturbedAttitude(meanAng, sigmaAng)
 				};
 		}
 		return xform;
