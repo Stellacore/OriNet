@@ -126,11 +126,16 @@ namespace sim
 
 		// [DoxyExample01]
 
-		if (! nearlyEquals(gotAtt, expAtt))
+		constexpr double tol{ 4. * std::numeric_limits<double>::epsilon() };
+		if (! nearlyEquals(gotAtt, expAtt, tol))
 		{
+			rigibra::PhysAngle const gotPhys{ gotAtt.physAngle() };
+			rigibra::PhysAngle const expPhys{ expAtt.physAngle() };
+			BiVector const diffPhys{ gotPhys.theBiv - expPhys.theBiv };
 			oss << "Failure of alignDirPair individual test\n";
 			oss << "exp: " << expAtt << '\n';
 			oss << "got: " << gotAtt << '\n';
+			oss << "dif: " << io::enote(diffPhys) << '\n';
 		}
 	}
 

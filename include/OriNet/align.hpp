@@ -38,6 +38,8 @@ Example:
 #include <Engabra>
 #include <Rigibra>
 
+#include <limits>
+
 
 namespace orinet
 {
@@ -66,6 +68,44 @@ namespace orinet
 	{
 		using namespace rigibra;
 		Attitude att{ null<Attitude>() };
+
+		// access individual directions
+		using namespace engabra::g3;
+		Vector const & a0 = refDirPair.first;
+		Vector const & b0 = refDirPair.second;
+		Vector const & a1 = bodDirPair.first;
+		Vector const & b1 = bodDirPair.second;
+
+		// determine bivector angles defined by each direction pair
+		BiVector const biv0{ (a0 * b0).theBiv };
+		BiVector const biv1{ (a1 * b1).theBiv };
+		constexpr double magTol{ std::numeric_limits<double>::epsilon() };
+		double const mag0{ magnitude(biv0) };
+		double const mag1{ magnitude(biv1) };
+		if ((magTol < mag0) && (magTol < mag1))
+		{
+			// determine first rotation step - align planes
+			Spinor const sqP{ (-1. / (mag1*mag0)) * (biv1 * biv0) };
+			Spinor const spinP{ sqrtG2(sqP) };
+
+			// rotate reference directions into plane of body directions
+			Vector const at{ (spinP * a0 * reverse(spinP)).theVec };
+			Vector const bt{ (spinP * b0 * reverse(spinP)).theVec };
+
+			// get mean directions from temp and body direction pairs
+			Vector const mt{ direction(.5 * (at + bt)) };
+			Vector const m1{ direction(.5 * (a1 + b1)) };
+
+			// determine second rotation step - align mean directions
+			Spinor const spinQ{ sqrtG2(m1 * mt) };
+
+			// composite the sequential spinors into result
+			Spinor const spinR{ spinQ * spinP };
+
+			// return net rotation as attitude
+			att = rigibra::Attitude(spinR);
+		}
+
 		return att;
 	}
 
