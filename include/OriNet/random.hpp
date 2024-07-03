@@ -53,6 +53,34 @@ namespace rand
 	// Range of rotation angles - plus/minus this limit
 //	constexpr double sLimAng{ engabra::g3::pi };
 
+	//! \brief A random unitary direction vector
+	inline
+	engabra::g3::Vector
+	randomDirection
+		()
+	{
+		using namespace engabra::g3;
+		Vector dir{ null<Vector>() };
+		for (;;)
+		{
+			static std::mt19937 gen(36742620u);
+			std::uniform_real_distribution<> dist(-1., 1.);
+			Vector const aVec
+				{ dist(gen)
+				, dist(gen)
+				, dist(gen)
+				};
+			double const mag{ magnitude(aVec) };
+			if (! (1. < mag))
+			{
+				dir = (1./mag) * aVec;
+				break;
+			}
+		}
+		return dir;
+	}
+
+
 	/*! \brief Estimate distribution of triad transform residual magnitudes.
 	 *
 	 * For terminology, define a "hexad" as a collection of the six
@@ -93,6 +121,7 @@ namespace rand
 		return estSigma;
 	}
 
+	//! \brief Location from normally distributed components
 	inline
 	engabra::g3::Vector
 	perturbedLocation
@@ -117,6 +146,7 @@ namespace rand
 		return loc;
 	}
 
+	//! \brief Attitude from normally distributed Physical angle components
 	inline
 	rigibra::Attitude
 	perturbedAttitude
