@@ -195,6 +195,61 @@ namespace rand
 		return xform;
 	}
 
+	//! \brief A transformation with uniformly distributed parameters values
+	inline
+	engabra::g3::Vector
+	uniformLocation
+		( std::pair<double, double> const & locMinMax
+		)
+	{
+		using namespace engabra::g3;
+		Vector loc{ null<Vector>() };
+
+		double const & locMin = locMinMax.first;
+		double const & locMax = locMinMax.second;
+
+		// Configure pseudo-random number distribution generator
+		static std::mt19937 gen(99981274u);
+		std::uniform_real_distribution<> distLocs(locMin, locMax);
+
+		// Use pseudo-random number generation to create transformation
+		loc = Vector{ distLocs(gen), distLocs(gen), distLocs(gen) };
+
+		return loc;
+	}
+
+	//! \brief An attitude with uniformly distributed parameters values
+	inline
+	rigibra::Attitude
+	uniformAttitude
+		( std::pair<double, double> const & angMinMax
+		)
+	{
+		using namespace rigibra;
+		Attitude att{ null<Attitude>() };
+		double const & angMin = angMinMax.first;
+		double const & angMax = angMinMax.second;
+
+		// Configure pseudo-random number distribution generator
+		static std::mt19937 gen(48169386u);
+		std::uniform_real_distribution<> distAngs(angMin, angMax);
+
+		// keep angle size within principle range
+		using namespace engabra::g3;
+		BiVector angle{ distAngs(gen), distAngs(gen), distAngs(gen) };
+		double mag{ magnitude(angle) };
+		if (turnHalf < mag)
+		{
+			BiVector const dir{ direction(angle) };
+			mag = fmod(mag, turnHalf);
+			angle = mag * dir;
+		}
+
+		// Use pseudo-random number generation to create transformation
+		att = Attitude{ PhysAngle{ angle } };
+
+		return att;
+	}
 
 	//! \brief A transformation with uniformly distributed parameters values
 	inline
@@ -204,24 +259,9 @@ namespace rand
 		, std::pair<double, double> const & angMinMax
 		)
 	{
-		double const & locMin = locMinMax.first;
-		double const & locMax = locMinMax.second;
-		double const & angMin = angMinMax.first;
-		double const & angMax = angMinMax.second;
-
-		// Configure pseudo-random number distribution generator
-		static std::mt19937 gen(74844020u);
-		std::uniform_real_distribution<> distLocs(locMin, locMax);
-		std::uniform_real_distribution<> distAngs(angMin, angMax);
-
-		// Use pseudo-random number generation to create transformation
 		return rigibra::Transform
-			{ engabra::g3::Vector
-				{ distLocs(gen), distLocs(gen), distLocs(gen) }
-			, rigibra::Attitude
-				{ rigibra::PhysAngle
-					{ distAngs(gen), distAngs(gen), distAngs(gen) }
-				}
+			{ uniformLocation(locMinMax)
+			, uniformAttitude(angMinMax)
 			};
 	}
 

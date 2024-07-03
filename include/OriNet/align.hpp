@@ -84,8 +84,10 @@ namespace orinet
 		double const mag1{ magnitude(biv1) };
 		if ((magTol < mag0) && (magTol < mag1))
 		{
+			BiVector const thetaDir0{ (1./mag0) * biv0 };
+			BiVector const thetaDir1{ (1./mag1) * biv1 };
 			// determine first rotation step - align planes
-			Spinor const sqP{ (-1. / (mag1*mag0)) * (biv1 * biv0) };
+			Spinor const sqP{ -1 * (thetaDir1 * thetaDir0) };
 			Spinor const spinP{ sqrtG2(sqP) };
 
 			// rotate reference directions into plane of body directions
@@ -96,8 +98,20 @@ namespace orinet
 			Vector const mt{ direction(.5 * (at + bt)) };
 			Vector const m1{ direction(.5 * (a1 + b1)) };
 
+			/*
+			std::cout << "a0: " << a0 << '\n';
+			std::cout << "b0: " << b0 << '\n';
+			std::cout << "thetaDir0: " << thetaDir0 << '\n';
+			std::cout << "thetaDir1: " << thetaDir1 << '\n';
+			std::cout << "at: " << at << '\n';
+			std::cout << "bt: " << bt << '\n';
+			std::cout << "mt: " << mt << '\n';
+			std::cout << "m1: " << m1 << '\n';
+			*/
+
 			// determine second rotation step - align mean directions
-			Spinor const spinQ{ sqrtG2(m1 * mt) };
+			Spinor const omega{ .5 * logG2(m1 * mt, thetaDir1) };
+			Spinor const spinQ{ exp(omega) };
 
 			// composite the sequential spinors into result
 			Spinor const spinR{ spinQ * spinP };

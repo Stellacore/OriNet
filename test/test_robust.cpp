@@ -42,6 +42,33 @@
 
 namespace
 {
+	//! \brief Compute maxMagResult of xforms relative to expXform
+	inline
+	double
+	maxMagDifferenceFor
+		( std::vector<rigibra::Transform>::const_iterator const & itBeg
+		, std::vector<rigibra::Transform>::const_iterator const & itEnd
+		, rigibra::Transform const & expXform
+		)
+	{
+		double maxMag{ engabra::g3::null<double>() };
+		if (itEnd != itBeg)
+		{
+			double max{ -1. };
+			for (std::vector<rigibra::Transform>::const_iterator
+				iter{itBeg} ; itEnd != iter ; ++iter)
+			{
+				rigibra::Transform const & xform = *iter;
+				constexpr bool norm{ false };
+				double const mag
+					{ orinet::maxMagResultDifference(xform, expXform, norm) };
+				max = std::max(max, mag);
+			}
+			maxMag = max;
+		}
+		return maxMag;
+	}
+
 	//! Examples for documentation - evaluate once
 	void
 	test0
@@ -97,23 +124,48 @@ namespace
 		// Get result of robust estimation
 		//
 
+		// Fit via median of transform location and angle components
+		// NOTE: this function is only appropriate for small rotations
+		using orinet::transform::robustViaParameters;
 		rigibra::Transform const gotXform
-			{ orinet::robustTransformFrom(xforms.cbegin(), xforms.cend()) };
+			{ robustViaParameters(xforms.cbegin(), xforms.cend()) };
 
-		constexpr double numSigmas{ 3. }; // test case sensitive
-		using orinet::rand::sigmaMagForSigmaLocAng;
-		double const tol
-			{ numSigmas * sigmaMagForSigmaLocAng(sigmaLoc, sigmaAng) };
-		if (! orinet::similarResult(gotXform, expXform, false, tol) )
+		// estimate expected variability of transform effects
+		double const estMaxMag
+			{ maxMagDifferenceFor
+				( xforms.cbegin()
+				, xforms.cbegin() + numMea // use only 'measured' ones
+				, expXform
+				)
+			};
+std::cout << "estMaxMag(0): " << estMaxMag << '\n';
+
+		double const tol{ estMaxMag };
+		constexpr bool useNorm{ false };
+		double gotMaxMag; // set in function next line
+		bool const okay
+			{ orinet::similarResult
+				(gotXform, expXform, useNorm, tol, &gotMaxMag)
+			};
+		if (! okay)
 		{
+			double const ratio{ gotMaxMag / estMaxMag };
 			oss << "Failure of robust fit to mea+err data\n";
-			oss << "numMea: " << numMea << '\n';
-			oss << "numErr: " << numErr << '\n';
-			oss << "sigmaLoc: " << engabra::g3::io::fixed(sigmaLoc) << '\n';
-			oss << "sigmaAng: " << engabra::g3::io::fixed(sigmaAng) << '\n';
-			oss << "     tol: " << engabra::g3::io::fixed(tol) << '\n';
-			oss << "exp: " << expXform << '\n';
-			oss << "got: " << gotXform << '\n';
+			oss << "   numMea: " << numMea << '\n';
+			oss << "   numErr: " << numErr << '\n';
+			for (rigibra::Transform const & xform : xforms)
+			{
+				oss << " xform: " << xform << '\n';
+			}
+			using namespace engabra::g3::io;
+			oss << "   sigLoc: " << fixed(sigmaLoc) << '\n';
+			oss << "   sigAng: " << fixed(sigmaAng) << '\n';
+			oss << "      tol: " << fixed(tol) << '\n';
+			oss << "gotMaxMag: " << fixed(gotMaxMag) << '\n';
+			oss << "estMaxMag: " << fixed(estMaxMag) << '\n';
+			oss << "    ratio: " << fixed(ratio) << '\n';
+			oss << "      exp: " << expXform << '\n';
+			oss << "      got: " << gotXform << '\n';
 		}
 
 		// [DoxyExample01]
@@ -132,59 +184,98 @@ namespace
 		( std::ostream & oss
 		)
 	{
-		constexpr std::size_t numTrials{ 10u };
-		constexpr std::size_t numMea{ 3u };
-		constexpr std::size_t numErr{ 2u };
+		// Test needs a larger number of measurement/errors for statistics
+		// to stabilize (for estimating expected measurement noise which
+		// is used in test condition below).
+		constexpr std::size_t numTrials{ 32u*1024u };
+		constexpr std::size_t numMea{ 15u };
+		constexpr std::size_t numErr{ 10u };
+		constexpr double tolFactor{ 3. }; // ? hard to say what this should be
 		constexpr double sigmaLoc{ (1./100.) * 1.5 }; // e.g. cm at 1.5 m
 		constexpr double sigmaAng{ (5./1000.) }; // e.g. 5 pix at 1000 pix
+		constexpr bool showStats{ false };
 
+		double maxRatio(-1.);
+		// perform large number of pseudo-random trials
 		std::set<std::size_t> testGoods;
 		std::set<std::size_t> testFails;
 		for (std::size_t numTrial{0u} ; numTrial < numTrials ; ++numTrial)
 		{
 			// establish an arbitrary starting transform test case
 			using engabra::g3::pi;
-			std::pair<double, double> const locMinMax{ -10., 10. };
+			std::pair<double, double> const locMinMax{ -2., 2. };
 			std::pair<double, double> const angMinMax{ -pi, pi };
 			rigibra::Transform const expXform
 				{ orinet::rand::uniformTransform(locMinMax, angMinMax) };
 
+			// [DoxyExample02]
+
 			// simulate noisy observation data for this test case
 			std::vector<rigibra::Transform> const xforms
 				{ orinet::rand::noisyTransforms
-					(expXform, numMea, numErr, sigmaLoc, sigmaAng)
+					(expXform, numMea, numErr, sigmaLoc, sigmaAng, locMinMax)
 				};
 
 			// obtain robustly estimated transformation
+			// Fit via median of transformation *results*
+			// NOTE: this function is appropriate for any size rotation
+			using orinet::transform::robustViaEffect;
 			rigibra::Transform const gotXform
-				{ orinet::robustTransformFrom
-					(xforms.cbegin(), xforms.cend())
+				{ robustViaEffect(xforms.cbegin(), xforms.cend()) };
+
+			// [DoxyExample02]
+
+			// estimate expected variability of transform effects
+			double const estMaxMag
+				{ maxMagDifferenceFor
+					( xforms.cbegin()
+					, xforms.cbegin() + numMea // use only 'measured' ones
+					, expXform
+					)
 				};
 
-			// TODO - figure out what distribution and DOFs are involved.
-			constexpr double numSigmas{ 3. }; // test case sensitive
-			using engabra::g3::sq;
-			double const estSigma
-				{ orinet::rand::sigmaMagForSigmaLocAng(sigmaLoc, sigmaAng) };
-			double const tol{ numSigmas * estSigma };
-			double maxMag; // set in function next line
-			using orinet::similarResult;
-			if (! similarResult(gotXform, expXform, false, tol, &maxMag) )
+			double const tol{ tolFactor * estMaxMag };
+			constexpr bool useNorm{ false };
+			double gotMaxMag; // set in function next line
+			bool const okay
+				{ orinet::similarResult
+					(gotXform, expXform, useNorm, tol, &gotMaxMag)
+				};
+
+			if (showStats)
+			{
+				double const ratio{ gotMaxMag / estMaxMag };
+				maxRatio = std::max(maxRatio, ratio);
+				using namespace engabra::g3;
+				std::cout
+					<< "estMaxMag(1): " << io::fixed(estMaxMag)
+					<< "  gotMaxMag: " << io::fixed(gotMaxMag)
+					<< "  ratio: " << io::fixed(ratio)
+					<< "  maxRatio: " << io::fixed(maxRatio)
+					<< '\n';
+			}
+
+			if (! okay)
 			{
 				testFails.insert(numTrial);
-				double const ratio{ maxMag / estSigma };
+				double const ratio{ gotMaxMag / estMaxMag };
 				oss << '\n';
 				oss << "Failure of robust fit trial no. " << numTrial << '\n';
-				oss << "numMea: " << numMea << '\n';
-				oss << "numErr: " << numErr << '\n';
-				oss << "sigLoc: " << engabra::g3::io::fixed(sigmaLoc) << '\n';
-				oss << "sigAng: " << engabra::g3::io::fixed(sigmaAng) << '\n';
-				oss << "   tol: " << engabra::g3::io::fixed(tol) << '\n';
-				oss << "maxMag: " << engabra::g3::io::fixed(maxMag) << '\n';
-				oss << "estSig: " << engabra::g3::io::fixed(estSigma) << '\n';
-				oss << " ratio: " << engabra::g3::io::fixed(ratio) << '\n';
-				oss << "   exp: " << expXform << '\n';
-				oss << "   got: " << gotXform << '\n';
+				oss << "   numMea: " << numMea << '\n';
+				oss << "   numErr: " << numErr << '\n';
+				for (rigibra::Transform const & xform : xforms)
+				{
+					oss << " xform: " << xform << '\n';
+				}
+				using namespace engabra::g3::io;
+				oss << "   sigLoc: " << fixed(sigmaLoc) << '\n';
+				oss << "   sigAng: " << fixed(sigmaAng) << '\n';
+				oss << "      tol: " << fixed(tol) << '\n';
+				oss << "gotMaxMag: " << fixed(gotMaxMag) << '\n';
+				oss << "estMaxMag: " << fixed(estMaxMag) << '\n';
+				oss << "    ratio: " << fixed(ratio) << '\n';
+				oss << "      exp: " << expXform << '\n';
+				oss << "      got: " << gotXform << '\n';
 			//	break;
 			}
 			else
