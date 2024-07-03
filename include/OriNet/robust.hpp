@@ -29,11 +29,10 @@
 /*! \file
 \brief Contains Function to determine robust transformation estimates
 
-Example:
-\snippet test_robust.cpp DoxyExample01
-
 */
 
+
+#include "OriNet/align.hpp"
 
 #include <Engabra>
 #include <Rigibra>
@@ -45,6 +44,9 @@ Example:
 
 namespace orinet
 {
+namespace transform
+{
+
 	/*! Return the median value of array of \b NOT_CONSTANT values.
 	 *
 	 * For non-empty collection containing 'N' elements:
@@ -121,7 +123,11 @@ namespace orinet
 		return median;
 	}
 
-	/*! \brief A rosbustly computed transform consistent with collection.
+	/*! \brief Rosbustly computed transform consistent with xform collection.
+	 *
+	 * This implementation evaluates similarity by comparing transformation
+	 * parameter component values (three vector offset components, and three
+	 * bivector angle components).
 	 *
 	 * Special cases include collection of:
 	 * \arg zero items (empty) - return null transform
@@ -140,12 +146,15 @@ namespace orinet
 	 * transformation result is a new synthesized transformation defined
 	 * using the six computed median results.
 	 *
-	 * Dereferencing to (* FwdIter) must be a rigibra::Trasnformation.
+	 * \note Dereferencing to (* FwdIter) must be a rigibra::Trasnformation.
+	 *
+	 * Example:
+	 * \snippet test_robust.cpp DoxyExample01
 	 */
 	template <typename FwdIter>
 	inline
 	rigibra::Transform
-	robustTransformFrom
+	robustViaParameters
 		( FwdIter const & beg
 		, FwdIter const & end
 		)
@@ -209,6 +218,128 @@ namespace orinet
 
 		return median;
 	}
+
+	/*! \brief Rosbustly computed transform consistent with xform collection.
+	 *
+	 * This implementation evaluates similarity using the *effect* that
+	 * the transform has on data vectors.
+	 *
+	 * Special cases include collection of:
+	 * \arg zero items (empty) - return null transform
+	 * \arg one item - return same transform as the collection item
+	 * \arg two item - return an "average" of the two
+	 * \arg three or more items - return a 'median transform' described below
+	 *
+	 * Algorithm involves:
+	 * \arg use median of translation vectors for translation offset
+	 * \arg transform two orthogonal vectors (e.g. e1,e2)
+	 * \arg create a resultant point cloud of each
+	 * \arg compute median of each vector location within point cloud
+	 * \arg construct median attitude by rotation onto the two median vectors
+	 *
+	 * \note Dereferencing to (* FwdIter) must be a rigibra::Trasnformation.
+	 *
+	 * Example:
+	 * \snippet test_robust.cpp DoxyExample02
+	 */
+	template <typename FwdIter>
+	inline
+	rigibra::Transform
+	robustViaEffect
+		( FwdIter const & beg
+		, FwdIter const & end
+		)
+	{
+		rigibra::Transform median{ rigibra::null<rigibra::Transform>() };
+
+		std::size_t const numXforms{ static_cast<std::size_t>(end - beg) };
+		if (0u < numXforms)
+		{
+			using namespace engabra::g3;
+			// pair of vectors to track through different transforms
+			static Vector const a0{ e1 };
+			static Vector const b0{ e2 };
+			static DirPair const refDirPair{ a0, b0 };
+
+			//
+			// Copy translation parameter components into mutable collections
+			//
+			std::array<std::vector<double>, 3u> compVecs;
+			compVecs[0].reserve(numXforms);
+			compVecs[1].reserve(numXforms);
+			compVecs[2].reserve(numXforms);
+			std::array<std::vector<double>, 3u> comp_a1s;
+			comp_a1s[0].reserve(numXforms);
+			comp_a1s[1].reserve(numXforms);
+			comp_a1s[2].reserve(numXforms);
+			std::array<std::vector<double>, 3u> comp_b1s;
+			comp_b1s[0].reserve(numXforms);
+			comp_b1s[1].reserve(numXforms);
+			comp_b1s[2].reserve(numXforms);
+
+			for (FwdIter iter{beg} ; end != iter ; ++iter)
+			{
+				if (rigibra::isValid(*iter))
+				{
+					// gather translation vector components
+					Vector const & loc = iter->theLoc;
+					compVecs[0].emplace_back(loc[0]);
+					compVecs[1].emplace_back(loc[1]);
+					compVecs[2].emplace_back(loc[2]);
+
+					// gather transformed basis pair components
+					using namespace rigibra;
+					Attitude const & att = iter->theAtt;
+					Vector const a1{ att(a0) };
+					Vector const b1{ att(b0) };
+					//
+					comp_a1s[0].emplace_back(a1[0]);
+					comp_a1s[1].emplace_back(a1[1]);
+					comp_a1s[2].emplace_back(a1[2]);
+					//
+					comp_b1s[0].emplace_back(b1[0]);
+					comp_b1s[1].emplace_back(b1[1]);
+					comp_b1s[2].emplace_back(b1[2]);
+
+				}
+			}
+
+			if (! compVecs[0].empty()) // all six have same size
+			{
+				Vector const medianLoc
+					{ medianOf(compVecs[0])
+					, medianOf(compVecs[1])
+					, medianOf(compVecs[2])
+					};
+
+				// robust estimate for transformed direction pair
+				Vector const median_a1
+					{ medianOf(comp_a1s[0])
+					, medianOf(comp_a1s[1])
+					, medianOf(comp_a1s[2])
+					};
+				Vector const median_b1
+					{ medianOf(comp_b1s[0])
+					, medianOf(comp_b1s[1])
+					, medianOf(comp_b1s[2])
+					};
+				DirPair const bodDirPair{ median_a1, median_b1 };
+
+				// attitude transforming reference pair onto body pair
+				rigibra::Attitude const medianAtt
+					{ alignDirPair(refDirPair, bodDirPair) };
+
+				//
+				// Form a new transformation from the component means
+				//
+				median = rigibra::Transform{ medianLoc, medianAtt };
+			}
+		}
+
+		return median;
+	}
+
+} // [transform]
 
 } // [orinet]
 
