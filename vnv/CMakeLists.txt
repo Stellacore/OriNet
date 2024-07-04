@@ -34,6 +34,8 @@ project(
 	LANGUAGES CXX
 	)
 
+# For convenience, use build flags from OriNet, but these could be anything
+include(../cmake/BuildFlags.cmake)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -65,13 +67,13 @@ foreach(ProgName ${ProgNames})
 		${ProgName}.cpp
 		)
 
-#	target_compile_options(
-#		${ProgName}
-#		PRIVATE
-#			$<$<CXX_COMPILER_ID:Clang>:${BUILD_FLAGS_FOR_CXX_CLANG}>
-#			$<$<CXX_COMPILER_ID:GNU>:${BUILD_FLAGS_FOR_CXX_GCC}>
-#			$<$<CXX_COMPILER_ID:MSVC>:${BUILD_FLAGS_FOR_CXX_VISUAL}>
-#		)
+	target_compile_options(
+		${ProgName}
+		PRIVATE
+			$<$<CXX_COMPILER_ID:Clang>:${BUILD_FLAGS_FOR_CXX_CLANG}>
+			$<$<CXX_COMPILER_ID:GNU>:${BUILD_FLAGS_FOR_CXX_GCC}>
+			$<$<CXX_COMPILER_ID:MSVC>:${BUILD_FLAGS_FOR_CXX_VISUAL}>
+		)
 
 	target_link_libraries(
 		${ProgName}
