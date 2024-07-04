@@ -32,13 +32,13 @@ setReleaseTag(aSourceIdentity)
 project(
 	OriNet
 	VERSION 0.1.0
-	DESCRIPTION "OriNet - Computations for rigid body orientation networks"
+	DESCRIPTION "OriNet - Computations for rigid body orientation networks."
 	HOMEPAGE_URL
 		"https://github.com/Stellacore/OriNet"
 	LANGUAGES CXX
 	)
 
-set(thisProjLib ${PROJECT_NAME})
+set(thisProjLib "${PROJECT_NAME}")
 
 set(thePackageDescription
 	[[
@@ -56,6 +56,8 @@ set(thePackageContact ${PROJECT_HOMEPAGE_URL})
 
 include(CTest)
 enable_testing()
+
+include(GNUInstallDirs) # create and set CMAKE_INSTALL_<dir> vars
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -141,3 +143,16 @@ endif(PROJECT_IS_TOP_LEVEL)
 
 message("CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX}")
 
+message("###")
+message("### CMAKE_INSTALL_LIBDIR: " ${CMAKE_INSTALL_LIBDIR})
+message("### CMAKE_INSTALL_BINDIR: " ${CMAKE_INSTALL_BINDIR})
+message("### CMAKE_INSTALL_INCLUDEDIR: " ${CMAKE_INSTALL_INCLUDEDIR})
+message("### CMAKE_INSTALL_DOCDIR: " ${CMAKE_INSTALL_DOCDIR})
+message("###")
+message("### CMAKE_INSTALL_FULL_LIBDIR: " ${CMAKE_INSTALL_FULL_LIBDIR})
+message("### CMAKE_INSTALL_FULL_BINDIR: " ${CMAKE_INSTALL_FULL_BINDIR})
+message("### CMAKE_INSTALL_FULL_INCLUDEDIR: " ${CMAKE_INSTALL_FULL_INCLUDEDIR})
+message("### CMAKE_INSTALL_FULL_DOCDIR: " ${CMAKE_INSTALL_FULL_DOCDIR})
+message("###")
+message("### DEB_PACKAGE_ROOT: " ${DEB_PACKAGE_ROOT})
+message("###")
