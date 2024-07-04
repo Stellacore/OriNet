@@ -49,12 +49,12 @@ namespace compare
 
 	/*! \brief Differences: all basis vectors transformed by each attitude.
 	 *
-	 * Each of the basis vectors {e1, e2, e3} are trasnsformed by each
+	 * Each of the basis vectors {e1, e2, e3} are transformed by each
 	 * attitude. The corresponding difference vectors are returned.
 	 */
 	inline
 	std::array<engabra::g3::Vector, 3u>
-	basisVectorDeltas
+	triadDeltaVectors
 		( rigibra::Attitude const & att1
 		, rigibra::Attitude const & att2
 		)
@@ -83,48 +83,6 @@ namespace compare
 		return diffs;
 	}
 
-	/*! \brief True if both attitudes produce similar effect on basis vectors.
-	 *
-	 * Example:
-	 * \snippet test_nearness.cpp DoxyExample01
-	 */
-	inline
-	bool
-	similarResult
-		( rigibra::Attitude const & att1
-		, rigibra::Attitude const & att2
-		, double const & tol = std::numeric_limits<double>::epsilon()
-		, double * const & ptMaxMag = nullptr
-		)
-	{
-		bool same{ false };
-		double maxMag{ engabra::g3::null<double>() };
-		if (isValid(att1) && isValid(att2))
-		{
-			using namespace engabra::g3;
-
-			// find largest difference
-			std::array<Vector, 3u> const deltas
-				{ basisVectorDeltas(att1, att2) };
-			std::array<double, 3u> const mags
-				{ magnitude(deltas[0])
-				, magnitude(deltas[1])
-				, magnitude(deltas[2])
-				};
-			std::array<double, 3u>::const_iterator const itMax
-				{ std::max_element(mags.cbegin(), mags.cend()) };
-
-			// set return and check against tolerance
-			maxMag = *itMax;
-			same = (maxMag < tol);
-		}
-		if (ptMaxMag)
-		{
-			*ptMaxMag = maxMag;
-		}
-		return same;
-	}
-
 	/*! \brief Max mag difference in basis vectors transformed by each xfm[12]
 	 *
 	 * Specifically, each data argument is used to transform the endpoints
@@ -134,7 +92,7 @@ namespace compare
 	 */
 	inline
 	std::array<engabra::g3::Vector, 6u>
-	hexadResultDifferences
+	hexadDeltaVectors
 		( rigibra::Transform const & xfm1
 		, rigibra::Transform const & xfm2
 		, bool const & useNormalizedCompare
@@ -207,7 +165,7 @@ namespace compare
 
 			// transform attitude changes for each of the +/- each basis vector
 			std::array<Vector, 3u> const deltas
-				{ basisVectorDeltas(xfm1.theAtt, xfm2.theAtt) };
+				{ triadDeltaVectors(xfm1.theAtt, xfm2.theAtt) };
 			Vector const delta_e1{ rho * deltas[0] };
 			Vector const delta_e2{ rho * deltas[1] };
 			Vector const delta_e3{ rho * deltas[2] };
@@ -259,7 +217,7 @@ namespace compare
 
 			// residual distances
 			std::array<Vector, 6u> const diffs
-				{ hexadResultDifferences(xfm1, xfm2, useNormalizedCompare) };
+				{ hexadDeltaVectors(xfm1, xfm2, useNormalizedCompare) };
 
 			// compute max delta
 			// first std::max() will change to positive magnitude
@@ -297,7 +255,7 @@ namespace compare
 
 			// residual distances
 			std::array<Vector, 6u> const diffs
-				{ hexadResultDifferences(xfm1, xfm2, useNormalizedCompare) };
+				{ hexadDeltaVectors(xfm1, xfm2, useNormalizedCompare) };
 
 			// compute max delta
 			// first std::max() will change to positive magnitude
@@ -310,7 +268,49 @@ namespace compare
 
 		return maxMag;
 	}
-		
+
+
+	/*! \brief True if both attitudes produce similar effect on basis vectors.
+	 *
+	 * Example:
+	 * \snippet test_nearness.cpp DoxyExample01
+	 */
+	inline
+	bool
+	similarResult
+		( rigibra::Attitude const & att1
+		, rigibra::Attitude const & att2
+		, double const & tol = std::numeric_limits<double>::epsilon()
+		, double * const & ptMaxMag = nullptr
+		)
+	{
+		bool same{ false };
+		double maxMag{ engabra::g3::null<double>() };
+		if (isValid(att1) && isValid(att2))
+		{
+			using namespace engabra::g3;
+
+			// find largest difference
+			std::array<Vector, 3u> const deltas
+				{ triadDeltaVectors(att1, att2) };
+			std::array<double, 3u> const mags
+				{ magnitude(deltas[0])
+				, magnitude(deltas[1])
+				, magnitude(deltas[2])
+				};
+			std::array<double, 3u>::const_iterator const itMax
+				{ std::max_element(mags.cbegin(), mags.cend()) };
+
+			// set return and check against tolerance
+			maxMag = *itMax;
+			same = (maxMag < tol);
+		}
+		if (ptMaxMag)
+		{
+			*ptMaxMag = maxMag;
+		}
+		return same;
+	}
 
 	/*! \brief True if both transforms produce similar output.
 	 *
