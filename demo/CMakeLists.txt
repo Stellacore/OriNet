@@ -26,6 +26,7 @@ set(ProgNames
 
 	# _  # template for demo programs
 
+	demo_network
 	demo_statistics
 	demo_version
 
