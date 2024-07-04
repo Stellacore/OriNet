@@ -1,0 +1,34 @@
+#
+# Example (minimal) CMakeLists.txt file for an external project
+#
+
+# == Standard cmake beginning
+cmake_minimum_required(VERSION 3.0)
+
+# == Standard cmake project specification
+project(
+	MyProjectName
+	DESCRIPTION
+		"Some s/w project using OriNet"
+	LANGUAGES
+		CXX
+	)
+
+# == Request cmake to find an installed OriNet
+find_package(
+	OriNet REQUIRED NO_MODULE
+	)
+# == Report (option) information about found package
+message("OriNet Found: " ${OriNet_FOUND})
+message("OriNet Version: " ${OriNet_VERSION})
+
+# == Build an executable program that uses OriNet
+add_executable(
+	foo foo.cpp
+	)
+target_link_libraries(
+	foo
+	PRIVATE
+		OriNet::OriNet
+	)
+

@@ -30,7 +30,7 @@
 \brief Functions for computing alignment for rigid body attitude.
 
 Example:
-\snippet test_alignPair.cpp DoxyExample01
+\snippet test_alignDirPair.cpp DoxyExample01
 
 */
 

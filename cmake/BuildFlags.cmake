@@ -32,6 +32,9 @@
 ##
 
 set(BUILD_FLAGS_FOR_C_CLANG
+	"-DOriNet_Project_Version=\"${PROJECT_VERSION}\""
+	"-DOriNet_Source_Identity=\"${aSourceIdentity}\""
+	#
 	-pthread
 	-fomit-frame-pointer
 	-fPIC  # Important for python callable libraries
@@ -46,6 +49,9 @@ set(BUILD_FLAGS_FOR_C_CLANG
 	)
 
 set(BUILD_FLAGS_FOR_C_GCC
+	"-DOriNet_Project_Version=\"${PROJECT_VERSION}\""
+	"-DOriNet_Source_Identity=\"${aSourceIdentity}\""
+	#
 	# build differences
 	-pthread
 	-fomit-frame-pointer

@@ -27,6 +27,7 @@ set(ProgNames
 	# _  # template for demo programs
 
 	demo_statistics
+	demo_version
 
 	)
 
@@ -48,7 +49,7 @@ foreach(ProgName ${ProgNames})
 	target_include_directories(
 		${ProgName}
 		PUBLIC
-			${CMAKE_CURRENT_SOURCE_DIR}/../include # public interface
+			${CMAKE_SOURCE_DIR}/include/ # public interface
 		PRIVATE
 			${CMAKE_CURRENT_SOURCE_DIR}/../src # project source
 		PRIVATE
@@ -58,6 +59,7 @@ foreach(ProgName ${ProgNames})
 	target_link_libraries(
 		${ProgName}
 		PRIVATE
+			OriNet::OriNet
 			Rigibra::Rigibra
 			Engabra::Engabra
 		)

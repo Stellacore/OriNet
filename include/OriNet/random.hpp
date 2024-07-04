@@ -30,7 +30,7 @@
 \brief Functions for generating pseudo-random data values
 
 Example:
-\snippet test_CN.cpp DoxyExample01
+\snippet test_robust.cpp DoxyExample02
 
 */
 
@@ -281,6 +281,7 @@ namespace rand
 	 * range of allowed values (as specified in the function
 	 * orinet::rand::uniformTransform().
 	 */
+	inline
 	std::vector<rigibra::Transform>
 	noisyTransforms
 		( rigibra::Transform const & expXform
