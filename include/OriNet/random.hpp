@@ -45,6 +45,8 @@ Example:
 namespace orinet
 {
 
+/*! \brief Functions for generating random data and transformations
+ */
 namespace random
 {
 	// Range of translations - plus/minus this limit

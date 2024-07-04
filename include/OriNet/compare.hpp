@@ -44,6 +44,8 @@
 namespace orinet
 {
 
+/*! \brief Functions for assessing similarity/difference between transforms.
+ */
 namespace compare
 {
 

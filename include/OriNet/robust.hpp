@@ -45,6 +45,8 @@
 namespace orinet
 {
 
+/*! \brief Functions for robust clustering of rigid body transformations.
+ */
 namespace robust
 {
 

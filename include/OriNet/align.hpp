@@ -44,6 +44,8 @@ Example:
 namespace orinet
 {
 
+/*! \brief Utilities and functions for determining alignment between bodies.
+ */
 namespace align
 {
 
