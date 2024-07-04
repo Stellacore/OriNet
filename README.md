@@ -3,6 +3,10 @@
 
 ## Demonstration Programs
 
+Validation programs are avialable in the 'vnv' subdirectory and
+are structured as an independent CMake project.
+Ref [vnv/README.md file](./vnv/README.md)
+
 Demonstration programs are available in the demo/ subdirectory and
 described in the [demo/README.md file](./demo/README.md)
 

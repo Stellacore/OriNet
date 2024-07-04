@@ -144,7 +144,7 @@ std::cout << '\n';
 /*! \brief 
  *
  * Ref Usage string in main code for details, i.e.:
- * \snippet demo_network.cpp DoxyExample01
+ * \snippet SimNetwork.cpp DoxyExample01
  */
 int
 main
