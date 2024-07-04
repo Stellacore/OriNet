@@ -44,7 +44,8 @@
 
 namespace orinet
 {
-namespace transform
+
+namespace robust
 {
 
 	/*! Return the median value of array of \b NOT_CONSTANT values.
@@ -154,7 +155,7 @@ namespace transform
 	template <typename FwdIter>
 	inline
 	rigibra::Transform
-	robustViaParameters
+	transformViaParameters
 		( FwdIter const & beg
 		, FwdIter const & end
 		)
@@ -245,7 +246,7 @@ namespace transform
 	template <typename FwdIter>
 	inline
 	rigibra::Transform
-	robustViaEffect
+	transformViaEffect
 		( FwdIter const & beg
 		, FwdIter const & end
 		)
@@ -339,7 +340,7 @@ namespace transform
 		return median;
 	}
 
-} // [transform]
+} // [robust]
 
 } // [orinet]
 

@@ -128,9 +128,10 @@ namespace
 
 		// Fit via median of transform location and angle components
 		// NOTE: this function is only appropriate for small rotations
-		using orinet::transform::robustViaParameters;
 		rigibra::Transform const gotXform
-			{ robustViaParameters(xforms.cbegin(), xforms.cend()) };
+			{ orinet::robust::transformViaParameters
+				(xforms.cbegin(), xforms.cend())
+			};
 
 		// estimate expected variability of transform effects
 		double const estMaxMag
@@ -140,7 +141,6 @@ namespace
 				, expXform
 				)
 			};
-std::cout << "estMaxMag(0): " << estMaxMag << '\n';
 
 		double const tol{ estMaxMag };
 		constexpr bool useNorm{ false };
@@ -221,9 +221,10 @@ std::cout << "estMaxMag(0): " << estMaxMag << '\n';
 			// obtain robustly estimated transformation
 			// Fit via median of transformation *results*
 			// NOTE: this function is appropriate for any size rotation
-			using orinet::transform::robustViaEffect;
 			rigibra::Transform const gotXform
-				{ robustViaEffect(xforms.cbegin(), xforms.cend()) };
+				{ orinet::robust::transformViaEffect
+					(xforms.cbegin(), xforms.cend())
+				};
 
 			// [DoxyExample02]
 
