@@ -59,7 +59,7 @@ namespace
 			using engabra::g3::pi;
 			std::pair<double, double> const locMinMax{ -10., 10. };
 			std::pair<double, double> const angMinMax{ -pi, pi };
-			using orinet::rand::uniformTransform;
+			using orinet::random::uniformTransform;
 			rigibra::Transform const x1w0
 				{ uniformTransform(locMinMax, angMinMax) };
 			rigibra::Transform const x2w1
@@ -87,7 +87,7 @@ namespace
 
 			// get computed values (which use abreviated formulae)
 			double const gotMaxMag
-				{ orinet::maxMagResultDifference(x1w0, x2w0, false) };
+				{ orinet::compare::maxMagResultDifference(x1w0, x2w0, false) };
 
 			// check if the two methods of computation agree
 			// allow for computation noise (quadratic operations in attitude)
@@ -150,7 +150,7 @@ namespace
 		constexpr bool expNearA{ false };
 
 		bool const gotNearA
-			{ orinet::similarResult(xform1, xform2, false, tolA) };
+			{ orinet::compare::similarResult(xform1, xform2, false, tolA) };
 		if (! (expNearA == gotNearA))
 		{
 			oss << "Failure of similarResult test 'A'\n";
@@ -164,7 +164,7 @@ namespace
 		double const tolB{ maxMag + 1./1024. };
 		constexpr bool expNearB{ true };
 		bool const gotNearB
-			{ orinet::similarResult(xform1, xform2, false, tolB) };
+			{ orinet::compare::similarResult(xform1, xform2, false, tolB) };
 		if (! (expNearB == gotNearB))
 		{
 			oss << "Failure of similarResult test 'B'\n";

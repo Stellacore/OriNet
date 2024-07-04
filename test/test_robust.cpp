@@ -61,7 +61,9 @@ namespace
 				rigibra::Transform const & xform = *iter;
 				constexpr bool norm{ false };
 				double const mag
-					{ orinet::maxMagResultDifference(xform, expXform, norm) };
+					{ orinet::compare::maxMagResultDifference
+						(xform, expXform, norm)
+					};
 				max = std::max(max, mag);
 			}
 			maxMag = max;
@@ -103,7 +105,7 @@ namespace
 		for (std::size_t nn{0u} ; nn < numMea ; ++nn)
 		{
 			rigibra::Transform const meaXform
-				{ orinet::rand::perturbedTransform
+				{ orinet::random::perturbedTransform
 					(expLoc, expAng, sigmaLoc, sigmaAng)
 				};
 			xforms.emplace_back(meaXform);
@@ -116,7 +118,7 @@ namespace
 			std::pair<double, double> const locMinMax{ -10., 10. };
 			std::pair<double, double> const angMinMax{ -pi, pi };
 			rigibra::Transform const errXform
-				{ orinet::rand::uniformTransform(locMinMax, angMinMax) };
+				{ orinet::random::uniformTransform(locMinMax, angMinMax) };
 			xforms.emplace_back(errXform);
 		}
 
@@ -126,9 +128,10 @@ namespace
 
 		// Fit via median of transform location and angle components
 		// NOTE: this function is only appropriate for small rotations
-		using orinet::transform::robustViaParameters;
 		rigibra::Transform const gotXform
-			{ robustViaParameters(xforms.cbegin(), xforms.cend()) };
+			{ orinet::robust::transformViaParameters
+				(xforms.cbegin(), xforms.cend())
+			};
 
 		// estimate expected variability of transform effects
 		double const estMaxMag
@@ -138,13 +141,12 @@ namespace
 				, expXform
 				)
 			};
-std::cout << "estMaxMag(0): " << estMaxMag << '\n';
 
 		double const tol{ estMaxMag };
 		constexpr bool useNorm{ false };
 		double gotMaxMag; // set in function next line
 		bool const okay
-			{ orinet::similarResult
+			{ orinet::compare::similarResult
 				(gotXform, expXform, useNorm, tol, &gotMaxMag)
 			};
 		if (! okay)
@@ -206,22 +208,23 @@ std::cout << "estMaxMag(0): " << estMaxMag << '\n';
 			std::pair<double, double> const locMinMax{ -2., 2. };
 			std::pair<double, double> const angMinMax{ -pi, pi };
 			rigibra::Transform const expXform
-				{ orinet::rand::uniformTransform(locMinMax, angMinMax) };
+				{ orinet::random::uniformTransform(locMinMax, angMinMax) };
 
 			// [DoxyExample02]
 
 			// simulate noisy observation data for this test case
 			std::vector<rigibra::Transform> const xforms
-				{ orinet::rand::noisyTransforms
+				{ orinet::random::noisyTransforms
 					(expXform, numMea, numErr, sigmaLoc, sigmaAng, locMinMax)
 				};
 
 			// obtain robustly estimated transformation
 			// Fit via median of transformation *results*
 			// NOTE: this function is appropriate for any size rotation
-			using orinet::transform::robustViaEffect;
 			rigibra::Transform const gotXform
-				{ robustViaEffect(xforms.cbegin(), xforms.cend()) };
+				{ orinet::robust::transformViaEffect
+					(xforms.cbegin(), xforms.cend())
+				};
 
 			// [DoxyExample02]
 
@@ -238,7 +241,7 @@ std::cout << "estMaxMag(0): " << estMaxMag << '\n';
 			constexpr bool useNorm{ false };
 			double gotMaxMag; // set in function next line
 			bool const okay
-				{ orinet::similarResult
+				{ orinet::compare::similarResult
 					(gotXform, expXform, useNorm, tol, &gotMaxMag)
 				};
 
