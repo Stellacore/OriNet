@@ -259,7 +259,7 @@ namespace transform
 			// pair of vectors to track through different transforms
 			static Vector const a0{ e1 };
 			static Vector const b0{ e2 };
-			static DirPair const refDirPair{ a0, b0 };
+			static align::DirPair const refDirPair{ a0, b0 };
 
 			//
 			// Copy translation parameter components into mutable collections
@@ -323,11 +323,11 @@ namespace transform
 					, medianOf(comp_b1s[1])
 					, medianOf(comp_b1s[2])
 					};
-				DirPair const bodDirPair{ median_a1, median_b1 };
+				align::DirPair const bodDirPair{ median_a1, median_b1 };
 
 				// attitude transforming reference pair onto body pair
 				rigibra::Attitude const medianAtt
-					{ alignDirPair(refDirPair, bodDirPair) };
+					{ align::attitudeFromDirPairs(refDirPair, bodDirPair) };
 
 				//
 				// Form a new transformation from the component means

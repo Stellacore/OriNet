@@ -43,6 +43,10 @@ Example:
 
 namespace orinet
 {
+
+namespace align
+{
+
 	//! \brief Two arbitrary but not (anti)parallel unitary directions
 	using DirPair = std::pair<engabra::g3::Vector, engabra::g3::Vector>;
 
@@ -59,7 +63,7 @@ namespace orinet
 	 */
 	inline
 	rigibra::Attitude
-	alignDirPair
+	attitudeFromDirPairs
 		( DirPair const & refDirPair
 			//!< Direction pair in reference frame
 		, DirPair const & bodDirPair
@@ -123,6 +127,8 @@ namespace orinet
 		return att;
 	}
 
+} // [align]
+
 
 } // [orinet]
 
@@ -135,7 +141,7 @@ namespace
 	std::ostream &
 	operator<<
 		( std::ostream & ostrm
-		, orinet::DirPair const & dirPair
+		, orinet::align::DirPair const & dirPair
 		)
 	{
 		ostrm << dirPair.first << ' ' << dirPair.second;

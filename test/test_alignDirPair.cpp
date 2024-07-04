@@ -24,7 +24,7 @@
 
 
 /*! \file
-\brief Unit tests (and example) code for OriNet::alignPair
+\brief Unit tests (and example) code for OriNet::align::attitudeFromDirPairs
 */
 
 
@@ -46,7 +46,7 @@ namespace
 	inline
 	engabra::g3::BiVector
 	angleBetween
-		( orinet::DirPair const & dirs
+		( orinet::align::DirPair const & dirs
 		)
 	{
 		using namespace engabra::g3;
@@ -59,7 +59,7 @@ namespace
 	inline
 	std::string
 	dirInfo
-		( orinet::DirPair const & dirs
+		( orinet::align::DirPair const & dirs
 		)
 	{
 		std::ostringstream oss;
@@ -74,13 +74,13 @@ namespace sim
 {
 	//! \brief Generate random pairs of directions
 	inline
-	orinet::DirPair
+	orinet::align::DirPair
 	directionPair
 		( std::pair<double, double> const & minMaxAngleMag = { .1, 3. }
 		)
 	{
 		using namespace engabra::g3;
-		orinet::DirPair dirPair{ null<Vector>(), null<Vector>() };
+		orinet::align::DirPair dirPair{ null<Vector>(), null<Vector>() };
 		for (;;)
 		{
 			using orinet::rand::randomDirection;
@@ -104,9 +104,9 @@ namespace sim
 
 	//! \brief Generate 'noisy' body frame direction pair
 	inline
-	orinet::DirPair
+	orinet::align::DirPair
 	bodyDirectionPair
-		( orinet::DirPair const & refDirPair
+		( orinet::align::DirPair const & refDirPair
 		, rigibra::Attitude const & attBodWrtRef
 		)
 	{
@@ -144,8 +144,8 @@ namespace sim
 		, rigibra::Attitude const & expAtt
 		, rigibra::Attitude const & gotAtt
 		, std::string const & testName
-		, orinet::DirPair const & refDirs = {}
-		, orinet::DirPair const & bodDirs = {}
+		, orinet::align::DirPair const & refDirs = {}
+		, orinet::align::DirPair const & bodDirs = {}
 		)
 	{
 		// reconstruction of test case can be sensistive (e.g. for
@@ -198,17 +198,17 @@ namespace sim
 
 		// simulate measurement data
 		using namespace engabra::g3;
-		orinet::DirPair const refDirPair
+		orinet::align::DirPair const refDirPair
 			{ e1, direction(e1+e2) };
-		orinet::DirPair const bodDirPair
+		orinet::align::DirPair const bodDirPair
 			{ sim::bodyDirectionPair(refDirPair, expAtt) };
 
 		rigibra::Attitude const gotAtt
-			{ orinet::alignDirPair(refDirPair, bodDirPair) };
+			{ orinet::align::attitudeFromDirPairs(refDirPair, bodDirPair) };
 
 		// [DoxyExample01]
 
-		checkAtt(oss, expAtt, gotAtt, "alignDirPair individual");
+		checkAtt(oss, expAtt, gotAtt, "attitudeFromDirPairs individual");
 	}
 
 	//! check special cases
@@ -224,15 +224,15 @@ namespace sim
 			rigibra::Attitude const expAtt{ rigibra::PhysAngle{ pi * e12 } };
 
 			// simulate measurement data
-			orinet::DirPair const refDirs{ e1, direction(e1+e2) };
+			orinet::align::DirPair const refDirs{ e1, direction(e1+e2) };
 			// exact 180 deg rotation
-			orinet::DirPair const bodDirs
+			orinet::align::DirPair const bodDirs
 				{ expAtt(refDirs.first), expAtt(refDirs.second) };
 
-			using orinet::alignDirPair;
-			rigibra::Attitude const gotAtt{ alignDirPair(refDirs, bodDirs) };
+			rigibra::Attitude const gotAtt
+				{ orinet::align::attitudeFromDirPairs(refDirs, bodDirs) };
 
-			checkAtt(oss, expAtt, gotAtt, "alignDirPair pi*e12");
+			checkAtt(oss, expAtt, gotAtt, "attitudeFromDirPairs pi*e12");
 		}
 
 		// no rotation
@@ -243,14 +243,14 @@ namespace sim
 
 			// simulate measurement data
 			using namespace engabra::g3;
-			orinet::DirPair const refDirs{ e1, direction(e1+e2) };
+			orinet::align::DirPair const refDirs{ e1, direction(e1+e2) };
 			// exact 180 deg rotation
-			orinet::DirPair const & bodDirs = refDirs;
+			orinet::align::DirPair const & bodDirs = refDirs;
 
-			using orinet::alignDirPair;
-			rigibra::Attitude const gotAtt{ alignDirPair(refDirs, bodDirs) };
+			rigibra::Attitude const gotAtt
+				{ orinet::align::attitudeFromDirPairs(refDirs, bodDirs) };
 
-			checkAtt(oss, expAtt, gotAtt, "alignDirPair identity");
+			checkAtt(oss, expAtt, gotAtt, "attitudeFromDirPairs identity");
 		}
 	}
 
@@ -271,17 +271,17 @@ namespace sim
 			// simulate random test case
 			using namespace rigibra;
 			Attitude const expAtt{ orinet::rand::uniformAttitude(angMinMax) };
-			orinet::DirPair const refDirs{ sim::directionPair() };
-			orinet::DirPair const bodDirs
+			orinet::align::DirPair const refDirs{ sim::directionPair() };
+			orinet::align::DirPair const bodDirs
 				{ sim::bodyDirectionPair(refDirs, expAtt) };
 
 			// compute best fit attitude
 			rigibra::Attitude const gotAtt
-				{ orinet::alignDirPair(refDirs, bodDirs) };
+				{ orinet::align::attitudeFromDirPairs(refDirs, bodDirs) };
 
 			// check solution
 			std::ostringstream tmsg;
-			tmsg << "alignDirPair volume run " << numRun;
+			tmsg << "attitudeFromDirPairs volume run " << numRun;
 			checkAtt(oss, expAtt, gotAtt, tmsg.str(), refDirs, bodDirs);
 		}
 	}
