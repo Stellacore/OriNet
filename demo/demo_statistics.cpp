@@ -72,9 +72,8 @@ namespace
 
 /*! \brief Monte-Carlo simulation of hexad 'maxMag' statistics.
  *
- * Program generates output of that should be useful for fitting a
- * heuristic model to predict hexad 'maxMag' values associated with
- * the random::perturbedTransform() generated transformations.
+ * Ref Usage string in main code for details:
+ * \snippet demo_statistics.cpp DoxyExample01
  */
 int
 main
@@ -82,13 +81,48 @@ main
 	, char * argv[]
 	)
 {
+	// [DoxyExample01]
+	char const * const useMsg =
+	R"(
+	This program generates a set of random transformations and
+	uses them to compuite and report several statistics. It
+	is a very specialized program created to support code
+	development and likely is of *no* general utility outside of
+	this special context.
+
+	(Pseudo)random transformations are generated with various
+	values for deviation paramters (sigmaLoc and sigmaAng). The
+	main loop samples a range of values for each of these in 
+	order to provide a 2D domain over which data statistics are
+	generated and reported. The ranges of sigma{Loc,Ang} values
+	are hard coded.
+
+	For each combination of sigma{Loc,Ang} values, a collection of
+	rigibra::Transform objects from orinet::rand::noisyTransforms()
+	are usd to compute statistics.
+
+	Reported statistics include:
+	 * orinet::maxMagResultDifference()
+	 * orinet::aveMagResultDifference()
+	)";
+	// [DoxyExample01]
+
 	if (! (2u == argc))
 	{
-		std::cerr << "Usage: <progname> outfile\n";
+
+		std::cerr
+			<< "\nUsage: <progname> outfile" << '\n'
+			<< useMsg << '\n'
+			;
 		return 1;
 	}
 	std::ofstream ofs(argv[1]);
-
+	ofs
+		<< '#' << "sigmaLoc"
+		<< ' ' << "sigmaAng"
+		<< ' ' << "maxMag"
+		<< ' ' << "aveMag"
+		<< '\n';
 
 	constexpr std::size_t numBaseXforms{ 32u };
 	constexpr std::size_t numMea{ 9u };
