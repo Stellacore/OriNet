@@ -34,8 +34,10 @@
 
 #include <Rigibra>
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <random>
 #include <set> // for development info
 #include <sstream>
 
@@ -315,6 +317,69 @@ namespace
 
 	}
 
+	void
+	checkMedian
+		( std::ostream & oss
+		, std::vector<double> const & vals
+		, double const & expMedian
+		, std::string const & tname
+		)
+	{
+		std::vector<double> tmps(vals.cbegin(), vals.cend());
+		// randomly shuffle values
+		static std::mt19937 gen{33288566u};
+		std::shuffle(tmps.begin(), tmps.end(), gen);
+
+		// extract median
+		double const gotMedian{ orinet::robust::medianOf(tmps) };
+
+		// check for case where not expecting answer (e.g. no data)
+		bool okay{ false };
+		if (! engabra::g3::isValid(expMedian))
+		{
+			if (! engabra::g3::isValid(gotMedian))
+			{
+				okay = true;
+			}
+		}
+		else
+		{
+			okay = engabra::g3::nearlyEquals(gotMedian, expMedian);
+		}
+
+		if (! okay)
+		{
+			oss << "Failure of medianOf test " << tname << '\n';
+			oss << "exp: " << expMedian << '\n';
+			oss << "got: " << gotMedian << '\n';
+		}
+
+	}
+
+	//! Test medianOf() function
+	void
+	test2
+		( std::ostream & oss
+		)
+	{
+		std::vector<double> const v0{                       };
+		std::vector<double> const v1{           0.          };
+		std::vector<double> const v2{        -1., 1.        };
+		std::vector<double> const v3{      -2., 0., 5.      };
+		std::vector<double> const v4{    -7, -1., 1., 3.    };
+		std::vector<double> const v5{  -4, -3., 0., 4., 5.  };
+		std::vector<double> const v6{-8, -7, -1., 1., 3., 9 };
+
+		static double const nan{ engabra::g3::null<double>() };
+		checkMedian(oss, v0, nan, "v0");
+		checkMedian(oss, v1,  0., "v1");
+		checkMedian(oss, v2,  0., "v2");
+		checkMedian(oss, v3,  0., "v3");
+		checkMedian(oss, v4,  0., "v4");
+		checkMedian(oss, v5,  0., "v5");
+		checkMedian(oss, v6,  0., "v6");
+	}
+
 }
 
 //! Check behavior of NS
@@ -327,6 +392,7 @@ main
 
 	test0(oss);
 	test1(oss);
+	test2(oss);
 
 	if (oss.str().empty()) // Only pass if no errors were encountered
 	{
