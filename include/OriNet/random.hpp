@@ -259,6 +259,7 @@ namespace random
 	uniformTransform
 		( std::pair<double, double> const & locMinMax
 		, std::pair<double, double> const & angMinMax
+			= { -engabra::g3::pi, engabra::g3::pi }
 		)
 	{
 		return rigibra::Transform
