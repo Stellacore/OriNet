@@ -159,7 +159,7 @@ namespace sim
 		using namespace rigibra;
 		using namespace engabra::g3;
 		double maxMag;
-		if (! orinet::similarResult(gotAtt, expAtt, tol, &maxMag))
+		if (! orinet::compare::similarResult(gotAtt, expAtt, tol, &maxMag))
 		{
 			PhysAngle const gotPhys{ gotAtt.physAngle() };
 			PhysAngle const expPhys{ expAtt.physAngle() };

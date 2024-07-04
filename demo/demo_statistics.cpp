@@ -166,13 +166,13 @@ main
 				for (rigibra::Transform const & xformSamp : xformSamps)
 				{
 					double const maxMag
-						{ orinet::maxMagResultDifference
+						{ orinet::compare::maxMagResultDifference
 							( xformSamp, xformBase, false
 							)
 						};
 
 					double const aveMag
-						{ orinet::aveMagResultDifference
+						{ orinet::compare::aveMagResultDifference
 							( xformSamp, xformBase, false
 							)
 						};

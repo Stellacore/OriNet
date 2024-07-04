@@ -61,7 +61,9 @@ namespace
 				rigibra::Transform const & xform = *iter;
 				constexpr bool norm{ false };
 				double const mag
-					{ orinet::maxMagResultDifference(xform, expXform, norm) };
+					{ orinet::compare::maxMagResultDifference
+						(xform, expXform, norm)
+					};
 				max = std::max(max, mag);
 			}
 			maxMag = max;
@@ -144,7 +146,7 @@ std::cout << "estMaxMag(0): " << estMaxMag << '\n';
 		constexpr bool useNorm{ false };
 		double gotMaxMag; // set in function next line
 		bool const okay
-			{ orinet::similarResult
+			{ orinet::compare::similarResult
 				(gotXform, expXform, useNorm, tol, &gotMaxMag)
 			};
 		if (! okay)
@@ -238,7 +240,7 @@ std::cout << "estMaxMag(0): " << estMaxMag << '\n';
 			constexpr bool useNorm{ false };
 			double gotMaxMag; // set in function next line
 			bool const okay
-				{ orinet::similarResult
+				{ orinet::compare::similarResult
 					(gotXform, expXform, useNorm, tol, &gotMaxMag)
 				};
 

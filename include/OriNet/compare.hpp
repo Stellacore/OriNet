@@ -43,6 +43,10 @@
 
 namespace orinet
 {
+
+namespace compare
+{
+
 	/*! \brief Differences: all basis vectors transformed by each attitude.
 	 *
 	 * Each of the basis vectors {e1, e2, e3} are trasnsformed by each
@@ -346,6 +350,8 @@ namespace orinet
 		}
 		return same;
 	}
+
+} // [compare]
 
 } // [orinet]
 
