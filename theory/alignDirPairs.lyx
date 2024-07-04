@@ -100,21 +100,22 @@ Introduction
 
 \begin_layout Standard
 The attitude of a body posed in three dimensional (3D) space can be established
- by the corresponding pairs independent directions.
- I.e.
- if an expression for direction pair is known in a body coordinate frame
+ by two corresponding pairs of independent directions.
+\end_layout
+
+\begin_layout Standard
+If an expression for direction pair is known in a body coordinate frame
  (e.g.
  
 \begin_inset Formula $\left(a,b\right)_{1}$
 \end_inset
 
-), and a cooresponding expression for this same direction pair 
+), and a corresponding expression for this same direction pair 
 \begin_inset Formula $\left(a,b\right)_{0}$
 \end_inset
 
  is known in a reference frame, then the attitude of the body with respect
- to the reference frame can be determined uniquely (provided directions
- 
+ to the reference frame is uniquely determined (provided directions 
 \begin_inset Formula $a$
 \end_inset
 
@@ -122,14 +123,16 @@ The attitude of a body posed in three dimensional (3D) space can be established
 \begin_inset Formula $b$
 \end_inset
 
- are not (anti)parallel with each other.
+ are not (anti)parallel with each other or nearly so to numeric precision.
 \end_layout
 
 \begin_layout Standard
-In practice, the directions in one, or both of the pairs, are obtained by
- measurement processes which introduce noise.
- As a result, there is no attitude of the body which will provide a perfect
- fit between both directions simultaneously.
+In practice, the individual direction vectors in one, or both of the pairs,
+ are typically obtained by measurement processes which introduce noise into
+ the recorded measurement.
+ As a result of the noise, it is generally the case that no attitude of
+ the body will provide a perfect fit between both of the individual directions
+ simultaneously.
  However, a reasonable 
 \begin_inset Quotes eld
 \end_inset
@@ -138,8 +141,9 @@ compromise
 \begin_inset Quotes erd
 \end_inset
 
- solution, elucidated in the following, can often be very useful in practical
- applications.
+ solution is to align the average direction of each pair.
+ This approach, which can often be very useful in practical applications,
+ is described and elucidated in the following.
 \end_layout
 
 \begin_layout Section
@@ -928,9 +932,10 @@ m_{1} & =\frac{a_{1}+b_{1}}{\left|a_{1}+b_{1}\right|}
 \begin_layout Itemize
 Compute the second partial rotation spinor
 \begin_inset Formula 
-\[
-\check{Q}=\sqrt{m_{1}m_{t}}
-\]
+\begin{align*}
+\check{Q} & =e^{\omega\hat{\Theta}_{1}}\\
+\omega & =-\frac{1}{2}\ln\left(m_{1}m_{t}\right)\hat{\Theta}_{1}
+\end{align*}
 
 \end_inset
 
@@ -1120,16 +1125,40 @@ d_{1}=\nu\frac{1}{2}R\left(a_{0}-b_{0}\right)R^{\dagger}
 
 \end_inset
 
-where scalar value, 
+where, 
 \begin_inset Formula $\nu$
 \end_inset
 
-, with 
+, is a positive
+\begin_inset Foot
+status open
+
+\begin_layout Plain Layout
+If 
+\begin_inset Formula $\nu$
+\end_inset
+
+ is negative, then the chirality of the direction pair changes and an artificial
+ half turn 
+\begin_inset Quotes eld
+\end_inset
+
+flip
+\begin_inset Quotes erd
+\end_inset
+
+ is introduced.
+\end_layout
+
+\end_inset
+
+ scalar value, 
 \begin_inset Formula $0<\nu$
 \end_inset
 
-, represents a noise factor (that models the 4th degree of measurement present
- in the direction pair and that should be discarded by a correct solution)
+, and represents a noise factor (that models the 4th degree of measurement
+ present in the direction pair and that should be discarded by a correct
+ solution)
 \end_layout
 
 \begin_layout Itemize
@@ -1156,7 +1185,7 @@ b_{1} & =s_{1}-d_{1}
 \begin_layout Standard
 These steps can be combined as
 \begin_inset Note Comment
-status collapsed
+status open
 
 \begin_layout Plain Layout
 \begin_inset Formula 
