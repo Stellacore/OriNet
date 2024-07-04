@@ -37,21 +37,37 @@ project(
 # For convenience, use build flags from OriNet, but these could be anything
 include(../cmake/BuildFlags.cmake)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)  # 20 needed for Graaf library
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# OriNet - main package
 find_package(OriNet REQUIRED NO_MODULE)
 message(OriNet Found: ${OriNet_FOUND})
 message(OriNet Version: ${OriNet_VERSION})
 
+# Rigibra - rigid body algebra package
 find_package(Rigibra REQUIRED NO_MODULE)
 message(Rigibra Found: ${Rigibra_FOUND})
 message(Rigibra Version: ${Rigibra_VERSION})
 
+# Engabra - engineering geometric algebra package
 find_package(Engabra REQUIRED NO_MODULE)
 message(Engabra Found: ${Engabra_FOUND})
 message(Engabra Version: ${Engabra_VERSION})
+
+# Graaf - graph data structure library
+include(FetchContent)
+FetchContent_Declare(
+	graaflib
+	GIT_REPOSITORY https://github.com/bobluppes/graaf.git
+	GIT_TAG main
+)
+# skip Graaf testing and benchmarks for speed fo build here
+set(SKIP_TESTS ON)
+set(SKIP_BENCHMARKS ON)
+set(SKIP_EXAMPLES ON)
+FetchContent_MakeAvailable(graaflib)
 
 
 set(ProgNames
@@ -81,6 +97,7 @@ foreach(ProgName ${ProgNames})
 			OriNet::OriNet
 			Rigibra::Rigibra
 			Engabra::Engabra
+			Graaf::Graaf
 		)
 
 endforeach(ProgName ${ProgNames})
