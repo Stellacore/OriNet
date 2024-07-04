@@ -32,6 +32,8 @@
 #include <Engabra>
 #include <Rigibra>
 
+#include <graaflib/graph.h>
+
 #include <algorithm>
 #include <iostream>
 #include <map>
@@ -43,6 +45,43 @@ namespace
 {
 	//! Association of stations in From/Into order.
 	using NdxPair = std::pair<std::size_t, std::size_t>;
+
+	// [DoxyExample01]
+	char const * const useMsg =
+	R"(
+	This program demonstrates determination of rigid body
+	network.  The network is associated with a directed
+	graph comprising nodes and edges in which the nodes
+	are considered to be rigid body frames and the edges
+	are rigid body transformations between them.
+
+	This program utilizes simulation to generate multiple
+	rigid body transformations between nodes.  Some of the
+	transformations are generated with small (and normally
+	distributed) errors, while others are generated with
+	arbitrarily large error to represent outliners/blunders.
+
+	The approach here is modeled on a survey adjustment in
+	which a number of stations are "setup".  Each setup
+	includes determining the relationship with a few prior
+	setups (akin to back-sight operations).
+
+	The overall steps are:
+	 * Generate a collection of random ideal station setups
+	 * For each station added, simulate multiple back-sights
+	   - select up to 2 (pseudo)random previous stations
+	   - simulate multiple measurement and outlier setups
+	     to each of the backsight stations.
+	   - compute median error with robust orientation (for
+	     use as graph edge weight)
+	   - add new station to graph as a node
+	   - add robust estimate of orientations as graph edge
+	   - add inverse transformation to graph as reverse edge
+	 * Find minimum spanning tree in graph
+	 * Use minimum spanning tree to connect graph into single
+	   network coordinate frame.
+	)";
+	// [DoxyExample01]
 
 } // [anon]
 
@@ -91,18 +130,18 @@ namespace sim
 		{
 			rigibra::Transform const & expCurrWrtRef = expStas[currSta];
 
-std::cout << "\nCurrent index: " << currSta << '\n';
+//std::cout << "\nCurrent index: " << currSta << '\n';
 
 			// generate backsight transforms for this station
 			static std::mt19937 gen(55342463u);
 			std::shuffle(staNdxs.begin(), staNdxs.begin() + currSta, gen);
-std::cout << "  backsight to: ";
+//std::cout << "  backsight to: ";
 
 			std::size_t const nbMax{ std::min(currSta, numBacksight) };
 			for (std::size_t backSta{0u} ; backSta < nbMax ; ++backSta)
 			{
 				// connect randomly with previous stations
-std::cout << ' ' << staNdxs[backSta];
+//std::cout << ' ' << staNdxs[backSta];
 				rigibra::Transform const & expBackWrtRef = expStas[backSta];
 
 				// compute expected relative setup transformation
@@ -125,20 +164,100 @@ std::cout << ' ' << staNdxs[backSta];
 					};
 
 				// record relative transforms for later processing
-				std::size_t const & fromNdx = backSta;
+				std::size_t const & fromNdx = staNdxs[backSta];
 				std::size_t const & intoNdx = currSta;
 				pairXforms.emplace_hint
 					( pairXforms.end()
 					, std::make_pair(NdxPair{fromNdx, intoNdx}, obsXforms)
 					);
 			}
-std::cout << '\n';
+//std::cout << '\n';
 		}
 
 		return pairXforms;
 	}
 
 } // [sim]
+
+
+namespace net
+{
+
+	//! Use station setups as network graph nodes
+	struct Station
+	{
+		std::size_t theStaNdx;
+		rigibra::Transform theExpXform;
+		rigibra::Transform theGotXform;
+
+	}; // Station
+
+	//! Use rigid body transformation as network graph edges
+	using Edge = rigibra::Transform;
+
+	//! Generate graph structure with robust edges
+	graaf::directed_graph<Station, Edge>
+	graphFrom
+		( std::vector<rigibra::Transform> const expStas
+		, std::map<NdxPair, std::vector<rigibra::Transform> >
+			const & pairXforms
+		)
+	{
+		graaf::directed_graph<Station, Edge> network;
+
+		// populate graph with a node for every edge
+		using StaNdx = std::size_t;
+		using VertId = graaf::vertex_id_t;
+		std::map<StaNdx, VertId> mapVertFromNdx;
+
+		// loop overall stations
+		for (std::size_t staNdx{0u} ; staNdx < expStas.size() ; ++staNdx)
+		{
+			rigibra::Transform const & expSta = expStas[staNdx];
+			static rigibra::Transform const empty
+				{ rigibra::null<rigibra::Transform>() };
+			Station const station{ staNdx, expSta, empty };
+			// add vertex into map
+			mapVertFromNdx[staNdx] = network.add_vertex(station);
+		}
+
+		// loop over all backsight station pairs
+		// - compute a robust estimate of relationship using all observations
+		// - enter robust estimate into graph as edges
+		for (std::map<NdxPair, std::vector<rigibra::Transform> >::value_type
+			const & pairXform : pairXforms)
+		{
+
+			std::size_t const & fromNdx = pairXform.first.first;
+			std::size_t const & intoNdx = pairXform.first.second;
+			std::vector<rigibra::Transform> const & xforms = pairXform.second;
+
+			// compute robustly rigid body transform to use for edge
+			rigibra::Transform const fitXform
+				{ orinet::robust::transformViaEffect
+					(xforms.cbegin(), xforms.cend())
+				};
+
+			// access corresponding graph nodes
+			VertId const & fromVert = mapVertFromNdx.at(fromNdx);
+			VertId const & intoVert = mapVertFromNdx.at(intoNdx);
+			// check that from/into nodes are in graph
+			bool const fromOkay{ network.has_vertex(fromVert) };
+			bool const intoOkay{ network.has_vertex(intoVert) };
+			if (! (fromOkay && intoOkay))
+			{
+				std::cerr << "bad vertex lookup\n" << std::endl;
+				exit(8);
+			}
+
+			// add edge
+			network.add_edge(fromVert, intoVert, fitXform);
+		}
+
+		return network;
+	}
+
+} // [net]
 
 
 /*! \brief 
@@ -152,43 +271,6 @@ main
 	, char * argv[]
 	)
 {
-	// [DoxyExample01]
-	char const * const useMsg =
-	R"(
-	This program demonstrates determination of rigid body
-	network.  The network is associated with a directed
-	graph comprising nodes and edges in which the nodes
-	are considered to be rigid body frames and the edges
-	are rigid body transformations between them.
-
-	This program utilizes simulation to generate multiple
-	rigid body transformations between nodes.  Some of the
-	transformations are generated with small (and normally
-	distributed) errors, while others are generated with
-	arbitrarily large error to represent outliners/blunders.
-
-	The approach here is modeled on a survey adjustment in
-	which a number of stations are "setup".  Each setup
-	includes determining the relationship with a few prior
-	setups (akin to back-sight operations).
-
-	The overall steps are:
-	 * Generate a collection of random ideal station setups
-	 * For each station added, simulate multiple back-sights
-	   - select up to 2 (pseudo)random previous stations
-	   - simulate multiple measurement and outlier setups
-	     to each of the backsight stations.
-	   - compute median error with robust orientation (for
-	     use as graph edge weight)
-	   - add new station to graph as a node
-	   - add robust estimate of orientations as graph edge
-	   - add inverse transformation to graph as reverse edge
-	 * Find minimum spanning tree in graph
-	 * Use minimum spanning tree to connect graph into single
-	   network coordinate frame.
-	)";
-	// [DoxyExample01]
-
 	if (! (2u == argc))
 	{
 
@@ -201,15 +283,26 @@ main
 	}
 	std::cout << "\nHi from " << __FILE__ << '\n';
 
+	//
 	// Configuration parameters
+	//
+	/*
 	constexpr std::size_t numStations{ 10u };
 	constexpr std::size_t numBacksight{ 3u };
 	constexpr std::size_t numMea{ 7u };
 	constexpr std::size_t numErr{ 3u };
 	constexpr std::pair<double, double> locMinMax{ 0., 100. };
+	*/
+	constexpr std::size_t numStations{ 8u };
+	constexpr std::size_t numBacksight{ 2u };
+	constexpr std::size_t numMea{ 2u };
+	constexpr std::size_t numErr{ 0u };
+	constexpr std::pair<double, double> locMinMax{ 0., 100. };
 
-	// generate collection of expected station orientations
+	//
+	// Generate collection of expected station orientations
 	// (used for generating simulation data)
+	//
 	std::vector<rigibra::Transform> const expStas
 		{ sim::randomStations(numStations, locMinMax) };
 std::cout << "number stations: " << expStas.size() << '\n';
@@ -221,7 +314,17 @@ std::cout << "number stations: " << expStas.size() << '\n';
 		};
 std::cout << "number backsights: " << pairXforms.size() << '\n';
 
-	// process observations (enter into graph)
+	//
+	// Populate graph: station frame nodes and robustly fit transform edges
+	//
+
+	graaf::directed_graph<net::Station, net::Edge> const network
+		{ net::graphFrom(expStas, pairXforms) };
+
+	/*
+	//
+	// Process observations (enter into graph)
+	//
 	for (std::map<NdxPair, std::vector<rigibra::Transform> >::value_type
 		const & pairXform : pairXforms)
 	{
@@ -232,9 +335,10 @@ std::cout << "NdxPair: " << fromNdx << ' ' << intoNdx << '\n';
 
 		for (rigibra::Transform const & xform : xforms)
 		{
-std::cout << "  xform: " << xform << '\n';
+//std::cout << "  xform: " << xform << '\n';
 		}
 	}
+	*/
 
 }
 
