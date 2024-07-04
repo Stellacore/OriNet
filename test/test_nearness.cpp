@@ -59,7 +59,7 @@ namespace
 			using engabra::g3::pi;
 			std::pair<double, double> const locMinMax{ -10., 10. };
 			std::pair<double, double> const angMinMax{ -pi, pi };
-			using orinet::rand::uniformTransform;
+			using orinet::random::uniformTransform;
 			rigibra::Transform const x1w0
 				{ uniformTransform(locMinMax, angMinMax) };
 			rigibra::Transform const x2w1

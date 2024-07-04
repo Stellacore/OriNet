@@ -83,9 +83,8 @@ namespace sim
 		orinet::align::DirPair dirPair{ null<Vector>(), null<Vector>() };
 		for (;;)
 		{
-			using orinet::rand::randomDirection;
-			Vector const aDir{ randomDirection() };
-			Vector const bDir{ randomDirection() };
+			Vector const aDir{ orinet::random::directionVector() };
+			Vector const bDir{ orinet::random::directionVector() };
 
 			BiVector const angle{ logG2(aDir * bDir).theBiv };
 			double const angleMag{ magnitude(angle) };
@@ -270,7 +269,7 @@ namespace sim
 
 			// simulate random test case
 			using namespace rigibra;
-			Attitude const expAtt{ orinet::rand::uniformAttitude(angMinMax) };
+			Attitude const expAtt{ orinet::random::uniformAttitude(angMinMax) };
 			orinet::align::DirPair const refDirs{ sim::directionPair() };
 			orinet::align::DirPair const bodDirs
 				{ sim::bodyDirectionPair(refDirs, expAtt) };

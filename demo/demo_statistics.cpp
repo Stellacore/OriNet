@@ -98,7 +98,7 @@ main
 	are hard coded.
 
 	For each combination of sigma{Loc,Ang} values, a collection of
-	rigibra::Transform objects from orinet::rand::noisyTransforms()
+	rigibra::Transform objects from orinet::random::noisyTransforms()
 	are usd to compute statistics.
 
 	Reported statistics include:
@@ -142,14 +142,14 @@ main
 	{
 		// compute base transform
 		rigibra::Transform const xformBase
-			{ orinet::rand::uniformTransform(locMinMax, angMinMax) };
+			{ orinet::random::uniformTransform(locMinMax, angMinMax) };
 
 		for (double const & sigmaLoc : sigmaLocs)
 		{
 			for (double const & sigmaAng : sigmaAngs)
 			{
 				std::vector<rigibra::Transform> const xformSamps
-					{ orinet::rand::noisyTransforms
+					{ orinet::random::noisyTransforms
 						(xformBase, numMea, numErr, sigmaLoc, sigmaAng)
 					};
 

@@ -103,7 +103,7 @@ namespace
 		for (std::size_t nn{0u} ; nn < numMea ; ++nn)
 		{
 			rigibra::Transform const meaXform
-				{ orinet::rand::perturbedTransform
+				{ orinet::random::perturbedTransform
 					(expLoc, expAng, sigmaLoc, sigmaAng)
 				};
 			xforms.emplace_back(meaXform);
@@ -116,7 +116,7 @@ namespace
 			std::pair<double, double> const locMinMax{ -10., 10. };
 			std::pair<double, double> const angMinMax{ -pi, pi };
 			rigibra::Transform const errXform
-				{ orinet::rand::uniformTransform(locMinMax, angMinMax) };
+				{ orinet::random::uniformTransform(locMinMax, angMinMax) };
 			xforms.emplace_back(errXform);
 		}
 
@@ -206,13 +206,13 @@ std::cout << "estMaxMag(0): " << estMaxMag << '\n';
 			std::pair<double, double> const locMinMax{ -2., 2. };
 			std::pair<double, double> const angMinMax{ -pi, pi };
 			rigibra::Transform const expXform
-				{ orinet::rand::uniformTransform(locMinMax, angMinMax) };
+				{ orinet::random::uniformTransform(locMinMax, angMinMax) };
 
 			// [DoxyExample02]
 
 			// simulate noisy observation data for this test case
 			std::vector<rigibra::Transform> const xforms
-				{ orinet::rand::noisyTransforms
+				{ orinet::random::noisyTransforms
 					(expXform, numMea, numErr, sigmaLoc, sigmaAng, locMinMax)
 				};
 

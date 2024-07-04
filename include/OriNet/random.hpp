@@ -45,7 +45,7 @@ Example:
 namespace orinet
 {
 
-namespace rand
+namespace random
 {
 	// Range of translations - plus/minus this limit
 //	constexpr double sLimLoc{ 10. };
@@ -56,7 +56,7 @@ namespace rand
 	//! \brief A random unitary direction vector
 	inline
 	engabra::g3::Vector
-	randomDirection
+	directionVector
 		()
 	{
 		using namespace engabra::g3;
@@ -320,7 +320,7 @@ namespace rand
 		return xforms;
 	}
 
-} // [rand]
+} // [random]
 
 } // [orinet]
 
