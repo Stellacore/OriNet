@@ -85,7 +85,7 @@ main
 	char const * const useMsg =
 	R"(
 	This program generates a set of random transformations and
-	uses them to compuite and report several statistics. It
+	uses them to compute and report several statistics. It
 	is a very specialized program created to support code
 	development and likely is of *no* general utility outside of
 	this special context.
@@ -99,11 +99,11 @@ main
 
 	For each combination of sigma{Loc,Ang} values, a collection of
 	rigibra::Transform objects from orinet::random::noisyTransforms()
-	are usd to compute statistics.
+	are used to compute statistics.
 
 	Reported statistics include:
-	 * orinet::maxMagResultDifference()
-	 * orinet::aveMagResultDifference()
+	 * orinet::compare::maxMagResultDifference()
+	 * orinet::compare::aveMagResultDifference()
 	)";
 	// [DoxyExample01]
 
