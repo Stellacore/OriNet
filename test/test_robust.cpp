@@ -53,24 +53,10 @@ namespace
 		, rigibra::Transform const & expXform
 		)
 	{
-		double maxMag{ engabra::g3::null<double>() };
-		if (itEnd != itBeg)
-		{
-			double max{ -1. };
-			for (std::vector<rigibra::Transform>::const_iterator
-				iter{itBeg} ; itEnd != iter ; ++iter)
-			{
-				rigibra::Transform const & xform = *iter;
-				constexpr bool norm{ false };
-				double const mag
-					{ orinet::compare::maxMagResultDifference
-						(xform, expXform, norm)
-					};
-				max = std::max(max, mag);
-			}
-			maxMag = max;
-		}
-		return maxMag;
+		constexpr bool norm{ false };
+		using namespace orinet::compare;
+		Stats const stats{ differenceStats(itBeg, itEnd, expXform, norm) };
+		return stats.theMaxMagDiff;
 	}
 
 	//! Examples for documentation - evaluate once
