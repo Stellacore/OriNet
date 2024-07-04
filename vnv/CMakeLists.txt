@@ -22,12 +22,39 @@
 # SOFTWARE.
 #
 
+
+cmake_minimum_required(VERSION 3.25)
+
+project(
+	OriNetVnV
+	VERSION 0.1.0
+	DESCRIPTION "OriNet/VnV - OriNet Verification and Validation."
+	HOMEPAGE_URL
+		"https://github.com/Stellacore/OriNet/vnv"
+	LANGUAGES CXX
+	)
+
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+find_package(OriNet REQUIRED NO_MODULE)
+message(OriNet Found: ${OriNet_FOUND})
+message(OriNet Version: ${OriNet_VERSION})
+
+find_package(Rigibra REQUIRED NO_MODULE)
+message(Rigibra Found: ${Rigibra_FOUND})
+message(Rigibra Version: ${Rigibra_VERSION})
+
+find_package(Engabra REQUIRED NO_MODULE)
+message(Engabra Found: ${Engabra_FOUND})
+message(Engabra Version: ${Engabra_VERSION})
+
+
 set(ProgNames
 
-	# _  # template for demo programs
-
-	demo_statistics
-	demo_version
+	SimNetwork
 
 	)
 
@@ -38,23 +65,13 @@ foreach(ProgName ${ProgNames})
 		${ProgName}.cpp
 		)
 
-	target_compile_options(
-		${ProgName}
-		PRIVATE
-			$<$<CXX_COMPILER_ID:Clang>:${BUILD_FLAGS_FOR_CXX_CLANG}>
-			$<$<CXX_COMPILER_ID:GNU>:${BUILD_FLAGS_FOR_CXX_GCC}>
-			$<$<CXX_COMPILER_ID:MSVC>:${BUILD_FLAGS_FOR_CXX_VISUAL}>
-		)
-
-	target_include_directories(
-		${ProgName}
-		PUBLIC
-			${CMAKE_SOURCE_DIR}/include/ # public interface
-		PRIVATE
-			${CMAKE_CURRENT_SOURCE_DIR}/../src # project source
-		PRIVATE
-			${CMAKE_CURRENT_SOURCE_DIR}  # local test code includes
-		)
+#	target_compile_options(
+#		${ProgName}
+#		PRIVATE
+#			$<$<CXX_COMPILER_ID:Clang>:${BUILD_FLAGS_FOR_CXX_CLANG}>
+#			$<$<CXX_COMPILER_ID:GNU>:${BUILD_FLAGS_FOR_CXX_GCC}>
+#			$<$<CXX_COMPILER_ID:MSVC>:${BUILD_FLAGS_FOR_CXX_VISUAL}>
+#		)
 
 	target_link_libraries(
 		${ProgName}

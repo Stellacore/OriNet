@@ -28,8 +28,7 @@
 */
 
 
-#include "OriNet/OriNet"
-
+#include <OriNet>
 #include <Engabra>
 #include <Rigibra>
 
