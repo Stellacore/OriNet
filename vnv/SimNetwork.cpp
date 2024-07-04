@@ -222,7 +222,7 @@ std::cout << "number stations: " << expStas.size() << '\n';
 std::cout << "number backsights: " << pairXforms.size() << '\n';
 
 	// process observations (enter into graph)
-	for (std::pair<NdxPair, std::vector<rigibra::Transform> >
+	for (std::map<NdxPair, std::vector<rigibra::Transform> >::value_type
 		const & pairXform : pairXforms)
 	{
 		std::size_t const & fromNdx = pairXform.first.first;
