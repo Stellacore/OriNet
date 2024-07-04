@@ -50,7 +50,7 @@ namespace orinet
 namespace robust
 {
 
-	/*! Return the median value of array of \b NOT_CONSTANT values.
+	/*! \brief Return the median value of array of \b NOT_CONSTANT values.
 	 *
 	 * For non-empty collection containing 'N' elements:
 	 * \arg For empty sizes: returns engabra::g3::null<double>() value.

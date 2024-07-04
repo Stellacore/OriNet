@@ -908,6 +908,7 @@ WARN_LOGFILE           =
 
 INPUT                  = @CMAKE_CURRENT_SOURCE_DIR@/../README.md \
                          @CMAKE_CURRENT_SOURCE_DIR@/../include/OriNet \
+                         @CMAKE_CURRENT_SOURCE_DIR@/../include/OriNet/OriNet \
                          @CMAKE_CURRENT_SOURCE_DIR@/../demo/
 
 # This tag can be used to specify the character encoding of the source files
@@ -991,6 +992,7 @@ EXCLUDE_SYMBOLS        =
 # command).
 
 EXAMPLE_PATH           = @CMAKE_CURRENT_SOURCE_DIR@/../test \
+                         @CMAKE_CURRENT_SOURCE_DIR@/../include/OriNet \
                          @CMAKE_CURRENT_SOURCE_DIR@/../demo
 
 # If the value of the EXAMPLE_PATH tag contains directories, you can use the

@@ -33,15 +33,21 @@
 #include <iostream>
 
 
-//! Show project version information
+/*! \brief Demonstrate access to project and source identifying information.
+ *
+ * Example:
+ * \snippet demo_version.cpp DoxyExample01
+ */
 int
 main
 	()
 {
+	// [DoxyExample01]
 	std::cout
 		<< "From " << __FILE__ << '\n'
 		<< "Project Version is: " << orinet::projectVersion() << '\n'
 		<< "Source Identity is: " << orinet::sourceIdentity() << '\n'
 		;
+	// [DoxyExample01]
 }
 
