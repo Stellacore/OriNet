@@ -34,11 +34,15 @@
 
 #include <graaflib/graph.h>
 #include <graaflib/io/dot.h>
+#include <graaflib/algorithm/minimum_spanning_tree/kruskal.h>
+#include <graaflib/algorithm/graph_traversal/breadth_first_search.h>
 
 #include <algorithm>
+#include <array>
 #include <iostream>
 #include <map>
 #include <numeric>
+#include <set>
 #include <vector>
 
 
@@ -193,30 +197,44 @@ namespace net
 
 	}; // Station
 
-	//! Use station-to-station tranformation for network graph edges
-	struct Backsight
-	{
-		rigibra::Transform theXform;
-		double const theMaxMagErr;
-
-	}; // Backsight
-
 	//! Use rigid body transformation as network graph edges
 	struct Edge : public graaf::weighted_edge<double>
 	{
-		Backsight theBacksight;
+		//! station-to-station tranformation for network graph edges
+		rigibra::Transform theXform;
+		double theMaxMagErr;
 
 		inline
 		explicit
 		Edge
-			( Backsight const & backsight
+			( rigibra::Transform const & xform
+			, double const & maxMagErr
 			)
-			: theBacksight{ backsight }
+			: theXform{ xform }
+			, theMaxMagErr{ maxMagErr }
 		{ }
 
 		inline
 		~Edge
 			() = default;
+
+		inline
+		bool
+		operator<
+			( Edge const & other
+			) const noexcept
+		{
+			return (this->get_weight() < other.get_weight());
+		}
+
+		inline
+		bool
+		operator!=
+			( Edge const & other
+			) const noexcept
+		{
+			return ((other < (*this)) || ((*this) < other));
+		}
 
 		[[nodiscard]]
 		inline
@@ -224,7 +242,7 @@ namespace net
 		get_weight
 			() const noexcept override
 		{
-			return theBacksight.theMaxMagErr;
+			return theMaxMagErr;
 		}
 
 	}; // Edge
@@ -301,8 +319,7 @@ namespace net
 			}
 
 			// add edge
-			Backsight const backsight{ fitXform, fitMaxMagErr };
-			Edge const edge{ backsight };
+			Edge const edge{ fitXform, fitMaxMagErr  };
 			network.add_edge(fromVert, intoVert, edge);
 		}
 
@@ -354,6 +371,48 @@ namespace net
 		graaf::io::to_dot(network, dotPath, vertLabel, edgeLabel);
 	}
 
+	//! Create (sub)graph from network, that contains only specified edges
+	graaf::undirected_graph<Station, Edge>
+	graphFromEdges
+		( std::vector<graaf::edge_id_t> const & eIds
+		, graaf::undirected_graph<net::Station, net::Edge> const & network
+		)
+	{
+		graaf::undirected_graph<Station, Edge> outGraph;
+
+		// add vertices to output graph and remember mapping
+		std::map<graaf::vertex_id_t, graaf::vertex_id_t> mapOutFmInp;
+		for (graaf::edge_id_t const & eId : eIds)
+		{
+			std::cout << "eId: " << eId.first << ',' << eId.second << '\n';
+			std::array<graaf::vertex_id_t, 2u> const inps
+				{ eId.first, eId.second };
+			for (graaf::vertex_id_t const & inp : inps)
+			{
+				std::map<graaf::vertex_id_t, graaf::vertex_id_t>::const_iterator
+					const itFind{ mapOutFmInp.find(inp) };
+				if (mapOutFmInp.end() == itFind)
+				{
+					Station const & station = network.get_vertex(inp);
+					mapOutFmInp[inp] = outGraph.add_vertex(station);
+				}
+			}
+		}
+		
+		// add edges to output graph
+		for (graaf::edge_id_t const & eId : eIds)
+		{
+			Edge const & edge = network.get_edge(eId);
+			outGraph.add_edge
+				( mapOutFmInp.at(eId.first)
+				, mapOutFmInp.at(eId.second)
+				, edge
+				);
+		}
+
+		return outGraph;
+	}
+
 } // [net]
 
 
@@ -368,16 +427,19 @@ main
 	, char * argv[]
 	)
 {
-	if (! (1 < argc))
+	if (! (2 < argc))
 	{
 		std::cerr
 			<< '\n' << argv[0] << '\n'
 			<< useMsg << '\n'
-			<< "\nUsage: <progname> outFile" << '\n'
+			<< "\nUsage: <progname>"
+				" <network_all.dot> <network_mst.dot>"
+			<< '\n'
 			;
 		return 1;
 	}
-	std::filesystem::path const dotPath{ argv[1] };
+	std::filesystem::path const dotPathAll{ argv[1] };
+	std::filesystem::path const dotPathMst{ argv[2] };
 	std::cout << "\nHi from " << __FILE__ << '\n';
 
 	//
@@ -419,13 +481,109 @@ std::cout << "number backsights: " << pairXforms.size() << '\n';
 		{ net::graphFrom(expStas, pairXforms) };
 
 	// save network topology to graphviz '.dot' file format
-	saveNetworkGraphic(network, dotPath);
+	saveNetworkGraphic(network, dotPathAll);
 
 	//
 	// Find minimum spanning tree
 	//
 
-	
+	std::vector<graaf::edge_id_t> const eIds
+		{ graaf::algorithm::kruskal_minimum_spanning_tree(network) };
 
+	// The mst contents get updated below
+	graaf::undirected_graph<net::Station, net::Edge> mst
+		{ net::graphFromEdges(eIds, network) };
+
+	saveNetworkGraphic(mst, dotPathMst);
+
+	//
+	// Update station orientations by traversing MST
+	//
+
+	struct Propagator
+	{
+		graaf::undirected_graph<net::Station, net::Edge> & theMst;
+		std::vector<rigibra::Transform> const & theStas;
+
+		inline
+		void
+		operator()
+			( graaf::edge_id_t const & eId
+			) const
+		{
+			graaf::vertex_id_t const & vId1 = eId.first;
+			graaf::vertex_id_t const & vId2 = eId.second;
+			net::Station & fromSta = theMst.get_vertex(vId1);
+			net::Station & intoSta = theMst.get_vertex(vId2);
+			std::size_t const & fromStaNdx = fromSta.theStaNdx;
+			std::size_t const & intoStaNdx = intoSta.theStaNdx;
+			net::Edge const & edge = theMst.get_edge(eId);
+
+			rigibra::Transform const tmpIntoWrtFrom{ edge.theXform };
+			rigibra::Transform xIntoWrtFrom{};
+			if (fromStaNdx < intoStaNdx)
+			{
+				xIntoWrtFrom = tmpIntoWrtFrom;
+			}
+			else
+			{
+				xIntoWrtFrom = rigibra::inverse(tmpIntoWrtFrom);
+			}
+
+			theMst.remove_edge(vId1, vId2);
+
+			if (! rigibra::isValid(fromSta.theGotXform))
+			{
+				fromSta.theGotXform = fromSta.theExpXform;
+				std::cout << "\n\n@@@ setting fromSta.theGotXform"
+					" for fromStaNdx: " << fromStaNdx << '\n';
+			}
+			rigibra::Transform const & xFromWrtRef = fromSta.theGotXform;
+			intoSta.theGotXform = xIntoWrtFrom * xFromWrtRef;
+
+			std::cout
+				<< '\n'
+				<< "Prop: eId: "
+				<< vId1 << "-->" << vId2
+				<< ' '
+				<< "'" << fromStaNdx << "'-->'" << intoStaNdx << "'"
+				<< '\n';
+			std::cout
+				<< "  fromWrtRef (exp): " << fromSta.theExpXform
+				<< '\n'
+				<< "  fromWrtRef (got): " << fromSta.theGotXform
+				<< '\n';
+			std::cout
+				<< "   edgeIntoWrtFrom: " << xIntoWrtFrom
+				<< '\n';
+			std::cout
+				<< "  intoWrtRef (exp): " << intoSta.theExpXform
+				<< '\n'
+				<< "  intoWrtRef (got): " << intoSta.theGotXform
+				<< '\n';
+		}
+
+	}; // Propagator
+
+	Propagator propagator{ mst, expStas };
+	graaf::algorithm::breadth_first_traverse(mst, 0, propagator);
 }
 
+/*
+	struct Station
+	{
+		std::size_t theStaNdx;
+		rigibra::Transform theExpXform;
+		rigibra::Transform theGotXform;
+
+	}; // Station
+
+	struct Edge : public graaf::weighted_edge<double>
+	{
+		rigibra::Transform theXform;
+		double theMaxMagErr;
+	...
+
+	}
+
+*/
