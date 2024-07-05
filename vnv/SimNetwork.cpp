@@ -33,6 +33,7 @@
 #include <Rigibra>
 
 #include <graaflib/graph.h>
+#include <graaflib/io/dot.h>
 
 #include <algorithm>
 #include <iostream>
@@ -192,8 +193,16 @@ namespace net
 
 	}; // Station
 
+	//! Use station-to-station tranformation for network graph edges
+	struct Backsight
+	{
+		rigibra::Transform theXform;
+		double const theMaxMagErr;
+
+	}; // Backsight
+
 	//! Use rigid body transformation as network graph edges
-	using Edge = rigibra::Transform;
+	using Edge = Backsight;
 
 	//! Generate graph structure with robust edges
 	graaf::directed_graph<Station, Edge>
@@ -237,6 +246,11 @@ namespace net
 				{ orinet::robust::transformViaEffect
 					(xforms.cbegin(), xforms.cend())
 				};
+			orinet::compare::Stats const stats
+				{ orinet::compare::differenceStats
+					(xforms.cbegin(), xforms.cend(), fitXform, false)
+				};
+			double const & fitMaxMagErr = stats.theMedMagDiff;
 
 			// access corresponding graph nodes
 			VertId const & fromVert = mapVertFromNdx.at(fromNdx);
@@ -251,10 +265,56 @@ namespace net
 			}
 
 			// add edge
-			network.add_edge(fromVert, intoVert, fitXform);
+			Backsight const backsight{ fitXform, fitMaxMagErr };
+			network.add_edge(fromVert, intoVert, backsight);
 		}
 
 		return network;
+	}
+
+
+	//! \brief Save graph information to graphviz '.dot' graphic file.
+	inline
+	void
+	saveNetworkGraphic
+		( graaf::directed_graph<net::Station, net::Edge> const network
+		, std::filesystem::path const & dotPath
+		)
+	{
+
+		// report graph properties
+		auto const vOut
+			{ []
+				( graaf::vertex_id_t const & vId
+				, net::Station const & sta
+				)
+			-> std::string
+				{
+					std::ostringstream lbl;
+					lbl << "label="
+						<< '"'
+						<< vId << '/' << sta.theStaNdx
+						<< '"';
+					return lbl.str();
+				}
+			};
+		auto const eOut
+			{ []
+				( graaf::edge_id_t const & /* eId */
+				, net::Backsight const & backsight
+				)
+			-> std::string
+				{
+					std::ostringstream lbl;
+					lbl << "label="
+						<< '"'
+						<< backsight.theMaxMagErr
+						<< '"';
+					return lbl.str();
+				}
+			};
+
+		graaf::io::to_dot(network, dotPath, vOut, eOut);
 	}
 
 } // [net]
@@ -271,9 +331,8 @@ main
 	, char * argv[]
 	)
 {
-	if (! (2u == argc))
+	if (! (1 < argc))
 	{
-
 		std::cerr
 			<< '\n' << argv[0] << '\n'
 			<< useMsg << '\n'
@@ -281,6 +340,7 @@ main
 			;
 		return 1;
 	}
+	std::filesystem::path const dotPath{ argv[1] };
 	std::cout << "\nHi from " << __FILE__ << '\n';
 
 	//
@@ -321,24 +381,7 @@ std::cout << "number backsights: " << pairXforms.size() << '\n';
 	graaf::directed_graph<net::Station, net::Edge> const network
 		{ net::graphFrom(expStas, pairXforms) };
 
-	/*
-	//
-	// Process observations (enter into graph)
-	//
-	for (std::map<NdxPair, std::vector<rigibra::Transform> >::value_type
-		const & pairXform : pairXforms)
-	{
-		std::size_t const & fromNdx = pairXform.first.first;
-		std::size_t const & intoNdx = pairXform.first.second;
-		std::vector<rigibra::Transform> const & xforms = pairXform.second;
-std::cout << "NdxPair: " << fromNdx << ' ' << intoNdx << '\n';
-
-		for (rigibra::Transform const & xform : xforms)
-		{
-//std::cout << "  xform: " << xform << '\n';
-		}
-	}
-	*/
+	saveNetworkGraphic(network, dotPath);
 
 }
 
