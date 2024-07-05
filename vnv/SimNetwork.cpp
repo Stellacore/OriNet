@@ -186,417 +186,7 @@ namespace sim
 } // [sim]
 
 
-namespace net
-{
-
-	//! Use station setups as network graph nodes
-	struct Station
-	{
-		std::size_t theStaNdx;
-		rigibra::Transform theExpXform;
-		rigibra::Transform theGotXform;
-
-	}; // Station
-
-	//! Use rigid body transformation as network graph edges
-	struct Edge : public graaf::weighted_edge<double>
-	{
-		//! station-to-station tranformation for network graph edges
-		rigibra::Transform theXform;
-		double theMedMagErr;
-
-		inline
-		explicit
-		Edge
-			( rigibra::Transform const & xform
-			, double const & maxMagErr
-			)
-			: theXform{ xform }
-			, theMedMagErr{ maxMagErr }
-		{ }
-
-		inline
-		~Edge
-			() = default;
-
-		inline
-		bool
-		operator<
-			( Edge const & other
-			) const noexcept
-		{
-			return (this->get_weight() < other.get_weight());
-		}
-
-		inline
-		bool
-		operator!=
-			( Edge const & other
-			) const noexcept
-		{
-			return ((other < (*this)) || ((*this) < other));
-		}
-
-		[[nodiscard]]
-		inline
-		double
-		get_weight
-			() const noexcept override
-		{
-			return theMedMagErr;
-		}
-
-	}; // Edge
-
-	/*! Generate graph structure with robust edges
-	 *
-	 * The edges contain transformations. These rigid body transformations
-	 * are interpreted to be (largerNodeNumber) w.r.t. (smallerNodeNumber)
-	 */
-	graaf::undirected_graph<Station, Edge>
-	graphFrom
-		( std::vector<rigibra::Transform> const expStas
-		, std::map<NdxPair, std::vector<rigibra::Transform> >
-			const & pairXforms
-		)
-	{
-		graaf::undirected_graph<Station, Edge> network;
-
-		// populate graph with a node for every edge
-		using StaNdx = std::size_t;
-		using VertId = graaf::vertex_id_t;
-		std::map<StaNdx, VertId> mapVertFromNdx;
-
-		// loop overall stations
-		for (std::size_t staNdx{0u} ; staNdx < expStas.size() ; ++staNdx)
-		{
-			rigibra::Transform const & expSta = expStas[staNdx];
-			static rigibra::Transform const empty
-				{ rigibra::null<rigibra::Transform>() };
-			Station const station{ staNdx, expSta, empty };
-			// add vertex into map
-			mapVertFromNdx[staNdx] = network.add_vertex(station);
-		}
-
-		// loop over all backsight station pairs
-		// - compute a robust estimate of relationship using all observations
-		// - enter robust estimate into graph as edges
-		for (std::map<NdxPair, std::vector<rigibra::Transform> >::value_type
-			const & pairXform : pairXforms)
-		{
-
-			std::size_t const & fromNdx = pairXform.first.first;
-			std::size_t const & intoNdx = pairXform.first.second;
-			if (! (fromNdx < intoNdx))
-			{
-				std::cerr << "Fatal Error:"
-					" Network convention assumes IntoWrtFrom for which"
-					" \n(fromNdx < intoNdx) indicates forward direction\n";
-				exit(1);
-			}
-			std::vector<rigibra::Transform> const & xforms = pairXform.second;
-
-			// compute robustly rigid body transform to use for edge
-			rigibra::Transform const fitXform
-				{ orinet::robust::transformViaEffect
-					(xforms.cbegin(), xforms.cend())
-				};
-			orinet::compare::Stats const stats
-				{ orinet::compare::differenceStats
-					(xforms.cbegin(), xforms.cend(), fitXform, false)
-				};
-			double const & fitMedMagErr = stats.theMedMagDiff;
-
-			// access corresponding graph nodes
-			VertId const & fromVert = mapVertFromNdx.at(fromNdx);
-			VertId const & intoVert = mapVertFromNdx.at(intoNdx);
-			// check that from/into nodes are in graph
-			bool const fromOkay{ network.has_vertex(fromVert) };
-			bool const intoOkay{ network.has_vertex(intoVert) };
-			if (! (fromOkay && intoOkay))
-			{
-				std::cerr << "bad vertex lookup\n" << std::endl;
-				exit(8);
-			}
-
-			// add edge
-			Edge const edge{ fitXform, fitMedMagErr  };
-			network.add_edge(fromVert, intoVert, edge);
-		}
-
-		return network;
-	}
-
-	//! Construct a label string for vertex station info
-	inline
-	std::string
-	vertLabel
-		( graaf::vertex_id_t const & vId
-		, net::Station const & sta
-		)
-	{
-		std::ostringstream lbl;
-		lbl << "label="
-			<< '"'
-			<< vId << "='" << sta.theStaNdx << "'"
-			<< '"';
-		return lbl.str();
-	}
-
-	//! Construct a label string for backsight transform info
-	inline
-	std::string
-	edgeLabel
-		( graaf::edge_id_t const & eId
-		, net::Edge const & edge
-		)
-	{
-		std::ostringstream lbl;
-		lbl << "label="
-			<< '"'
-			<< eId.first << "-->" << eId.second
-			<< '\n'
-			<< edge.get_weight()
-			<< '"';
-		return lbl.str();
-	}
-
-	//! \brief Save graph information to graphviz '.dot' graphic file.
-	inline
-	void
-	saveNetworkGraphic
-		( graaf::undirected_graph<net::Station, net::Edge> const network
-		, std::filesystem::path const & dotPath
-		)
-	{
-		graaf::io::to_dot(network, dotPath, vertLabel, edgeLabel);
-	}
-
-	//! Create (sub)graph from network, that contains only specified edges
-	graaf::undirected_graph<Station, Edge>
-	graphFromEdges
-		( std::vector<graaf::edge_id_t> const & eIds
-		, graaf::undirected_graph<net::Station, net::Edge> const & network
-		)
-	{
-		graaf::undirected_graph<Station, Edge> outGraph;
-
-		// add vertices to output graph and remember mapping
-		std::map<graaf::vertex_id_t, graaf::vertex_id_t> mapOutFmInp;
-		for (graaf::edge_id_t const & eId : eIds)
-		{
-			std::cout << "eId: " << eId.first << ',' << eId.second << '\n';
-			std::array<graaf::vertex_id_t, 2u> const inps
-				{ eId.first, eId.second };
-			for (graaf::vertex_id_t const & inp : inps)
-			{
-				std::map<graaf::vertex_id_t, graaf::vertex_id_t>::const_iterator
-					const itFind{ mapOutFmInp.find(inp) };
-				if (mapOutFmInp.end() == itFind)
-				{
-					Station const & station = network.get_vertex(inp);
-					mapOutFmInp[inp] = outGraph.add_vertex(station);
-				}
-			}
-		}
-		
-		// add edges to output graph
-		for (graaf::edge_id_t const & eId : eIds)
-		{
-			Edge const & edge = network.get_edge(eId);
-			outGraph.add_edge
-				( mapOutFmInp.at(eId.first)
-				, mapOutFmInp.at(eId.second)
-				, edge
-				);
-		}
-
-		return outGraph;
-	}
-
-} // [net]
-
-
-namespace foo
-{
-	using FrameId = std::size_t;
-	constexpr FrameId const sNullId{ std::numeric_limits<std::size_t>::max() };
-
-	//! \brief Absolute orientation with respect to (assumed) reference frame
-	struct AbsFrame
-	{
-		FrameId theIdThis{ sNullId };
-		rigibra::Transform theXwRef{ rigibra::null<rigibra::Transform>() };
-
-		// AbsFrame::
-		//! Identity of this particular frame
-		inline
-		FrameId
-		idThis
-			() const
-		{
-			return theIdThis;
-		}
-
-		// AbsFrame::
-		//! Rigid body transformation w.r.t. an assumed global reference frame
-		inline
-		rigibra::Transform const &
-		xformWrtRef
-			() const
-		{
-			return theXwRef;
-		}
-
-	}; // AbsFrame
-
-	//! \brief Relative orientation between two body frames
-	class RelOrient : public graaf::weighted_edge<double>
-	{
-		FrameId theIdFrom{ sNullId };
-		FrameId theIdInto{ sNullId };
-		rigibra::Transform theIntoWrtFrom
-			{ rigibra::null<rigibra::Transform>() };
-		double const theMedMagDiff{ engabra::g3::null<double>() };
-
-	public:
-
-		// RelOrient::
-		//! Value construction
-		inline
-		explicit
-		RelOrient
-			( FrameId const & idFrom
-			, FrameId const & idInto
-			, rigibra::Transform const & xIntoWrtFrom
-			, double const & medMagDiff
-			)
-			: theIdFrom{ std::min(idFrom, idInto) }
-			, theIdInto{ std::max(idFrom, idInto) }
-			, theIntoWrtFrom{}
-			, theMedMagDiff{ medMagDiff }
-		{
-			if (idFrom < idInto)
-			{
-				theIntoWrtFrom = xIntoWrtFrom;
-			}
-			else
-			if (idInto < idFrom)
-			{
-				theIntoWrtFrom = rigibra::inverse(xIntoWrtFrom);
-			}
-			else
-			{
-				theIntoWrtFrom = rigibra::identity<rigibra::Transform>();
-			}
-		}
-
-		// RelOrient::
-		//! no-op dtor
-  		inline
-		virtual
-		~RelOrient
-			() = default;
-
-		// RelOrient::
-		//! Domain (definition) of relative transform
-		inline
-		FrameId const &
-		idFrom
-			() const
-		{
-			return theIdFrom;
-		}
-
-		// RelOrient::
-		//! Range (destination) of relative transform
-		inline
-		FrameId const &
-		idInto
-			() const
-		{
-			return theIdInto;
-		}
-
-		// RelOrient::
-		//! Provide weight of this edge
-		[[nodiscard("graaf::weighted_edge compatibility")]]
-  		inline
-		virtual
-		double // == weight_t
-		get_weight
-			() const noexcept
-		{
-			return theMedMagDiff;
-		}
-
-		// RelOrient::
-		//! Transform Into wrt From
-		inline
-		rigibra::Transform const &
-		xformIntoWrtFrom
-			() const
-		{
-			return theIntoWrtFrom;
-		}
-
-		// RelOrient::
-		//! Transform From wrt Into
-		inline
-		rigibra::Transform
-		xformFromWrtInto
-			() const
-		{
-			return rigibra::inverse(theIntoWrtFrom);
-		}
-
-	}; // RelOrient
-
-
-	//! \brief Propagate rigid body orientation from absFromWrtRef
-	inline
-	AbsFrame
-	absFrameFrom
-		( AbsFrame const & absFromWrtRef
-		, RelOrient const & relIntoWrtFrom
-		)
-	{
-		AbsFrame absIntoWrtRef{};
-		if (relIntoWrtFrom.idFrom() == absFromWrtRef.idThis())
-		{
-			using namespace rigibra;
-			Transform const & xFromWrtRef = absFromWrtRef.xformWrtRef();
-			Transform const xIntoWrtRef
-				{ relIntoWrtFrom.xformIntoWrtFrom() * xFromWrtRef };
-			absIntoWrtRef = AbsFrame{ relIntoWrtFrom.idInto(), xIntoWrtRef };
-		}
-		return absIntoWrtRef;
-	}
-
-
-	/*! \brief Container for all data in rigid body network
-	 *
-	 */
-	struct Network
-	{
-		std::deque<AbsFrame> theAbsFrames{};
-		std::deque<RelOrient> theRelOrients{};
-
-		graaf::undirected_graph<AbsFrame, RelOrient> theGraph{};
-
-		inline
-		void
-		addRelOrient
-			( RelOrient const & // relori
-			)
-		{ }
-
-	}; // Network
-
-} // [foo]
-
-
-namespace bar
+namespace network
 {
 	using VertId = graaf::vertex_id_t;
 	using EdgeId = graaf::edge_id_t;
@@ -691,9 +281,71 @@ namespace bar
 
 	}; // EdgeXform
 
+	//! Robust transformation computed from collection of transforms
+	inline
+	EdgeXform
+	edgeXformMedianFit
+		( std::vector<rigibra::Transform> const & xHiWrtLos
+		)
+	{
+		// compute robust fit to collection of transforms
+		rigibra::Transform const fitXform
+			{ orinet::robust::transformViaEffect
+				(xHiWrtLos.cbegin(), xHiWrtLos.cend())
+			};
+		// estimate quality of the fit value
+		orinet::compare::Stats const stats
+			{ orinet::compare::differenceStats
+				(xHiWrtLos.cbegin(), xHiWrtLos.cend(), fitXform, false)
+			};
+		// generate weighted edge from the data
+		double const & fitErr = stats.theMedMagDiff;
+		return EdgeXform{fitXform, fitErr};
+	}
 
-	//! \brief TODO
-	struct Network
+
+	//! Construct a label string for vertex station info
+	inline
+	std::string
+	vertLabel
+		( graaf::vertex_id_t const & vId
+		, StaFrame const & staFrame
+		)
+	{
+		std::ostringstream lbl;
+		lbl << "label="
+			<< '"'
+			<< vId << "='" << staFrame.theStaNdx << "'"
+			<< '"';
+		return lbl.str();
+	}
+
+	//! Construct a label string for backsight transform info
+	inline
+	std::string
+	edgeLabel
+		( graaf::edge_id_t const & eId
+		, EdgeXform const & edgeXform
+		)
+	{
+		std::ostringstream lbl;
+		lbl << "label="
+			<< '"'
+			<< eId.first << "-->" << eId.second
+			<< '\n'
+			<< edgeXform.get_weight()
+			<< '"';
+		return lbl.str();
+	}
+
+
+	/*! \brief Representation of the geometry of a rigid body network.
+	 *
+	 * Uses a graph data structure to store StaFrame instances as nodes
+	 * and rigid body transformations as edge relationships between them.
+	 *
+	 */
+	struct Geometry
 	{
 		std::map<StaNdx, VertId> theVertIdFromStaNdx{};
 
@@ -701,6 +353,7 @@ namespace bar
 
 
 		//! Check if staNdx already in graph, if not, then add vertex
+		// Geometry::
 		inline
 		void
 		ensureStaFrameExists
@@ -716,6 +369,7 @@ namespace bar
 		}
 
 		//! Graaf vertex ID value for station index
+		// Geometry::
 		inline
 		VertId
 		vertIdForStaNdx
@@ -725,29 +379,8 @@ namespace bar
 			return theVertIdFromStaNdx.at(staNdx);
 		}
 
-		//! Robust transformation computed from collection of transforms
-		inline
-		EdgeXform
-		edgeXformMedianFit
-			( std::vector<rigibra::Transform> const & xHiWrtLos
-			)
-		{
-			// compute robust fit to collection of transforms
-			rigibra::Transform const fitXform
-				{ orinet::robust::transformViaEffect
-					(xHiWrtLos.cbegin(), xHiWrtLos.cend())
-				};
-			// estimate quality of the fit value
-			orinet::compare::Stats const stats
-				{ orinet::compare::differenceStats
-					(xHiWrtLos.cbegin(), xHiWrtLos.cend(), fitXform, false)
-				};
-			// generate weighted edge from the data
-			double const & fitErr = stats.theMedMagDiff;
-			return EdgeXform{fitXform, fitErr};
-		}
-
 		//! Insert transformation edge into graph
+		// Geometry::
 		inline
 		void
 		addEdge
@@ -767,6 +400,7 @@ namespace bar
 		}
 
 		//! Edges forming a minimum path
+		// Geometry::
 		inline
 		std::vector<graaf::edge_id_t>
 		spanningEdgeXforms
@@ -780,14 +414,17 @@ namespace bar
 		 * E.g. calling this function with result of spanningEdgeXforms()
 		 * will return a new network that minimally spans this original
 		 * instance.
+		 *
+		 *  snippet TODO
 		 */
+		// Geometry::
 		inline
-		Network
+		Geometry
 		networkTree
 			( std::vector<graaf::edge_id_t> const eIds
 			) const
 		{
-			Network network{};
+			Geometry network{};
 
 			for (graaf::edge_id_t const & eId : eIds)
 			{
@@ -825,9 +462,20 @@ namespace bar
 			return network;
 		}
 
-	}; // Network
+		//! \brief Save graph information to graphviz '.dot' graphic file.
+		// Geometry::
+		inline
+		void
+		saveNetworkGraphic
+			( std::filesystem::path const & dotPath
+			) const
+		{
+			graaf::io::to_dot(theGraph, dotPath, vertLabel, edgeLabel);
+		}
 
-} // [bar]
+	}; // Geometry
+
+} // [network]
 
 
 /*! \brief 
@@ -887,50 +535,36 @@ std::cout << "number stations: " << expStas.size() << '\n';
 		};
 std::cout << "number backsights: " << pairXforms.size() << '\n';
 
-	foo::Network foonet{};
-	for (std::map<NdxPair, std::vector<rigibra::Transform> >::value_type
-		const & pairXform : pairXforms)
-	{
-		using namespace rigibra;
-		NdxPair const & ndxPair = pairXform.first;
-		std::vector<Transform> const & xforms = pairXform.second;
-		Transform const fitXform
-			{ orinet::robust::transformViaEffect
-				(xforms.cbegin(), xforms.cend())
-			};
-		orinet::compare::Stats const stats
-			{ orinet::compare::differenceStats
-				(xforms.cbegin(), xforms.cend(), fitXform, false)
-			};
-		double const & fitMedianErr = stats.theMedMagDiff;
-		foo::RelOrient const roEdge
-			(ndxPair.first, ndxPair.second, fitXform, fitMedianErr);
-
-		foonet.addRelOrient(roEdge);
-	}
-
 	//
 	// Populate graph: station frame nodes and robustly fit transform edges
 	//
 
-	graaf::undirected_graph<net::Station, net::Edge> const network
-		{ net::graphFrom(expStas, pairXforms) };
+	network::Geometry geoNet;
+
+	for (std::map<NdxPair, std::vector<rigibra::Transform> >::value_type
+		const & pairXform : pairXforms)
+	{
+		// compute robustly fit transformation for this edge
+		network::EdgeXform const edgeXform
+			{ network::edgeXformMedianFit(pairXform.second) };
+		// insert robust transform into network
+		geoNet.addEdge(pairXform.first, edgeXform);
+	}
+
 
 	// save network topology to graphviz '.dot' file format
-	saveNetworkGraphic(network, dotPathAll);
+	geoNet.saveNetworkGraphic(dotPathAll);
 
 	//
 	// Find minimum spanning tree
 	//
 
-	std::vector<graaf::edge_id_t> const eIds
-		{ graaf::algorithm::kruskal_minimum_spanning_tree(network) };
+	std::vector<graaf::edge_id_t> const mstEdgeIds
+		{ geoNet.spanningEdgeXforms() };
 
-	// The mst contents get updated below
-	graaf::undirected_graph<net::Station, net::Edge> mst
-		{ net::graphFromEdges(eIds, network) };
+	network::Geometry const mstNet{ geoNet.networkTree(mstEdgeIds) };
 
-	saveNetworkGraphic(mst, dotPathMst);
+	mstNet.saveNetworkGraphic(dotPathMst);
 
 	//
 	// Update station orientations by traversing MST
@@ -1005,21 +639,3 @@ std::cout << "number backsights: " << pairXforms.size() << '\n';
 	*/
 }
 
-/*
-	struct Station
-	{
-		std::size_t theStaNdx;
-		rigibra::Transform theExpXform;
-		rigibra::Transform theGotXform;
-
-	}; // Station
-
-	struct Edge : public graaf::weighted_edge<double>
-	{
-		rigibra::Transform theXform;
-		double theMedMagErr;
-	...
-
-	}
-
-*/
