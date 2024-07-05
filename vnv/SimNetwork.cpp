@@ -51,7 +51,7 @@ namespace
 	char const * const useMsg =
 	R"(
 	This program demonstrates determination of rigid body
-	network.  The network is associated with a directed
+	network.  The network is associated with an undirected
 	graph comprising nodes and edges in which the nodes
 	are considered to be rigid body frames and the edges
 	are rigid body transformations between them.
@@ -204,15 +204,19 @@ namespace net
 	//! Use rigid body transformation as network graph edges
 	using Edge = Backsight;
 
-	//! Generate graph structure with robust edges
-	graaf::directed_graph<Station, Edge>
+	/*! Generate graph structure with robust edges
+	 *
+	 * The edges contain transformations. These rigid body transformations
+	 * are interpreted to be (largerNodeNumber) w.r.t. (smallerNodeNumber)
+	 */
+	graaf::undirected_graph<Station, Edge>
 	graphFrom
 		( std::vector<rigibra::Transform> const expStas
 		, std::map<NdxPair, std::vector<rigibra::Transform> >
 			const & pairXforms
 		)
 	{
-		graaf::directed_graph<Station, Edge> network;
+		graaf::undirected_graph<Station, Edge> network;
 
 		// populate graph with a node for every edge
 		using StaNdx = std::size_t;
@@ -239,6 +243,13 @@ namespace net
 
 			std::size_t const & fromNdx = pairXform.first.first;
 			std::size_t const & intoNdx = pairXform.first.second;
+			if (! (fromNdx < intoNdx))
+			{
+				std::cerr << "Fatal Error:"
+					" Network convention assumes IntoWrtFrom for which"
+					" \n(fromNdx < intoNdx) indicates forward direction\n";
+				exit(1);
+			}
 			std::vector<rigibra::Transform> const & xforms = pairXform.second;
 
 			// compute robustly rigid body transform to use for edge
@@ -272,49 +283,49 @@ namespace net
 		return network;
 	}
 
+	//! Construct a label string for vertex station info
+	inline
+	std::string
+	vertLabel
+		( graaf::vertex_id_t const & vId
+		, net::Station const & sta
+		)
+	{
+		std::ostringstream lbl;
+		lbl << "label="
+			<< '"'
+			<< vId << "='" << sta.theStaNdx << "'"
+			<< '"';
+		return lbl.str();
+	}
+
+	//! Construct a label string for backsight transform info
+	inline
+	std::string
+	edgeLabel
+		( graaf::edge_id_t const & eId
+		, net::Backsight const & backsight
+		)
+	{
+		std::ostringstream lbl;
+		lbl << "label="
+			<< '"'
+			<< eId.first << "-->" << eId.second
+			<< '\n'
+			<< backsight.theMaxMagErr
+			<< '"';
+		return lbl.str();
+	}
 
 	//! \brief Save graph information to graphviz '.dot' graphic file.
 	inline
 	void
 	saveNetworkGraphic
-		( graaf::directed_graph<net::Station, net::Edge> const network
+		( graaf::undirected_graph<net::Station, net::Edge> const network
 		, std::filesystem::path const & dotPath
 		)
 	{
-
-		// report graph properties
-		auto const vOut
-			{ []
-				( graaf::vertex_id_t const & vId
-				, net::Station const & sta
-				)
-			-> std::string
-				{
-					std::ostringstream lbl;
-					lbl << "label="
-						<< '"'
-						<< vId << '/' << sta.theStaNdx
-						<< '"';
-					return lbl.str();
-				}
-			};
-		auto const eOut
-			{ []
-				( graaf::edge_id_t const & /* eId */
-				, net::Backsight const & backsight
-				)
-			-> std::string
-				{
-					std::ostringstream lbl;
-					lbl << "label="
-						<< '"'
-						<< backsight.theMaxMagErr
-						<< '"';
-					return lbl.str();
-				}
-			};
-
-		graaf::io::to_dot(network, dotPath, vOut, eOut);
+		graaf::io::to_dot(network, dotPath, vertLabel, edgeLabel);
 	}
 
 } // [net]
@@ -378,10 +389,17 @@ std::cout << "number backsights: " << pairXforms.size() << '\n';
 	// Populate graph: station frame nodes and robustly fit transform edges
 	//
 
-	graaf::directed_graph<net::Station, net::Edge> const network
+	graaf::undirected_graph<net::Station, net::Edge> const network
 		{ net::graphFrom(expStas, pairXforms) };
 
+	// save network topology to graphviz '.dot' file format
 	saveNetworkGraphic(network, dotPath);
+
+	//
+	// Find minimum spanning tree
+	//
+
+	
 
 }
 
