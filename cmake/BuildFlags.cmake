@@ -81,7 +81,6 @@ set(BUILD_FLAGS_FOR_CXX_CLANG
 	# flags
 	-fstrict-enums
 	# warnings
-	-Wc++11-compat
 	)
 
 set(BUILD_FLAGS_FOR_CXX_GCC
@@ -92,7 +91,6 @@ set(BUILD_FLAGS_FOR_CXX_GCC
 	-fstrict-enums
 	-fno-nonansi-builtins
 	# warnings
-	-Wc++11-compat
 	)
 set(BUILD_FLAGS_FOR_CXX_VISUAL
 	${BUILD_FLAGS_FOR_C_VISUAL}
