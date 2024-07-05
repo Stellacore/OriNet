@@ -202,7 +202,32 @@ namespace net
 	}; // Backsight
 
 	//! Use rigid body transformation as network graph edges
-	using Edge = Backsight;
+	struct Edge : public graaf::weighted_edge<double>
+	{
+		Backsight theBacksight;
+
+		inline
+		explicit
+		Edge
+			( Backsight const & backsight
+			)
+			: theBacksight{ backsight }
+		{ }
+
+		inline
+		~Edge
+			() = default;
+
+		[[nodiscard]]
+		inline
+		double
+		get_weight
+			() const noexcept override
+		{
+			return theBacksight.theMaxMagErr;
+		}
+
+	}; // Edge
 
 	/*! Generate graph structure with robust edges
 	 *
@@ -277,7 +302,8 @@ namespace net
 
 			// add edge
 			Backsight const backsight{ fitXform, fitMaxMagErr };
-			network.add_edge(fromVert, intoVert, backsight);
+			Edge const edge{ backsight };
+			network.add_edge(fromVert, intoVert, edge);
 		}
 
 		return network;
@@ -304,7 +330,7 @@ namespace net
 	std::string
 	edgeLabel
 		( graaf::edge_id_t const & eId
-		, net::Backsight const & backsight
+		, net::Edge const & edge
 		)
 	{
 		std::ostringstream lbl;
@@ -312,7 +338,7 @@ namespace net
 			<< '"'
 			<< eId.first << "-->" << eId.second
 			<< '\n'
-			<< backsight.theMaxMagErr
+			<< edge.get_weight()
 			<< '"';
 		return lbl.str();
 	}
