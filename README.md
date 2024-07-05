@@ -16,7 +16,7 @@ Example build command (including explicit setting of compiler)
 
 ```
 CC=/usr/bin/clang CXX=/usr/bin/clang++\
- ;\
+ \
  cmake\
  -DCMAKE_BUILD_TYPE=Release\
  -DCMAKE_PREFIX_PATH=/tmpLocal/\
