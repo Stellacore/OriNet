@@ -39,6 +39,7 @@
 
 #include <algorithm>
 #include <array>
+#include <deque>
 #include <iostream>
 #include <map>
 #include <numeric>
@@ -202,7 +203,7 @@ namespace net
 	{
 		//! station-to-station tranformation for network graph edges
 		rigibra::Transform theXform;
-		double theMaxMagErr;
+		double theMedMagErr;
 
 		inline
 		explicit
@@ -211,7 +212,7 @@ namespace net
 			, double const & maxMagErr
 			)
 			: theXform{ xform }
-			, theMaxMagErr{ maxMagErr }
+			, theMedMagErr{ maxMagErr }
 		{ }
 
 		inline
@@ -242,7 +243,7 @@ namespace net
 		get_weight
 			() const noexcept override
 		{
-			return theMaxMagErr;
+			return theMedMagErr;
 		}
 
 	}; // Edge
@@ -304,7 +305,7 @@ namespace net
 				{ orinet::compare::differenceStats
 					(xforms.cbegin(), xforms.cend(), fitXform, false)
 				};
-			double const & fitMaxMagErr = stats.theMedMagDiff;
+			double const & fitMedMagErr = stats.theMedMagDiff;
 
 			// access corresponding graph nodes
 			VertId const & fromVert = mapVertFromNdx.at(fromNdx);
@@ -319,7 +320,7 @@ namespace net
 			}
 
 			// add edge
-			Edge const edge{ fitXform, fitMaxMagErr  };
+			Edge const edge{ fitXform, fitMedMagErr  };
 			network.add_edge(fromVert, intoVert, edge);
 		}
 
@@ -416,6 +417,419 @@ namespace net
 } // [net]
 
 
+namespace foo
+{
+	using FrameId = std::size_t;
+	constexpr FrameId const sNullId{ std::numeric_limits<std::size_t>::max() };
+
+	//! \brief Absolute orientation with respect to (assumed) reference frame
+	struct AbsFrame
+	{
+		FrameId theIdThis{ sNullId };
+		rigibra::Transform theXwRef{ rigibra::null<rigibra::Transform>() };
+
+		// AbsFrame::
+		//! Identity of this particular frame
+		inline
+		FrameId
+		idThis
+			() const
+		{
+			return theIdThis;
+		}
+
+		// AbsFrame::
+		//! Rigid body transformation w.r.t. an assumed global reference frame
+		inline
+		rigibra::Transform const &
+		xformWrtRef
+			() const
+		{
+			return theXwRef;
+		}
+
+	}; // AbsFrame
+
+	//! \brief Relative orientation between two body frames
+	class RelOrient : public graaf::weighted_edge<double>
+	{
+		FrameId theIdFrom{ sNullId };
+		FrameId theIdInto{ sNullId };
+		rigibra::Transform theIntoWrtFrom
+			{ rigibra::null<rigibra::Transform>() };
+		double const theMedMagDiff{ engabra::g3::null<double>() };
+
+	public:
+
+		// RelOrient::
+		//! Value construction
+		inline
+		explicit
+		RelOrient
+			( FrameId const & idFrom
+			, FrameId const & idInto
+			, rigibra::Transform const & xIntoWrtFrom
+			, double const & medMagDiff
+			)
+			: theIdFrom{ std::min(idFrom, idInto) }
+			, theIdInto{ std::max(idFrom, idInto) }
+			, theIntoWrtFrom{}
+			, theMedMagDiff{ medMagDiff }
+		{
+			if (idFrom < idInto)
+			{
+				theIntoWrtFrom = xIntoWrtFrom;
+			}
+			else
+			if (idInto < idFrom)
+			{
+				theIntoWrtFrom = rigibra::inverse(xIntoWrtFrom);
+			}
+			else
+			{
+				theIntoWrtFrom = rigibra::identity<rigibra::Transform>();
+			}
+		}
+
+		// RelOrient::
+		//! no-op dtor
+  		inline
+		virtual
+		~RelOrient
+			() = default;
+
+		// RelOrient::
+		//! Domain (definition) of relative transform
+		inline
+		FrameId const &
+		idFrom
+			() const
+		{
+			return theIdFrom;
+		}
+
+		// RelOrient::
+		//! Range (destination) of relative transform
+		inline
+		FrameId const &
+		idInto
+			() const
+		{
+			return theIdInto;
+		}
+
+		// RelOrient::
+		//! Provide weight of this edge
+		[[nodiscard("graaf::weighted_edge compatibility")]]
+  		inline
+		virtual
+		double // == weight_t
+		get_weight
+			() const noexcept
+		{
+			return theMedMagDiff;
+		}
+
+		// RelOrient::
+		//! Transform Into wrt From
+		inline
+		rigibra::Transform const &
+		xformIntoWrtFrom
+			() const
+		{
+			return theIntoWrtFrom;
+		}
+
+		// RelOrient::
+		//! Transform From wrt Into
+		inline
+		rigibra::Transform
+		xformFromWrtInto
+			() const
+		{
+			return rigibra::inverse(theIntoWrtFrom);
+		}
+
+	}; // RelOrient
+
+
+	//! \brief Propagate rigid body orientation from absFromWrtRef
+	inline
+	AbsFrame
+	absFrameFrom
+		( AbsFrame const & absFromWrtRef
+		, RelOrient const & relIntoWrtFrom
+		)
+	{
+		AbsFrame absIntoWrtRef{};
+		if (relIntoWrtFrom.idFrom() == absFromWrtRef.idThis())
+		{
+			using namespace rigibra;
+			Transform const & xFromWrtRef = absFromWrtRef.xformWrtRef();
+			Transform const xIntoWrtRef
+				{ relIntoWrtFrom.xformIntoWrtFrom() * xFromWrtRef };
+			absIntoWrtRef = AbsFrame{ relIntoWrtFrom.idInto(), xIntoWrtRef };
+		}
+		return absIntoWrtRef;
+	}
+
+
+	/*! \brief Container for all data in rigid body network
+	 *
+	 */
+	struct Network
+	{
+		std::deque<AbsFrame> theAbsFrames{};
+		std::deque<RelOrient> theRelOrients{};
+
+		graaf::undirected_graph<AbsFrame, RelOrient> theGraph{};
+
+		inline
+		void
+		addRelOrient
+			( RelOrient const & // relori
+			)
+		{ }
+
+	}; // Network
+
+} // [foo]
+
+
+namespace bar
+{
+	using VertId = graaf::vertex_id_t;
+	using EdgeId = graaf::edge_id_t;
+	using StaNdx = std::size_t;
+	using LoHiPair = std::pair<StaNdx, StaNdx>;
+
+	/*! \brief Station Frame - i.e. associated with a rigid body pose.
+	 *
+	 */
+	struct StaFrame
+	{
+		StaNdx theStaNdx;
+
+	}; // StaFrame
+
+	/*! \brief Rigid body orientation betweem two station frames.
+	 *
+	 * NOTE: the forward direction of the transformation is associated
+	 * with StaFrame.theStaNdx values in the following sense.
+	 * \arg If (frameA.theStaNdx < frameB.theStaNdx), then transform
+	 *      theLoHiXform represents frame B w.r.t. A.
+	 * \arg If (frameB.theStaNdx < frameA.theStaNdx), then transform
+	 *      theLoHiXform represents frame A w.r.t. B.
+	 *
+	 * The inverse() function provides the transformation for an
+	 * edge being traversed in the other direction.
+	 */
+	struct EdgeXform : public graaf::weighted_edge<double>
+	{
+		rigibra::Transform theLoHiXform{ rigibra::null<rigibra::Transform>() };
+		double theFitErr{ engabra::g3::null<double>() };
+
+		//! Value ctor.
+		inline
+		explicit
+		EdgeXform
+			( rigibra::Transform const & lohiXform
+			, double const & fitErr
+			)
+			: theLoHiXform{ lohiXform }
+			, theFitErr{ fitErr }
+		{ }
+
+		//! Construct with null/invalid member values.
+		inline
+		EdgeXform
+			() = default;
+
+		//! No-op dtor.
+		inline
+		~EdgeXform
+			() = default;
+
+		//! Edge weight (is transformation fit error - theFitErr)
+		[[nodiscard]]
+		inline
+		double
+		get_weight
+			() const noexcept override
+		{
+			return theFitErr;
+		}
+
+		//! Sort in order of increasing edge weight (transformation error)
+		inline
+		bool
+		operator<
+			( EdgeXform const & other
+			) const noexcept
+		{
+			return (this->get_weight() < other.get_weight());
+		}
+
+		//! True if this and other have different edge weights
+		inline
+		bool
+		operator!=
+			( EdgeXform const & other
+			) const noexcept
+		{
+			return ((other < (*this)) || ((*this) < other));
+		}
+
+		//! An instance associated with edge in reverse direction.
+		inline
+		EdgeXform
+		inverse
+			() const
+		{
+			return EdgeXform(rigibra::inverse(theLoHiXform), theFitErr);
+		}
+
+	}; // EdgeXform
+
+
+	//! \brief TODO
+	struct Network
+	{
+		std::map<StaNdx, VertId> theVertIdFromStaNdx{};
+
+		graaf::undirected_graph<StaFrame, EdgeXform> theGraph{};
+
+
+		//! Check if staNdx already in graph, if not, then add vertex
+		inline
+		void
+		ensureStaFrameExists
+			( StaNdx const & staNdx
+			)
+		{
+			if (theVertIdFromStaNdx.end() == theVertIdFromStaNdx.find(staNdx))
+			{
+				StaFrame const staFrame{ staNdx };
+				VertId const vId{ theGraph.add_vertex(staFrame) };
+				theVertIdFromStaNdx[staNdx] = vId;
+			}
+		}
+
+		//! Graaf vertex ID value for station index
+		inline
+		VertId
+		vertIdForStaNdx
+			( StaNdx const & staNdx
+			) const
+		{
+			return theVertIdFromStaNdx.at(staNdx);
+		}
+
+		//! Robust transformation computed from collection of transforms
+		inline
+		EdgeXform
+		edgeXformMedianFit
+			( std::vector<rigibra::Transform> const & xHiWrtLos
+			)
+		{
+			// compute robust fit to collection of transforms
+			rigibra::Transform const fitXform
+				{ orinet::robust::transformViaEffect
+					(xHiWrtLos.cbegin(), xHiWrtLos.cend())
+				};
+			// estimate quality of the fit value
+			orinet::compare::Stats const stats
+				{ orinet::compare::differenceStats
+					(xHiWrtLos.cbegin(), xHiWrtLos.cend(), fitXform, false)
+				};
+			// generate weighted edge from the data
+			double const & fitErr = stats.theMedMagDiff;
+			return EdgeXform{fitXform, fitErr};
+		}
+
+		//! Insert transformation edge into graph
+		inline
+		void
+		addEdge
+			( LoHiPair const & staNdxLoHi
+			, EdgeXform const & edgeXform
+			)
+		{
+			// check if vertices (station nodes) are already in the graph
+			StaNdx const & sta1 = staNdxLoHi.first;
+			StaNdx const & sta2 = staNdxLoHi.second;
+			ensureStaFrameExists(sta1);
+			ensureStaFrameExists(sta2);
+
+			VertId const vId1{ vertIdForStaNdx(sta1) };
+			VertId const vId2{ vertIdForStaNdx(sta2) };
+			theGraph.add_edge(vId1, vId2, edgeXform);
+		}
+
+		//! Edges forming a minimum path
+		inline
+		std::vector<graaf::edge_id_t>
+		spanningEdgeXforms
+			() const
+		{
+			return graaf::algorithm::kruskal_minimum_spanning_tree(theGraph);
+		}
+
+		/*! Create an instance populated according to edge list
+		 *
+		 * E.g. calling this function with result of spanningEdgeXforms()
+		 * will return a new network that minimally spans this original
+		 * instance.
+		 */
+		inline
+		Network
+		networkTree
+			( std::vector<graaf::edge_id_t> const eIds
+			) const
+		{
+			Network network{};
+
+			for (graaf::edge_id_t const & eId : eIds)
+			{
+				// get vertex Ids
+				VertId const & vId1 = eId.first;
+				VertId const & vId2 = eId.second;
+
+				// get edge data
+				EdgeXform const & origEdge = theGraph.get_edge(eId);
+
+				// get vertex data
+				StaFrame const & staFrame1 = theGraph.get_vertex(vId1);
+				StaFrame const & staFrame2 = theGraph.get_vertex(vId2);
+
+				StaNdx const & staNdx1 = staFrame1.theStaNdx;
+				StaNdx const & staNdx2 = staFrame2.theStaNdx;
+
+				LoHiPair staNdxLoHi;
+				EdgeXform useEdge{};
+				if (staNdx1 < staNdx2)
+				{
+					staNdxLoHi = { staNdx1, staNdx2 };
+					useEdge = origEdge;
+				}
+				else
+				if (staNdx2 < staNdx1)
+				{
+					staNdxLoHi = { staNdx2, staNdx1 };
+					useEdge = origEdge.inverse();
+				}
+
+				network.addEdge(staNdxLoHi, useEdge);
+			}
+
+			return network;
+		}
+
+	}; // Network
+
+} // [bar]
+
+
 /*! \brief 
  *
  * Ref Usage string in main code for details, i.e.:
@@ -473,6 +887,28 @@ std::cout << "number stations: " << expStas.size() << '\n';
 		};
 std::cout << "number backsights: " << pairXforms.size() << '\n';
 
+	foo::Network foonet{};
+	for (std::map<NdxPair, std::vector<rigibra::Transform> >::value_type
+		const & pairXform : pairXforms)
+	{
+		using namespace rigibra;
+		NdxPair const & ndxPair = pairXform.first;
+		std::vector<Transform> const & xforms = pairXform.second;
+		Transform const fitXform
+			{ orinet::robust::transformViaEffect
+				(xforms.cbegin(), xforms.cend())
+			};
+		orinet::compare::Stats const stats
+			{ orinet::compare::differenceStats
+				(xforms.cbegin(), xforms.cend(), fitXform, false)
+			};
+		double const & fitMedianErr = stats.theMedMagDiff;
+		foo::RelOrient const roEdge
+			(ndxPair.first, ndxPair.second, fitXform, fitMedianErr);
+
+		foonet.addRelOrient(roEdge);
+	}
+
 	//
 	// Populate graph: station frame nodes and robustly fit transform edges
 	//
@@ -500,6 +936,7 @@ std::cout << "number backsights: " << pairXforms.size() << '\n';
 	// Update station orientations by traversing MST
 	//
 
+	/*
 	struct Propagator
 	{
 		graaf::undirected_graph<net::Station, net::Edge> & theMst;
@@ -529,8 +966,6 @@ std::cout << "number backsights: " << pairXforms.size() << '\n';
 			{
 				xIntoWrtFrom = rigibra::inverse(tmpIntoWrtFrom);
 			}
-
-			theMst.remove_edge(vId1, vId2);
 
 			if (! rigibra::isValid(fromSta.theGotXform))
 			{
@@ -567,6 +1002,7 @@ std::cout << "number backsights: " << pairXforms.size() << '\n';
 
 	Propagator propagator{ mst, expStas };
 	graaf::algorithm::breadth_first_traverse(mst, 0, propagator);
+	*/
 }
 
 /*
@@ -581,7 +1017,7 @@ std::cout << "number backsights: " << pairXforms.size() << '\n';
 	struct Edge : public graaf::weighted_edge<double>
 	{
 		rigibra::Transform theXform;
-		double theMaxMagErr;
+		double theMedMagErr;
 	...
 
 	}
