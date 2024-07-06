@@ -34,20 +34,12 @@ Example:
 
 */
 
-#include "OriNet/compare.hpp"
-#include "OriNet/robust.hpp"
-
 #include <Engabra>
-//#include <graaflib/algorithm/graph_traversal/breadth_first_search.h>
-//#include <graaflib/algorithm/minimum_spanning_tree/kruskal.h>
 #include <graaflib/graph.h>
-//#include <graaflib/io/dot.h>
 #include <Rigibra>
 
 #include <filesystem>
 #include <map>
-#include <sstream>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -189,64 +181,6 @@ namespace network
 
 	}; // EdgeXform
 
-	//! Robust transformation computed from collection of transforms
-	inline
-	EdgeXform
-	edgeXformMedianFit
-		( std::vector<rigibra::Transform> const & xHiWrtLos
-		, LoHiPair const & ndxPair
-		)
-	{
-		// compute robust fit to collection of transforms
-		rigibra::Transform const fitXform
-			{ orinet::robust::transformViaEffect
-				(xHiWrtLos.cbegin(), xHiWrtLos.cend())
-			};
-		// estimate quality of the fit value
-		orinet::compare::Stats const stats
-			{ orinet::compare::differenceStats
-				(xHiWrtLos.cbegin(), xHiWrtLos.cend(), fitXform, false)
-			};
-		// generate weighted edge from the data
-		double const & fitErr = stats.theMedMagDiff;
-		return EdgeXform{fitXform, fitErr, ndxPair};
-	}
-
-
-	//! Construct a label string for vertex station info
-	inline
-	std::string
-	vertLabel
-		( graaf::vertex_id_t const & vId
-		, StaFrame const & staFrame
-		)
-	{
-		std::ostringstream lbl;
-		lbl << "label="
-			<< '"'
-			<< vId << "='" << staFrame.theStaNdx << "'"
-			<< '"';
-		return lbl.str();
-	}
-
-	//! Construct a label string for backsight transform info
-	inline
-	std::string
-	edgeLabel
-		( graaf::edge_id_t const & eId
-		, EdgeXform const & edgeXform
-		)
-	{
-		std::ostringstream lbl;
-		lbl << "label="
-			<< '"'
-			<< eId.first << "-->" << eId.second
-			<< '\n'
-			<< edgeXform.get_weight()
-			<< '"';
-		return lbl.str();
-	}
-
 
 	/*! \brief Representation of the geometry of a rigid body network.
 	 *
@@ -261,6 +195,14 @@ namespace network
 
 		//! Graph data structure for storing/processing network relationships
 		graaf::undirected_graph<StaFrame, EdgeXform> theGraph{};
+
+		//! Robust transformation computed from collection of transforms
+		static
+		EdgeXform
+		edgeXformMedianFit
+			( std::vector<rigibra::Transform> const & xHiWrtLos
+			, LoHiPair const & ndxPair
+			);
 
 		//! Check if staNdx already in graph, if not, then add vertex
 		// Geometry::
