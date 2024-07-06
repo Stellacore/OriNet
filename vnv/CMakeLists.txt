@@ -62,7 +62,7 @@ FetchContent_Declare(
 	graaflib
 	GIT_REPOSITORY https://github.com/bobluppes/graaf.git
 	GIT_TAG main
-)
+	)
 # skip Graaf testing and benchmarks for speed fo build here
 set(SKIP_TESTS ON)
 set(SKIP_BENCHMARKS ON)

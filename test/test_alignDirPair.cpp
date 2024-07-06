@@ -32,6 +32,7 @@
 
 #include "OriNet/compare.hpp"
 #include "OriNet/random.hpp"
+#include "OriNet/sim.hpp"
 
 #include <Engabra>
 #include <Rigibra>
@@ -69,71 +70,6 @@ namespace
 		return oss.str();
 	}
 
-
-namespace sim
-{
-	//! \brief Generate random pairs of directions
-	inline
-	orinet::align::DirPair
-	directionPair
-		( std::pair<double, double> const & minMaxAngleMag = { .1, 3. }
-		)
-	{
-		using namespace engabra::g3;
-		orinet::align::DirPair dirPair{ null<Vector>(), null<Vector>() };
-		for (;;)
-		{
-			Vector const aDir{ orinet::random::directionVector() };
-			Vector const bDir{ orinet::random::directionVector() };
-
-			BiVector const angle{ logG2(aDir * bDir).theBiv };
-			double const angleMag{ magnitude(angle) };
-
-			// avoid (anti)parallel dirs
-			double const & minAngleMag = minMaxAngleMag.first;
-			double const & maxAngleMag = minMaxAngleMag.second;
-			if ((minAngleMag < angleMag) && (angleMag < maxAngleMag))
-			{
-				dirPair = std::make_pair(aDir, bDir);
-				break;
-			}
-		}
-		return dirPair;
-	}
-
-	//! \brief Generate 'noisy' body frame direction pair
-	inline
-	orinet::align::DirPair
-	bodyDirectionPair
-		( orinet::align::DirPair const & refDirPair
-		, rigibra::Attitude const & attBodWrtRef
-		)
-	{
-		using namespace engabra::g3;
-
-		// measurements in reference frame
-		Vector const & a0 = refDirPair.first;
-		Vector const & b0 = refDirPair.second;
-
-		// perturb measurements by random error (the 4th measurement DOM)
-		// ref. theory/alignDifPairs.lyx
-		static std::mt19937 gen(47562958u);
-		std::uniform_real_distribution<> dist(1./128., 32./128.);
-		double const nu{ dist(gen) };
-		double const wp{ 1. + nu };
-		double const wn{ 1. - nu };
-		// perturbed values that remain coplaner with (a0,b0)
-		Vector const aTmp{ direction(.5 * (wp * a0 + wn * b0)) };
-		Vector const bTmp{ direction(.5 * (wn * a0 + wp * b0)) };
-
-		// measurements in body frame
-		Vector const a1{ attBodWrtRef(aTmp) };
-		Vector const b1{ attBodWrtRef(bTmp) };
-
-		return std::make_pair(a1, b1);
-	}
-
-} // [sim]
 
 	//! Compare two attitude instances and report details if different
 	inline
@@ -200,7 +136,7 @@ namespace sim
 		orinet::align::DirPair const refDirPair
 			{ e1, direction(e1+e2) };
 		orinet::align::DirPair const bodDirPair
-			{ sim::bodyDirectionPair(refDirPair, expAtt) };
+			{ orinet::sim::bodyDirectionPair(refDirPair, expAtt) };
 
 		rigibra::Attitude const gotAtt
 			{ orinet::align::attitudeFromDirPairs(refDirPair, bodDirPair) };
@@ -270,9 +206,10 @@ namespace sim
 			// simulate random test case
 			using namespace rigibra;
 			Attitude const expAtt{ orinet::random::uniformAttitude(angMinMax) };
-			orinet::align::DirPair const refDirs{ sim::directionPair() };
+			orinet::align::DirPair const refDirs
+				{ orinet::sim::directionPair() };
 			orinet::align::DirPair const bodDirs
-				{ sim::bodyDirectionPair(refDirs, expAtt) };
+				{ orinet::sim::bodyDirectionPair(refDirs, expAtt) };
 
 			// compute best fit attitude
 			rigibra::Attitude const gotAtt
