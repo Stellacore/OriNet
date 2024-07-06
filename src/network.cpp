@@ -214,16 +214,19 @@ Geometry :: networkTree
 }
 
 std::vector<rigibra::Transform>
-Geometry :: propagateXforms
+Geometry :: propagateTransforms
 	( StaNdx const & staNdx0
 	, rigibra::Transform const & staXform0
-	, std::size_t const & numStaNdxs
-	, std::vector<rigibra::Transform> const & expStas
 	) const
 {
+	std::vector<rigibra::Transform> gotXforms;
+
 	using namespace rigibra;
+
+	std::size_t const numStaNdxs{ theGraph.vertex_count() };
+	gotXforms.resize(numStaNdxs);
 	static Transform const nullXform{ null<Transform>() };
-	std::vector<rigibra::Transform> gotXforms(numStaNdxs, nullXform);
+	std::fill(gotXforms.begin(), gotXforms.end(), nullXform);
 
 	// set first station orientation
 	gotXforms[staNdx0] = staXform0;
@@ -232,7 +235,6 @@ Geometry :: propagateXforms
 	{
 		Geometry const & theGeo;
 		std::vector<rigibra::Transform> & gotStas;
-		std::vector<rigibra::Transform> const & expStas;
 
 		inline
 		void
@@ -286,7 +288,7 @@ Geometry :: propagateXforms
 	}; // Propagator;
 
 	VertId const vId0{ vertIdForStaNdx(staNdx0) };
-	Propagator const propagator{ *this, gotXforms, expStas };
+	Propagator const propagator{ *this, gotXforms};
 	graaf::algorithm::breadth_first_traverse
 		(theGraph, vId0, propagator);
 

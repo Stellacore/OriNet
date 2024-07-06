@@ -59,7 +59,7 @@ namespace network
 	//! Station orientations referenced by index (e.g. to external collection)
 	using StaNdx = std::size_t;
 
-	/*! Relative orientations between stations (in .first < .second order)
+	/*! \brief Relative orientations between stations (.first < .second order)
 	 *
 	 * A graph structure is used to model the network connectivity and is
 	 * execeptionally useful for network traversal operations. However,
@@ -235,7 +235,7 @@ namespace network
 		spanningEdgeOris
 			() const;
 
-		/*! Create an instance populated according to edge list
+		/*! \brief Create an instance populated according to edge list
 		 *
 		 * E.g. calling this function with result of spanningEdgeOris()
 		 * will return a new network that minimally spans this original
@@ -248,18 +248,16 @@ namespace network
 			( std::vector<graaf::edge_id_t> const eIds
 			) const;
 
-		/*! Transformations computed by propagation through network
+		/*! \brief Transformations computed by propagation through network
 		 *
 		 * Note that later computed transformations overwrite earlier ones.
 		 * In general, this is method is probably most useful if run
 		 * on a network that represents a minimum spanning tree.
 		 */
 		std::vector<rigibra::Transform>
-		propagateXforms
+		propagateTransforms
 			( StaNdx const & staNdx0
 			, rigibra::Transform const & staXform0
-			, std::size_t const & numStaNdxs
-			, std::vector<rigibra::Transform> const & expStas
 			) const;
 
 		//! \brief Save graph information to graphviz '.dot' graphic file.
