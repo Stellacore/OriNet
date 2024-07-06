@@ -641,7 +641,7 @@ main
 	// Configuration parameters
 	//
 
-	constexpr bool showResult{ false };
+	constexpr bool showResult{ true };
 //#define EasyCase
 
 #	if defined(EasyCase)
