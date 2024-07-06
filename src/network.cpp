@@ -92,26 +92,26 @@ namespace network
 	}
 
 
-// static
-EdgeOri
-Geometry :: edgeOriMedianFit
-	( std::vector<rigibra::Transform> const & xHiWrtLos
-	)
-{
-	// compute robust fit to collection of transforms
-	rigibra::Transform const fitXform
-		{ orinet::robust::transformViaEffect
-			(xHiWrtLos.cbegin(), xHiWrtLos.cend())
-		};
-	// estimate quality of the fit value
-	orinet::compare::Stats const stats
-		{ orinet::compare::differenceStats
-			(xHiWrtLos.cbegin(), xHiWrtLos.cend(), fitXform, false)
-		};
-	// generate weighted edge from the data
-	double const & fitErr = stats.theMedMagDiff;
-	return EdgeOri{fitXform, fitErr};
-}
+	EdgeOri
+	edgeOriMedianFit
+		( std::vector<rigibra::Transform> const & xHiWrtLos
+		)
+	{
+		// compute robust fit to collection of transforms
+		rigibra::Transform const fitXform
+			{ orinet::robust::transformViaEffect
+				(xHiWrtLos.cbegin(), xHiWrtLos.cend())
+			};
+		// estimate quality of the fit value
+		orinet::compare::Stats const stats
+			{ orinet::compare::differenceStats
+				(xHiWrtLos.cbegin(), xHiWrtLos.cend(), fitXform, false)
+			};
+		// generate weighted edge from the data
+		double const & fitErr = stats.theMedMagDiff;
+		return EdgeOri{fitXform, fitErr};
+	}
+
 
 void
 Geometry :: ensureStaFrameExists

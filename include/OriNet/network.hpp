@@ -173,6 +173,12 @@ namespace network
 
 	}; // EdgeOri
 
+	//! Robust transformation computed from collection of transforms
+	EdgeOri
+	edgeOriMedianFit
+		( std::vector<rigibra::Transform> const & xHiWrtLos
+		);
+
 
 	/*! \brief Representation of the geometry of a rigid body network.
 	 *
@@ -210,13 +216,6 @@ namespace network
 
 		//! Graph data structure for storing/processing network relationships
 		graaf::undirected_graph<StaFrame, EdgeOri> theGraph{};
-
-		//! Robust transformation computed from collection of transforms
-		static
-		EdgeOri
-		edgeOriMedianFit
-			( std::vector<rigibra::Transform> const & xHiWrtLos
-			);
 
 		//! Check if staNdx already in graph, if not, then add vertex
 		// Geometry::
