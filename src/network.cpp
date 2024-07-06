@@ -96,7 +96,6 @@ namespace network
 EdgeOri
 Geometry :: edgeOriMedianFit
 	( std::vector<rigibra::Transform> const & xHiWrtLos
-	, LoHiPair const & ndxPair
 	)
 {
 	// compute robust fit to collection of transforms
@@ -111,7 +110,7 @@ Geometry :: edgeOriMedianFit
 		};
 	// generate weighted edge from the data
 	double const & fitErr = stats.theMedMagDiff;
-	return EdgeOri{fitXform, fitErr, ndxPair};
+	return EdgeOri{fitXform, fitErr};
 }
 
 void

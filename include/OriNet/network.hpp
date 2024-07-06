@@ -104,7 +104,6 @@ namespace network
 	{
 		rigibra::Transform theLoHiXform{ rigibra::null<rigibra::Transform>() };
 		double theFitErr{ engabra::g3::null<double>() };
-		LoHiPair theNdxPair;
 
 		//! Value ctor.
 		inline
@@ -112,11 +111,9 @@ namespace network
 		EdgeOri
 			( rigibra::Transform const & lohiXform
 			, double const & fitErr
-			, LoHiPair const & fromIntoNdxs
 			)
 			: theLoHiXform{ lohiXform }
 			, theFitErr{ fitErr }
-			, theNdxPair{ fromIntoNdxs }
 		{ }
 
 		//! Construct with null/invalid member values.
@@ -174,9 +171,7 @@ namespace network
 		inverse
 			() const
 		{
-			LoHiPair ndxRev{ theNdxPair.second, theNdxPair.first };
-			return EdgeOri
-				(rigibra::inverse(theLoHiXform), theFitErr, ndxRev);
+			return EdgeOri(rigibra::inverse(theLoHiXform), theFitErr);
 		}
 
 	}; // EdgeOri
@@ -201,7 +196,6 @@ namespace network
 		EdgeOri
 		edgeOriMedianFit
 			( std::vector<rigibra::Transform> const & xHiWrtLos
-			, LoHiPair const & ndxPair
 			);
 
 		//! Check if staNdx already in graph, if not, then add vertex
