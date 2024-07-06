@@ -199,6 +199,12 @@ The OriNet software project incorporates the following support libraries.
   the graph data structure used to store orientation network data
   relationships and to perform efficient network traversal operations.
 
+	* Note: graaflib can be installed as a [header-only library](
+	  https://github.com/bobluppes/graaf/releases).  Download the
+	  appropriate archive file and expand it into an 'include'
+	  directory being searched by OriNet CMakefiles (e.g. expand
+	  into the /usr/local/include directory for system wide use.
+
 
 ## Build commands
 
