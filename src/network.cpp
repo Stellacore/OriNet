@@ -78,7 +78,7 @@ namespace network
 	std::string
 	edgeLabel
 		( graaf::edge_id_t const & eId
-		, EdgeXform const & edgeXform
+		, EdgeOri const & edgeOri
 		)
 	{
 		std::ostringstream lbl;
@@ -86,15 +86,15 @@ namespace network
 			<< '"'
 			<< eId.first << "-->" << eId.second
 			<< '\n'
-			<< edgeXform.get_weight()
+			<< edgeOri.get_weight()
 			<< '"';
 		return lbl.str();
 	}
 
 
 // static
-EdgeXform
-Geometry :: edgeXformMedianFit
+EdgeOri
+Geometry :: edgeOriMedianFit
 	( std::vector<rigibra::Transform> const & xHiWrtLos
 	, LoHiPair const & ndxPair
 	)
@@ -111,7 +111,7 @@ Geometry :: edgeXformMedianFit
 		};
 	// generate weighted edge from the data
 	double const & fitErr = stats.theMedMagDiff;
-	return EdgeXform{fitXform, fitErr, ndxPair};
+	return EdgeOri{fitXform, fitErr, ndxPair};
 }
 
 void
@@ -149,7 +149,7 @@ Geometry :: staNdxForVertId
 void
 Geometry :: addEdge
 	( LoHiPair const & staNdxLoHi
-	, EdgeXform const & edgeXform
+	, EdgeOri const & edgeOri
 	)
 {
 	// check if vertices (station nodes) are already in the graph
@@ -160,11 +160,11 @@ Geometry :: addEdge
 
 	VertId const vId1{ vertIdForStaNdx(sta1) };
 	VertId const vId2{ vertIdForStaNdx(sta2) };
-	theGraph.add_edge(vId1, vId2, edgeXform);
+	theGraph.add_edge(vId1, vId2, edgeOri);
 }
 
 std::vector<graaf::edge_id_t>
-Geometry :: spanningEdgeXforms
+Geometry :: spanningEdgeOris
 	() const
 {
 	return graaf::algorithm::kruskal_minimum_spanning_tree(theGraph);
@@ -184,7 +184,7 @@ Geometry :: networkTree
 		VertId const & vId2 = eId.second;
 
 		// get edge data
-		EdgeXform const & origEdge = theGraph.get_edge(eId);
+		EdgeOri const & origEdge = theGraph.get_edge(eId);
 
 		// get vertex data
 		StaFrame const & staFrame1 = theGraph.get_vertex(vId1);
@@ -195,7 +195,7 @@ Geometry :: networkTree
 
 		// set transformation edge consistent with LoHiNdx convention
 		LoHiPair staNdxLoHi;
-		EdgeXform useEdge{};
+		EdgeOri useEdge{};
 		if (staNdx1 < staNdx2)
 		{
 			staNdxLoHi = { staNdx1, staNdx2 };
@@ -246,13 +246,13 @@ Geometry :: propagateXforms
 			StaNdx const staNdx1{ theGeo.staNdxForVertId(vId1) };
 			StaNdx const staNdx2{ theGeo.staNdxForVertId(vId2) };
 
-			EdgeXform const & edgeXform = theGeo.theGraph.get_edge(eId);
+			EdgeOri const & edgeOri = theGeo.theGraph.get_edge(eId);
 
-			EdgeXform useEdgeXform{ edgeXform };
+			EdgeOri useEdgeOri{ edgeOri };
 			LoHiPair ndxLoHiPair{ staNdx1, staNdx2 };
 			if (staNdx2 < staNdx1)
 			{
-				useEdgeXform = edgeXform.inverse();
+				useEdgeOri = edgeOri.inverse();
 				ndxLoHiPair = LoHiPair{ staNdx2, staNdx1 };
 			}
 
@@ -265,7 +265,7 @@ Geometry :: propagateXforms
 			if (isValid(x1wRef))
 			{
 				// propagate from 1 forward into 2
-				Transform const x2w1{ useEdgeXform.xform() };
+				Transform const x2w1{ useEdgeOri.xform() };
 				Transform const x2wRef{ x2w1 * x1wRef };
 				gotStas[hiNdx] = x2wRef;
 			}
@@ -273,7 +273,7 @@ Geometry :: propagateXforms
 			if (isValid(x2wRef))
 			{
 				// propagate from 2 back to 1
-				Transform const x1w2{ useEdgeXform.xform() };
+				Transform const x1w2{ useEdgeOri.xform() };
 				Transform const x1wRef{ x1w2 * x2wRef };
 				gotStas[loNdx] = x1wRef;
 			}

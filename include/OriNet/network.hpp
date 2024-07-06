@@ -100,7 +100,7 @@ namespace network
 	 * The inverse() function provides the transformation for an
 	 * edge being traversed in the other direction.
 	 */
-	struct EdgeXform : public graaf::weighted_edge<double>
+	struct EdgeOri : public graaf::weighted_edge<double>
 	{
 		rigibra::Transform theLoHiXform{ rigibra::null<rigibra::Transform>() };
 		double theFitErr{ engabra::g3::null<double>() };
@@ -109,7 +109,7 @@ namespace network
 		//! Value ctor.
 		inline
 		explicit
-		EdgeXform
+		EdgeOri
 			( rigibra::Transform const & lohiXform
 			, double const & fitErr
 			, LoHiPair const & fromIntoNdxs
@@ -121,12 +121,12 @@ namespace network
 
 		//! Construct with null/invalid member values.
 		inline
-		EdgeXform
+		EdgeOri
 			() = default;
 
 		//! No-op dtor.
 		inline
-		~EdgeXform
+		~EdgeOri
 			() = default;
 
 		//! Edge weight (is transformation fit error - theFitErr)
@@ -143,7 +143,7 @@ namespace network
 		inline
 		bool
 		operator<
-			( EdgeXform const & other
+			( EdgeOri const & other
 			) const noexcept
 		{
 			return (this->get_weight() < other.get_weight());
@@ -153,7 +153,7 @@ namespace network
 		inline
 		bool
 		operator!=
-			( EdgeXform const & other
+			( EdgeOri const & other
 			) const noexcept
 		{
 			return ((other < (*this)) || ((*this) < other));
@@ -170,16 +170,16 @@ namespace network
 
 		//! An instance associated with edge in reverse direction.
 		inline
-		EdgeXform
+		EdgeOri
 		inverse
 			() const
 		{
 			LoHiPair ndxRev{ theNdxPair.second, theNdxPair.first };
-			return EdgeXform
+			return EdgeOri
 				(rigibra::inverse(theLoHiXform), theFitErr, ndxRev);
 		}
 
-	}; // EdgeXform
+	}; // EdgeOri
 
 
 	/*! \brief Representation of the geometry of a rigid body network.
@@ -194,12 +194,12 @@ namespace network
 		std::map<StaNdx, VertId> theVertIdFromStaNdx{};
 
 		//! Graph data structure for storing/processing network relationships
-		graaf::undirected_graph<StaFrame, EdgeXform> theGraph{};
+		graaf::undirected_graph<StaFrame, EdgeOri> theGraph{};
 
 		//! Robust transformation computed from collection of transforms
 		static
-		EdgeXform
-		edgeXformMedianFit
+		EdgeOri
+		edgeOriMedianFit
 			( std::vector<rigibra::Transform> const & xHiWrtLos
 			, LoHiPair const & ndxPair
 			);
@@ -232,18 +232,18 @@ namespace network
 		void
 		addEdge
 			( LoHiPair const & staNdxLoHi
-			, EdgeXform const & edgeXform
+			, EdgeOri const & edgeOri
 			);
 
 		//! Edges forming a minimum path
 		// Geometry::
 		std::vector<graaf::edge_id_t>
-		spanningEdgeXforms
+		spanningEdgeOris
 			() const;
 
 		/*! Create an instance populated according to edge list
 		 *
-		 * E.g. calling this function with result of spanningEdgeXforms()
+		 * E.g. calling this function with result of spanningEdgeOris()
 		 * will return a new network that minimally spans this original
 		 * instance.
 		 */
