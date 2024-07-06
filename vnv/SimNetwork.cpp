@@ -29,6 +29,9 @@
 
 
 #include <OriNet>
+#include <OriNet/random.hpp>
+#include <OriNet/sim.hpp>
+
 #include <Engabra>
 #include <Rigibra>
 
@@ -149,12 +152,12 @@ main
 	// (used for generating simulation data)
 	//
 	std::vector<rigibra::Transform> const expStas
-		{ sim::sequentialStations(numStations) };
-	//	{ sim::randomStations(numStations, locMinMax) };
+		{ orinet::sim::sequentialStations(numStations) };
+	//	{ orinet::sim::randomStations(numStations, locMinMax) };
 
 	// simulate backsight observation data
 	std::map<NdxPair, std::vector<rigibra::Transform> > const pairXforms
-		{ sim::backsightTransforms
+		{ orinet::sim::backsightTransforms
 			(expStas, numBacksight, numMea, numErr, locMinMax)
 		};
 
@@ -164,17 +167,17 @@ main
 	// Populate graph: station frame nodes and robustly fit transform edges
 	//
 
-	network::Geometry geoNet;
+	orinet::network::Geometry geoNet;
 
 	for (std::map<NdxPair, std::vector<rigibra::Transform> >::value_type
 		const & pairXform : pairXforms)
 	{
 		// compute robustly fit transformation for this edge
-		network::EdgeXform const edgeXform
-			{ network::edgeXformMedianFit(pairXform.second, pairXform.first) };
+		orinet::network::EdgeOri const edgeOri
+			{ orinet::network::edgeOriMedianFit(pairXform.second) };
 
 		// insert robust transform into network
-		geoNet.addEdge(pairXform.first, edgeXform);
+		geoNet.addEdge(pairXform.first, edgeOri);
 	}
 
 
@@ -186,9 +189,9 @@ main
 	//
 
 	std::vector<graaf::edge_id_t> const mstEdgeIds
-		{ geoNet.spanningEdgeXforms() };
+		{ geoNet.spanningEdgeOris() };
 
-	network::Geometry const mstNet{ geoNet.networkTree(mstEdgeIds) };
+	orinet::network::Geometry const mstNet{ geoNet.networkTree(mstEdgeIds) };
 
 	mstNet.saveNetworkGraphic(dotPathMst);
 
@@ -197,11 +200,10 @@ main
 	//
 
 	// traverse mst from node 0 (since 0 always present in non-empty graph)
-	network::StaNdx const staNdx0{ 0u };
+	orinet::network::StaNdx const staNdx0{ 0u };
 	rigibra::Transform const & staXform0 = expStas[staNdx0];
-	std::size_t const numStas{ expStas.size() };
 	std::vector<rigibra::Transform> const gotStas
-		{ mstNet.propagateXforms(staNdx0, staXform0, numStas, expStas) };
+		{ mstNet.propagateTransforms(staNdx0, staXform0) };
 
 	//
 	// Display computed/propagated station locations
