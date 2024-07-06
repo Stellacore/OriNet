@@ -27,12 +27,14 @@
 #define OriNet_compare_INCL_
 
 
+#include "OriNet/robust.hpp" // for medianOf() - probably should factor out
+
 #include <Rigibra>
 
 #include <algorithm>
 #include <array>
-#include <algorithm>
 #include <limits>
+#include <vector>
 
 
 /*! \file
@@ -351,6 +353,58 @@ namespace compare
 			*ptMaxMag = maxMag;
 		}
 		return same;
+	}
+
+	//! \brief Statistics comparing collection of transforms to some other one.
+	struct Stats
+	{
+		std::size_t theNumSamps{ 0u };
+		double theMinMagDiff{ engabra::g3::null<double>() };
+		double theMedMagDiff{ engabra::g3::null<double>() };
+		double theAveMagDiff{ engabra::g3::null<double>() };
+		double theMaxMagDiff{ engabra::g3::null<double>() };
+
+	}; // Stats
+
+	/*! \brief Compute statistics for collection of xforms relative to refXform
+	 *
+	 * \Note (*FwdIter) must resolve to rigibra::Transform.
+	 */
+	template <typename FwdIter>
+	inline
+	Stats
+	differenceStats
+		( FwdIter const & itBeg
+		, FwdIter const & itEnd
+		, rigibra::Transform const & refXform
+		, bool const & normalize = false
+		)
+	{
+		Stats stats{};
+		long int const itDiff{ (long int)std::distance(itBeg, itEnd) };
+		if (0 < itDiff)
+		{
+			std::size_t const size{ static_cast<std::size_t>(itDiff) };
+			std::vector<double> mags;
+			mags.reserve(size);
+			double min{ std::numeric_limits<double>::max() };
+			double max{ -1. };
+			double sum{ 0. };
+			for (FwdIter iter{itBeg} ; itEnd != iter ; ++iter)
+			{
+				rigibra::Transform const & anXform = *iter;
+				double const mag
+					{ maxMagResultDifference(anXform, refXform, normalize) };
+				min = std::min(min, mag);
+				max = std::max(max, mag);
+				sum = sum + mag;
+				mags.emplace_back(mag);
+			}
+			double const ave{ (1./(double)size) * sum };
+			double const med{ robust::medianOf(mags) };
+			stats = Stats{ size, min, med, ave, max };
+		}
+		return stats;
 	}
 
 } // [compare]

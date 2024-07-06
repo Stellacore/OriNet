@@ -76,25 +76,40 @@ namespace robust
 		//	bool const isEven{ 0u == (sizeN % 2u) };
 			bool const isOdd{ 1u == (sizeN % 2u) };
 
-			// (0)  - even none  (special case)
-			// ><
-			// 0 (1)  - odd use 0  (N/2-th element)
-			// >m <
-			// 0 1 (2)  - even average 0,1  (N/2-th element and Next)
-			// > m  <
-			// 0 1 2 (3)  -  odd use 1  (N/2-th element)
-			// > m    <
-			// 0 1 2 3 (4)  - even average 1,2  (N/2-th element and Next)
-			// >   m    <
-			// 0 1 2 3 4 (5)  - odd use 2  (N/2-th element)
-			// >   m      <
-			// 0 1 2 3 4 5 (6)  - even average 2,3  (N/2-th element and Next)
-			// >     m      <
+			// Even: (0)  - even none  (special case)
+			//      >< 
+			//  Odd: 0 (1)  - odd use 0  (N/2-th element)
+			//      >m < 
+			// Even: 0 1 (2)  - even average 0,1  (N/2-th and Prev)
+			//      >  m < 
+			//  Odd: 0 1 2 (3)  -  odd use 1  (N/2-th element)
+			//      >  m   < 
+			// Even: 0 1 2 3 (4)  - even average 1,2  (N/2-th and Prev)
+			//      >    m   < 
+			//  Odd: 0 1 2 3 4 (5)  - odd use 2  (N/2-th element)
+			//      >    m     < 
+			// Even: 0 1 2 3 4 5 (6)  - even average 2,3  (N/2-th and Prev)
+			//      >      m     < 
 
 			std::size_t const halfN{ sizeN / 2u };
+			std::size_t midN;
+			if (isOdd)
+			{
+				midN = halfN;
+			}
+			else
+			{
+				if (! (0u < halfN))
+				{
+					std::cerr << "FATAL ERROR\n";
+					exit(8);
+				}
+				// is true that (0u < halfN) since here is (N=even && 0<N)
+				midN = halfN - 1u;
+			}
 
 			std::vector<double>::iterator const itBeg{ values.begin() };
-			std::vector<double>::iterator const itMid{ itBeg + halfN };
+			std::vector<double>::iterator const itMid{ itBeg + midN };
 			std::vector<double>::iterator const itEnd{ values.end() };
 
 			// The largest of the smallest "half" of values

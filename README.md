@@ -1,13 +1,22 @@
 # OriNet - Computations for rigid body orientation network
 
 
+## Demonstration Programs
+
+Validation programs are avialable in the 'vnv' subdirectory and
+are structured as an independent CMake project.
+Ref [vnv/README.md file](./vnv/README.md)
+
+Demonstration programs are available in the demo/ subdirectory and
+described in the [demo/README.md file](./demo/README.md)
+
 ### Build commands
 
 Example build command (including explicit setting of compiler)
 
 ```
 CC=/usr/bin/clang CXX=/usr/bin/clang++\
- ;\
+ \
  cmake\
  -DCMAKE_BUILD_TYPE=Release\
  -DCMAKE_PREFIX_PATH=/tmpLocal/\
