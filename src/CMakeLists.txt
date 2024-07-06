@@ -39,6 +39,8 @@ set(srcFiles
 
 	OriNet.cpp
 
+	network.cpp
+
 	)
 
 add_library(
