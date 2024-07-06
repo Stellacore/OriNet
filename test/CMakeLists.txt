@@ -28,6 +28,7 @@ set(ProgNames
 
 	test_alignDirPair
 	test_nearness
+	test_network
 	test_robust
 
 	)
@@ -60,6 +61,7 @@ foreach(ProgName ${ProgNames})
 	target_link_libraries(
 		${ProgName}
 		PRIVATE
+			OriNet::OriNet
 			Rigibra::Rigibra
 			Engabra::Engabra
 		)
