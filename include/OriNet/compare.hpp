@@ -368,7 +368,7 @@ namespace compare
 
 	/*! \brief Compute statistics for collection of xforms relative to refXform
 	 *
-	 * \Note (*FwdIter) must resolve to rigibra::Transform.
+	 * \note (*FwdIter) must resolve to rigibra::Transform.
 	 */
 	template <typename FwdIter>
 	inline
