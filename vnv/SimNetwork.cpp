@@ -156,12 +156,9 @@ namespace sim
 		{
 			rigibra::Transform const & expCurrWrtRef = expStas[currSta];
 
-//std::cout << "\nCurrent index: " << currSta << '\n';
-
 			// generate backsight transforms for this station
 			static std::mt19937 gen(55342463u);
 			std::shuffle(staNdxs.begin(), staNdxs.begin() + currSta, gen);
-//std::cout << "  backsight to: ";
 
 			std::size_t const nbMax{ std::min(currSta, numBacksight) };
 			for (std::size_t backSta{0u} ; backSta < nbMax ; ++backSta)
@@ -170,7 +167,6 @@ namespace sim
 				std::size_t const & intoNdx = currSta;
 
 				// connect randomly with previous stations
-//std::cout << ' ' << fromNdx;
 				rigibra::Transform const & expBackWrtRef = expStas[fromNdx];
 
 				// compute expected relative setup transformation
@@ -178,12 +174,6 @@ namespace sim
 					{ rigibra::inverse(expBackWrtRef) };
 				rigibra::Transform const expCurrWrtBack
 					{ expCurrWrtRef * expRefWrtBack };
-
-std::cout << '\n';
-std::cout << " ndxPair: " << fromNdx << ", " << intoNdx << '\n';
-std::cout << " expCurrWrtRef: " << expCurrWrtRef << '\n';
-std::cout << " expBackWrtRef: " << expBackWrtRef << '\n';
-std::cout << "expCurrWrtBack: " << expCurrWrtBack << '\n';
 
 				// simulate backsight transformations
 				std::vector<rigibra::Transform> const obsXforms
@@ -204,7 +194,6 @@ std::cout << "expCurrWrtBack: " << expCurrWrtBack << '\n';
 					, std::make_pair(NdxPair{fromNdx, intoNdx}, obsXforms)
 					);
 			}
-//std::cout << '\n';
 		}
 
 		return pairXforms;
@@ -442,12 +431,6 @@ namespace network
 			, EdgeXform const & edgeXform
 			)
 		{
-//std::cout << "### addEdge: "
-//	<< " staNdxLoHi: "
-//	<< staNdxLoHi.first << "," << staNdxLoHi.second
-//	<< "  edgeXform: " << edgeXform.xform()
-//	<< '\n';
-
 			// check if vertices (station nodes) are already in the graph
 			StaNdx const & sta1 = staNdxLoHi.first;
 			StaNdx const & sta2 = staNdxLoHi.second;
@@ -562,37 +545,15 @@ namespace network
 					StaNdx const staNdx1{ theGeo.staNdxForVertId(vId1) };
 					StaNdx const staNdx2{ theGeo.staNdxForVertId(vId2) };
 
-std::cout << '\n';
-std::cout << "Prop: " << staNdx1 << "-->" << staNdx2 << '\n';
-
 					EdgeXform const & edgeXform = theGeo.theGraph.get_edge(eId);
-std::cout << " EdgePair: "
-	<< edgeXform.theNdxPair.first
-	<< " : "
-	<< edgeXform.theNdxPair.second
-	<< "  "
-	<< edgeXform.xform()
-	<< '\n';
+
 					EdgeXform useEdgeXform{ edgeXform };
 					LoHiPair ndxLoHiPair{ staNdx1, staNdx2 };
 					if (staNdx2 < staNdx1)
 					{
-std::cout << " @@@@@@@@@@@ - inverse of edge:\n";
 						useEdgeXform = edgeXform.inverse();
 						ndxLoHiPair = LoHiPair{ staNdx2, staNdx1 };
-std::cout << " Ndx.Swap:\n";
 					}
-else
-{
-	std::cout << " Ndx.AsIs:\n";
-}
-std::cout << " LoHiPair: "
-	<< ndxLoHiPair.first << ", " << ndxLoHiPair.second << '\n';
-std::cout << "  usePair: "
-	<< useEdgeXform.theNdxPair.first
-	<< ">>>"
-	<< useEdgeXform.theNdxPair.second
-	<< '\n';
 
 					using namespace rigibra;
 					StaNdx const loNdx = ndxLoHiPair.first;
@@ -600,46 +561,23 @@ std::cout << "  usePair: "
 					Transform const & x1wRef = gotStas[loNdx];
 					Transform const & x2wRef = gotStas[hiNdx];
 
-				//	if (isValid(x1wRef) && (! isValid(x2wRef)))
 					if (isValid(x1wRef))
 					{
-std::cout << " Okay[" << loNdx << "]::----[" << hiNdx << "]\n";
 						// propagate from 1 forward into 2
 						Transform const x2w1{ useEdgeXform.xform() };
 						Transform const x2wRef{ x2w1 * x1wRef };
-std::cout << " Set Hi Ndx: " << hiNdx << "\n";
 						gotStas[hiNdx] = x2wRef;
-rigibra::Transform const & expSta = expStas[hiNdx];
-rigibra::Transform const & gotSta = gotStas[hiNdx];
-std::cout
-	<< '\n'
-	<< "exp[" << hiNdx << "]: " << expSta << '\n'
-	<< "got[" << hiNdx << "]: " << gotSta << '\n'
-	;
-
 					}
 					else
-				//	if ((! isValid(x1wRef)) && isValid(x2wRef))
 					if (isValid(x2wRef))
 					{
-std::cout << " ----[" << loNdx << "]::Okay[" << hiNdx << "]\n";
 						// propagate from 2 back to 1
 						Transform const x1w2{ useEdgeXform.xform() };
 						Transform const x1wRef{ x1w2 * x2wRef };
-std::cout << " Set Lo Ndx: " << loNdx << "\n";
 						gotStas[loNdx] = x1wRef;
-rigibra::Transform const & expSta = expStas[loNdx];
-rigibra::Transform const & gotSta = gotStas[loNdx];
-std::cout
-	<< '\n'
-	<< "exp[" << loNdx << "]: " << expSta << '\n'
-	<< "x1w2  : " << x1w2 << '\n'
-	<< "got[" << loNdx << "]: " << gotSta << '\n'
-	;
 					}
 					else
 					{
-std::cout << " Null[" << loNdx << "]::Null[" << hiNdx << "]\n";
 						std::cerr << "FATAL ERROR - bad Graph sort\n";
 						exit(1);
 					}
@@ -695,7 +633,6 @@ main
 	}
 	std::filesystem::path const dotPathAll{ argv[1] };
 	std::filesystem::path const dotPathMst{ argv[2] };
-	std::cout << "\nHi from " << __FILE__ << '\n';
 
 	//
 	// Configuration parameters
@@ -723,33 +660,12 @@ main
 	std::vector<rigibra::Transform> const expStas
 		{ sim::sequentialStations(numStations) };
 	//	{ sim::randomStations(numStations, locMinMax) };
-std::cout << "number stations: " << expStas.size() << '\n';
-for (rigibra::Transform const & expSta : expStas)
-{
-	std::cout << "expSta: " << expSta << '\n';
-}
 
 	// simulate backsight observation data
 	std::map<NdxPair, std::vector<rigibra::Transform> > const pairXforms
 		{ sim::backsightTransforms
 			(expStas, numBacksight, numMea, numErr, locMinMax)
 		};
-std::cout << "number backsights: " << pairXforms.size() << '\n';
-for (std::map<NdxPair, std::vector<rigibra::Transform> >::value_type
-	const & pairXforms : pairXforms)
-{
-	std::size_t const & ndxFrom = pairXforms.first.first;
-	std::size_t const & ndxInto = pairXforms.first.second;
-	std::vector<rigibra::Transform> const & xforms = pairXforms.second;
-	std::cout << "backsightTransforms: pairXforms:\n";
-	std::cout << "ndxs: " << ndxFrom << ", " << ndxInto << '\n';
-	for (rigibra::Transform const & xform : xforms)
-	{
-		std::cout << "  x: " << xform << '\n';
-	}
-
-}
-//exit(8);
 
 	//
 	// Populate graph: station frame nodes and robustly fit transform edges
@@ -760,28 +676,13 @@ for (std::map<NdxPair, std::vector<rigibra::Transform> >::value_type
 	for (std::map<NdxPair, std::vector<rigibra::Transform> >::value_type
 		const & pairXform : pairXforms)
 	{
-std::cout << "\n### main: " << '\n';
-std::vector<rigibra::Transform> const & xforms = pairXform.second;
-for(rigibra::Transform const & xform : xforms)
-{
-	std::cout << "### main: xforms: " << xform << '\n';
-}
 		// compute robustly fit transformation for this edge
 		network::EdgeXform const edgeXform
 			{ network::edgeXformMedianFit(pairXform.second, pairXform.first) };
 
-std::cout << "### main: median: "
-	<< " staNdxLoHi: "
-	<< pairXform.first.first << "," << pairXform.first.second
-	<< '\n';
-std::cout << "### main: median: " << edgeXform.xform()
-	<< '\n';
-
 		// insert robust transform into network
 		geoNet.addEdge(pairXform.first, edgeXform);
 	}
-
-//exit(8);
 
 
 	// save network topology to graphviz '.dot' file format
@@ -802,7 +703,7 @@ std::cout << "### main: median: " << edgeXform.xform()
 	// Update station orientations by traversing MST
 	//
 
-	// traverse mst starting from node 0 (whatever that may be)
+	// traverse mst from node 0 (since 0 always present in non-empty graph)
 	network::StaNdx const staNdx0{ 0u };
 	rigibra::Transform const & staXform0 = expStas[staNdx0];
 	std::size_t const numStas{ expStas.size() };
@@ -810,20 +711,23 @@ std::cout << "### main: median: " << edgeXform.xform()
 		{ mstNet.propagateXforms(staNdx0, staXform0, numStas, expStas) };
 	//	{ geoNet.propagateXforms(staNdx0, staXform0, numStas) };
 
-	std::size_t const numSta{ expStas.size() };
-	std::cout << "\n==============\n";
-	for (std::size_t nn{0u} ; nn < numSta ; ++nn)
+	constexpr bool showResult{ true };
+	if (showResult)
 	{
-		rigibra::Transform const & expSta = expStas[nn];
-		rigibra::Transform const & gotSta = gotStas[nn];
-		std::cout
-			<< '\n'
-			<< "exp[" << nn << "] " << expSta << '\n'
-			<< "got[" << nn << "] " << gotSta << '\n'
-			;
+		std::size_t const numSta{ expStas.size() };
+		std::cout << "\n==============";
+		for (std::size_t nn{0u} ; nn < numSta ; ++nn)
+		{
+			rigibra::Transform const & expSta = expStas[nn];
+			rigibra::Transform const & gotSta = gotStas[nn];
+			std::cout
+				<< '\n'
+				<< "exp[" << nn << "] " << expSta << '\n'
+				<< "got[" << nn << "] " << gotSta << '\n'
+				;
+		}
+		std::cout << "==============\n";
 	}
-	/*
-	*/
 
 }
 
