@@ -376,12 +376,13 @@ namespace network
 	 * and rigid body transformations as edge relationships between them.
 	 *
 	 */
-	struct Geometry
+	class Geometry
 	{
+		//! Lookup map: station data index from graph vertex index 
 		std::map<StaNdx, VertId> theVertIdFromStaNdx{};
 
+		//! Graph data structure for storing/processing network relationships
 		graaf::undirected_graph<StaFrame, EdgeXform> theGraph{};
-
 
 		//! Check if staNdx already in graph, if not, then add vertex
 		// Geometry::
@@ -422,6 +423,8 @@ namespace network
 			return staFrame.theStaNdx;
 		}
 
+	public:
+
 		//! Insert transformation edge into graph
 		// Geometry::
 		inline
@@ -457,9 +460,8 @@ namespace network
 		 * E.g. calling this function with result of spanningEdgeXforms()
 		 * will return a new network that minimally spans this original
 		 * instance.
-		 *
-		 *  snippet TODO
 		 */
+		 // *  snippet TODO
 		// Geometry::
 		inline
 		Geometry
@@ -485,6 +487,7 @@ namespace network
 				StaNdx const & staNdx1 = staFrame1.theStaNdx;
 				StaNdx const & staNdx2 = staFrame2.theStaNdx;
 
+				// set transformation edge consistent with LoHiNdx convention
 				LoHiPair staNdxLoHi;
 				EdgeXform useEdge{};
 				if (staNdx1 < staNdx2)
@@ -638,7 +641,9 @@ main
 	// Configuration parameters
 	//
 
+	constexpr bool showResult{ false };
 //#define EasyCase
+
 #	if defined(EasyCase)
 	constexpr std::size_t numStations{ 8u };
 	constexpr std::size_t numBacksight{ 2u };
@@ -646,11 +651,20 @@ main
 	constexpr std::size_t numErr{ 0u };
 	constexpr std::pair<double, double> locMinMax{ 0., 100. };
 #	else // EasyCase
+	// general test data
 	constexpr std::size_t numStations{ 10u };
 	constexpr std::size_t numBacksight{ 3u };
 	constexpr std::size_t numMea{ 7u };
 	constexpr std::size_t numErr{ 3u };
 	constexpr std::pair<double, double> locMinMax{ 0., 100. };
+	/*
+	// large size data
+	constexpr std::size_t numStations{ 1000u };
+	constexpr std::size_t numBacksight{ 5u };
+	constexpr std::size_t numMea{ 400u };
+	constexpr std::size_t numErr{  50u };
+	constexpr std::pair<double, double> locMinMax{ 0., 100. };
+	*/
 #	endif // EasyCase
 
 	//
@@ -709,9 +723,11 @@ main
 	std::size_t const numStas{ expStas.size() };
 	std::vector<rigibra::Transform> const gotStas
 		{ mstNet.propagateXforms(staNdx0, staXform0, numStas, expStas) };
-	//	{ geoNet.propagateXforms(staNdx0, staXform0, numStas) };
 
-	constexpr bool showResult{ true };
+	//
+	// Display computed/propagated station locations
+	//
+
 	if (showResult)
 	{
 		std::size_t const numSta{ expStas.size() };
