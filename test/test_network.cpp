@@ -1,0 +1,196 @@
+//
+// MIT License
+//
+// Copyright (c) 2024 Stellacore Corporation
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+
+
+/*! \file
+\brief Unit tests (and example) code for OriNet::CN
+*/
+
+
+#include "OriNet/network.hpp"
+
+#include "OriNet/random.hpp"
+
+#include <Engabra>
+#include <Rigibra>
+
+#include <limits>
+#include <cmath>
+#include <iostream>
+#include <sstream>
+
+
+namespace
+{
+	//! Examples for documentation
+	void
+	test0
+		( std::ostream & oss
+		)
+	{
+		// [DoxyExample01]
+
+		// [DoxyExampleSim]
+
+		constexpr std::pair<double, double> locMinMax{ -50., 100. };
+		constexpr std::pair<double, double> angMinMax{ -3.14, +3.14 };
+
+		using rigibra::Transform;
+		using orinet::random::uniformTransform;
+		std::vector<Transform> const expStas
+			{ uniformTransform(locMinMax, angMinMax) // 0
+			, uniformTransform(locMinMax, angMinMax)
+			, uniformTransform(locMinMax, angMinMax)
+			, uniformTransform(locMinMax, angMinMax)
+			, uniformTransform(locMinMax, angMinMax)
+			, uniformTransform(locMinMax, angMinMax) // 5
+			};
+
+		// [DoxyExampleSim]
+
+		// [DoxyExampleCreate]
+
+		// main network (will have redundant edge relative orientations)
+		orinet::network::Geometry netGeo;
+
+		// [DoxyExampleCreate]
+
+		// [DoxyExampleEdges]
+
+		// relative orientation between stations - IntoWrtFrom
+		std::function<Transform(Transform const &, Transform const &)>
+			const ro
+			{ []
+				( Transform const & xFromWrtRef
+				, Transform const & xIntoWrtRef
+				)
+				{
+					Transform const xRefWrtFrom
+						{ rigibra::inverse(xFromWrtRef) };
+					return (xIntoWrtRef * xRefWrtFrom);
+				}
+			};
+
+		// specify a few arbitrary relative orientations to define network
+		using orinet::network::LoHiPair;
+		std::vector<LoHiPair> const edgeLoHis
+			{ {0u, 1u}, {0u, 2u}, {0u, 4u}
+			, {1u, 2u}, {1u, 4u}
+			, {2u, 3u}, {2u, 5u}
+			, {3u, 4u}
+			, {4u, 5u}
+			};
+		double const fitErr{ .001 }; // assume all RelOri of equal quality
+		for (LoHiPair const & edgeLoHi : edgeLoHis)
+		{
+			using orinet::network::StaNdx;
+			using orinet::network::EdgeOri;
+			StaNdx const & fromNdx = edgeLoHi.first;
+			StaNdx const & intoNdx = edgeLoHi.second;
+			EdgeOri const edge
+				{ ro(expStas[fromNdx], expStas[intoNdx]), fitErr };
+			netGeo.addEdge(edgeLoHi, edge);
+		}
+
+		// [DoxyExampleEdges]
+
+		// [DoxyExampleThin]
+
+		// compute minimum path spanning tree
+		// (along minimum relative orientation transform errors)
+		using orinet::network::EdgeId;
+		std::vector<EdgeId> const eIds{ netGeo.spanningEdgeOris() };
+
+		orinet::network::Geometry const mstGeo{ netGeo.networkTree(eIds) };
+
+		// [DoxyExampleThin]
+
+		// [DoxyExamplePropagate]
+
+		// propagate relative orientations into station orientations
+		constexpr orinet::network::StaNdx holdStaNdx{ 3u };
+		Transform const holdStaOri{ expStas[holdStaNdx] };
+		std::vector<Transform> const gotStas
+			{ mstGeo.propagateTransforms(holdStaNdx, holdStaOri) };
+
+		// [DoxyExamplePropagate]
+
+		// compare computed station orientations with expected ones
+		if (! (gotStas.size() == expStas.size()))
+		{
+			oss << "Failure of gotStas size test\n";
+			oss << "exp: " << expStas.size() << '\n';
+			oss << "got: " << gotStas.size() << '\n';
+		}
+		else
+		{
+			std::size_t const numSta{ expStas.size() };
+			for (std::size_t nn{0u} ; nn < numSta ; ++nn)
+			{
+				Transform const & gotSta = gotStas[nn];
+				Transform const & expSta = expStas[nn];
+				// use nearly exact comparison since no noise in sim data
+				// adjust tolerance to range of station values
+				double const locMag
+					{ std::hypot(locMinMax.first, locMinMax.second) };
+				double const tol
+					{ locMag * std::numeric_limits<double>::epsilon() };
+				if (! nearlyEquals(gotSta, expSta, tol))
+				{
+					oss << "Failure of gotSta data test\n";
+					oss << " nn: " << nn << '\n';
+					oss << "exp: " << expSta << '\n';
+					oss << "got: " << gotSta << '\n';
+				}
+			}
+		}
+
+		// [DoxyExample01]
+	}
+
+}
+
+//! Check behavior of NS
+int
+main
+	()
+{
+	int status{ 1 };
+	std::stringstream oss;
+
+	test0(oss);
+
+	if (oss.str().empty()) // Only pass if no errors were encountered
+	{
+		status = 0;
+	}
+	else
+	{
+		// else report error messages
+		std::cerr << "### FAILURE in test file: " << __FILE__ << std::endl;
+		std::cerr << oss.str();
+	}
+	return status;
+}
+
