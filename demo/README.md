@@ -1,4 +1,4 @@
-# OriNet / demo - Example demonstration programs.
+# OriNet/demo - Example demonstration programs.
 
 
 ## Inventory of Programs
