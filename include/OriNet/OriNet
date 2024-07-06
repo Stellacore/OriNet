@@ -49,6 +49,7 @@
 #include <OriNet/compare.hpp>
 #include <OriNet/random.hpp>
 #include <OriNet/robust.hpp>
+#include <OriNet/sim.hpp>
 
 // [DoxyExample01]
 

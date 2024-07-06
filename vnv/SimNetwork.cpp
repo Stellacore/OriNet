@@ -91,116 +91,6 @@ namespace
 
 } // [anon]
 
-namespace sim
-{
-	//! Create a collection of (pseudo)random station orientations
-	inline
-	std::vector<rigibra::Transform>
-	sequentialStations
-		( std::size_t const & numStas
-		)
-	{
-		std::vector<rigibra::Transform> stas;
-		stas.reserve(numStas);
-		using namespace engabra::g3;
-		Vector loc{ 0. };
-		for (std::size_t numSta{0u} ; numSta < numStas ; ++numSta)
-		{
-			using namespace rigibra;
-			Transform const xform{ loc, identity<Attitude>() };
-			stas.emplace_back(xform);
-			loc = loc + 10.*e1;
-		}
-		return stas;
-	}
-
-	//! Create a collection of (pseudo)random station orientations
-	inline
-	std::vector<rigibra::Transform>
-	randomStations
-		( std::size_t const & numStas
-		, std::pair<double, double> const & locMinMax
-		)
-	{
-		std::vector<rigibra::Transform> stas;
-		stas.reserve(numStas);
-		for (std::size_t numSta{0u} ; numSta < numStas ; ++numSta)
-		{
-			stas.emplace_back
-				(orinet::random::uniformTransform(locMinMax));
-		}
-		return stas;
-	}
-
-	//! simulate backsight observations
-	inline
-	std::map<NdxPair, std::vector<rigibra::Transform> >
-	backsightTransforms
-		( std::vector<rigibra::Transform> const & expStas
-		, std::size_t const & numBacksight
-		, std::size_t const & numMea
-		, std::size_t const & numErr
-		, std::pair<double, double> const & locMinMax
-		, std::pair<double, double> const & angMinMax
-			= { -engabra::g3::pi, engabra::g3::pi }
-		, double const & sigmaLoc = 1./8.
-		, double const & sigmaAng = 5./1024.
-		)
-	{
-		std::map<NdxPair, std::vector<rigibra::Transform> > pairXforms;
-
-		// simulate measurements station by station)
-		std::vector<std::size_t> staNdxs(expStas.size());
-		std::iota(staNdxs.begin(), staNdxs.end(), 0u);
-		for (std::size_t currSta{0u} ; currSta < expStas.size() ; ++currSta)
-		{
-			rigibra::Transform const & expCurrWrtRef = expStas[currSta];
-
-			// generate backsight transforms for this station
-			static std::mt19937 gen(55342463u);
-			std::shuffle(staNdxs.begin(), staNdxs.begin() + currSta, gen);
-
-			std::size_t const nbMax{ std::min(currSta, numBacksight) };
-			for (std::size_t backSta{0u} ; backSta < nbMax ; ++backSta)
-			{
-				std::size_t const & fromNdx = staNdxs[backSta];
-				std::size_t const & intoNdx = currSta;
-
-				// connect randomly with previous stations
-				rigibra::Transform const & expBackWrtRef = expStas[fromNdx];
-
-				// compute expected relative setup transformation
-				rigibra::Transform const expRefWrtBack
-					{ rigibra::inverse(expBackWrtRef) };
-				rigibra::Transform const expCurrWrtBack
-					{ expCurrWrtRef * expRefWrtBack };
-
-				// simulate backsight transformations
-				std::vector<rigibra::Transform> const obsXforms
-					{ orinet::random::noisyTransforms
-						( expCurrWrtBack
-						, numMea
-						, numErr
-						, sigmaLoc
-						, sigmaAng
-						, locMinMax
-						, angMinMax
-						)
-					};
-
-				// record relative transforms for later processing
-				pairXforms.emplace_hint
-					( pairXforms.end()
-					, std::make_pair(NdxPair{fromNdx, intoNdx}, obsXforms)
-					);
-			}
-		}
-
-		return pairXforms;
-	}
-
-} // [sim]
-
 
 namespace network
 {
@@ -667,6 +557,7 @@ main
 	*/
 #	endif // EasyCase
 
+	// [DoxyExample02]
 	//
 	// Generate collection of expected station orientations
 	// (used for generating simulation data)
@@ -680,6 +571,8 @@ main
 		{ sim::backsightTransforms
 			(expStas, numBacksight, numMea, numErr, locMinMax)
 		};
+
+	// [DoxyExample02]
 
 	//
 	// Populate graph: station frame nodes and robustly fit transform edges
