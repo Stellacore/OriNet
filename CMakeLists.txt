@@ -59,7 +59,7 @@ enable_testing()
 
 include(GNUInstallDirs) # create and set CMAKE_INSTALL_<dir> vars
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)  # 20 req'd for graaflib, else 17 is okay
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
