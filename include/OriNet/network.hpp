@@ -29,9 +29,6 @@
 /*! \file
 \brief Functions for creating and processing orientation network data.
 
-Example:
-\snippet test_network.cpp DoxyExample01
-
 */
 
 #include <Engabra>
@@ -182,6 +179,29 @@ namespace network
 	 * Uses a graph data structure to store StaFrame instances as nodes
 	 * and rigid body transformations as edge relationships between them.
 	 *
+	 * Example: (from test/test_network.cpp)
+	 *
+	 * Use orinet::random functions to simulate station orientations
+	 * for use in simulating edge relative orientations.
+	 * \snippet test_network.cpp DoxyExampleSim
+	 *
+	 * Construct a network::Geometry instance for network analysis below.
+	 * \snippet test_network.cpp DoxyExampleCreate
+	 *
+	 * Simulate edge relative orientations - in practical application
+	 * these would likely be the input data for orientation network
+	 * formation and analysis.
+	 * \snippet test_network.cpp DoxyExampleEdges
+	 *
+	 * Find an optimum connectivity through the network by which every
+	 * station is transitively connected to every other. Connection
+	 * path is the one that minmimzes the cumulative relative orientation
+	 * 'fitErr' sum.
+	 * \snippet test_network.cpp DoxyExampleThin
+	 *
+	 * Compute each station orientation using the thinned (minimum
+	 * spanning tree) orientation network.
+	 * \snippet test_network.cpp DoxyExamplePropagate
 	 */
 	class Geometry
 	{
@@ -221,7 +241,11 @@ namespace network
 
 	public:
 
-		//! Insert transformation edge into graph
+		/*! \brief Insert transformation edge into graph
+		 *
+		 * Example:
+	 	 * \snippet test_network.cpp DoxyExampleThin
+		 */
 		// Geometry::
 		void
 		addEdge
@@ -240,8 +264,10 @@ namespace network
 		 * E.g. calling this function with result of spanningEdgeOris()
 		 * will return a new network that minimally spans this original
 		 * instance.
+		 *
+		 * Example:
+	 	 * \snippet test_network.cpp DoxyExampleThin
 		 */
-		 // *  snippet TODO
 		// Geometry::
 		Geometry
 		networkTree
@@ -253,6 +279,9 @@ namespace network
 		 * Note that later computed transformations overwrite earlier ones.
 		 * In general, this is method is probably most useful if run
 		 * on a network that represents a minimum spanning tree.
+		 *
+		 * Example:
+	 	 * \snippet test_network.cpp DoxyExamplePropagate
 		 */
 		std::vector<rigibra::Transform>
 		propagateTransforms
