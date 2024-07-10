@@ -184,7 +184,7 @@ namespace random
 		, double const & sigmaLoc
 		, double const & sigmaAng
 		)
-	{	
+	{
 		rigibra::Transform xform{ rigibra::null<rigibra::Transform>() };
 		if (! ((sigmaLoc < 0.) || (sigmaAng < 0.)) )
 		{
@@ -195,6 +195,21 @@ namespace random
 				};
 		}
 		return xform;
+	}
+
+	//! \brief A transformation with uniformly distributed parameters values
+	inline
+	rigibra::Transform
+	perturbedTransform
+		( rigibra::Transform const & expXform
+		, double const & sigmaLoc
+		, double const & sigmaAng
+		)
+	{	
+		engabra::g3::Vector const expLoc = expXform.theLoc;
+		rigibra::PhysAngle const expAng{ expXform.theAtt.physAngle() };
+
+		return perturbedTransform(expLoc, expAng, sigmaLoc, sigmaAng);
 	}
 
 	//! \brief A transformation with uniformly distributed parameters values
