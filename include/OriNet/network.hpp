@@ -258,6 +258,18 @@ namespace network
 		spanningEdgeOris
 			() const;
 
+		//! Number of vertices in graph
+		// Geometry::
+		std::size_t
+		sizeVerts
+			() const;
+
+		//! Number of edges in graph
+		// Geometry::
+		std::size_t
+		sizeEdges
+			() const;
+
 		/*! \brief Create an instance populated according to edge list
 		 *
 		 * E.g. calling this function with result of spanningEdgeOris()
