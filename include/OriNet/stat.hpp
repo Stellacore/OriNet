@@ -27,7 +27,7 @@
 #define OriNet_stat_INCL_
 
 /*! \file
-\brief Contains TODO
+\brief Classes for computing/tracking statistics from data streams.
 
 Example:
 \snippet test_stat.cpp DoxyExample01
@@ -38,6 +38,7 @@ Example:
 #include <Engabra>
 
 #include <algorithm>
+#include <array>
 #include <vector>
 
 
@@ -119,7 +120,6 @@ namespace track
 				if (isOdd)
 				{
 					med = theValues[ndxHalf];
-					std::cout << "using middle element\n";
 				}
 				else // isEven
 				{
@@ -131,6 +131,78 @@ namespace track
 		}
 
 	}; // Values
+
+	//! Track running statistics for individual data values.
+	class Vectors
+	{
+		std::array<Values, 3u> theValues;
+
+	public:
+
+		/*! \brief Allocate space to hold all data values.
+		 *
+		 * This implementation holds a copy of all data values.
+		 * Therefore, (for efficiency) construction should allocate
+		 * at least enough space to hold all values. Otherwise
+		 * inserting a values may cause a reallocation/copy
+		 * operations. This should work okay, but will affect
+		 * performance to some degree (depending on size).
+		 */
+		inline
+		explicit
+		Vectors
+			( std::size_t const & reserveSize
+			)
+			: theValues
+				{ Values(reserveSize)
+				, Values(reserveSize)
+				, Values(reserveSize)
+				}
+		{ }
+
+		//! \brief Number of values that have been inserted.
+		inline
+		std::size_t
+		size
+			() const
+		{
+			return theValues[0].size();
+		}
+
+		//! \brief Incorporate value into data collection.
+		inline
+		void
+		insert
+			( engabra::g3::Vector const & value
+			)
+		{
+			// add components to component values
+			theValues[0].insert(value[0]);
+			theValues[1].insert(value[1]);
+			theValues[2].insert(value[2]);
+		}
+
+		/*! \brief Vector comprised of median of all coordinate values.
+		 *
+		 * Returns engabra::g3::null<Vector>() if empty. Otherwise
+		 * returns the middle value (of sorted) list for odd number
+		 * of elements, and the average of the two middle values
+		 * for even number of elements.
+		 */
+		inline
+		engabra::g3::Vector
+		median
+			() const
+		{
+			return engabra::g3::Vector
+				{ theValues[0].median()
+				, theValues[1].median()
+				, theValues[2].median()
+				};
+		}
+
+	}; // Vectors
+
 
 } // [track]
 

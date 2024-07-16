@@ -33,7 +33,9 @@
 #include <Engabra>
 #include <Rigibra>
 
+#include <algorithm>
 #include <iostream>
+#include <random>
 #include <sstream>
 
 
@@ -74,8 +76,6 @@ namespace
 		( std::ostream & oss
 		)
 	{
-		// [DoxyExample01]
-
 		constexpr double nan{ engabra::g3::null<double>() };
 
 		// add samples incrementally
@@ -97,9 +97,55 @@ namespace
 		stats.insert( 4.);
 		checkMedian(oss, stats,  1., "seven values");
 
+	}
+
+	//! Examples for documentation
+	void
+	test1
+		( std::ostream & oss
+		)
+	{
+		using engabra::g3::Vector;
+		std::vector<double> coordValues{ -8., -6., -1.,  1.,  3., 4., 9. };
+		Vector expMedian{ 1., 1., 1. };
+
+		std::vector<double> xvals{ coordValues };
+		std::vector<double> yvals{ coordValues };
+		std::vector<double> zvals{ coordValues };
+		static std::mt19937 gen(44233674u);
+		std::shuffle(xvals.begin(), xvals.end(), gen);
+		std::shuffle(yvals.begin(), yvals.end(), gen);
+		std::shuffle(zvals.begin(), zvals.end(), gen);
+		std::vector<Vector> vecs;
+		for (std::size_t nn{0u} ; nn < zvals.size() ; ++nn)
+		{
+			Vector const vec{ xvals[nn], yvals[nn], zvals[nn] };
+			vecs.emplace_back(vec);
+		}
+
 		// [DoxyExample01]
 
-//		stat::track::Vectors
+		// For efficienty, pre-reserve enough space for anticipated use cases
+		constexpr std::size_t reserveSize{ 16u };
+
+		// use stats tracking on vectors
+		orinet::stat::track::Vectors stats(reserveSize);
+		Vector gotMedian{};
+		for (engabra::g3::Vector const & vec : vecs)
+		{
+			stats.insert(vec);
+			gotMedian = stats.median();
+		}
+
+		// [DoxyExample01]
+
+		if (! engabra::g3::nearlyEquals(gotMedian, expMedian))
+		{
+			oss << "Failure of vector tracker median test\n";
+			oss << "exp: " << expMedian << '\n';
+			oss << "got: " << gotMedian << '\n';
+		}
+
 //		stat::track::Attitudes
 
 	}
@@ -115,6 +161,7 @@ main
 	std::stringstream oss;
 
 	test0(oss);
+	test1(oss);
 
 	if (oss.str().empty()) // Only pass if no errors were encountered
 	{
