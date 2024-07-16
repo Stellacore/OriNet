@@ -35,7 +35,10 @@ Example:
 */
 
 
+#include "align.hpp"
+
 #include <Engabra>
+#include <Rigibra>
 
 #include <algorithm>
 #include <array>
@@ -202,6 +205,86 @@ namespace track
 		}
 
 	}; // Vectors
+
+	//! Track running statistics for individual Attitudes.
+	class Attitudes
+	{
+		std::array<Vectors, 2u> theIntoVecs;
+
+	public:
+
+		/*! \brief Allocate space to hold all data values.
+		 *
+		 * This implementation holds a copy of all data values.
+		 * Therefore, (for efficiency) construction should allocate
+		 * at least enough space to hold all values. Otherwise
+		 * inserting a values may cause a reallocation/copy
+		 * operations. This should work okay, but will affect
+		 * performance to some degree (depending on size).
+		 */
+		inline
+		explicit
+		Attitudes
+			( std::size_t const & reserveSize
+			)
+			: theIntoVecs
+				{ Vectors(reserveSize)
+				, Vectors(reserveSize)
+				}
+		{ }
+
+		//! \brief Number of values that have been inserted.
+		inline
+		std::size_t
+		size
+			() const
+		{
+			return theIntoVecs[0].size();
+		}
+
+		/*! \brief Incorporate attitude information into data collection.
+		 *
+		 * The attitude is used to transform basis vectors, e1 and e2
+		 * into the transform range. Each of the results is individually
+		 * tracked in a track::Vectors instance.
+		 */
+		inline
+		void
+		insert
+			( rigibra::Attitude const & value
+			)
+		{
+			using namespace engabra::g3;
+			Vector const into0{ value(e1) };
+			Vector const into1{ value(e2) };
+			theIntoVecs[0].insert(into0);
+			theIntoVecs[1].insert(into1);
+		}
+
+		/*! \brief Vector comprised of median of all coordinate values.
+		 *
+		 * Returns engabra::g3::null<Vector>() if empty. Otherwise
+		 * returns the middle value (of sorted) list for odd number
+		 * of elements, and the average of the two middle values
+		 * for even number of elements.
+		 */
+		inline
+		rigibra::Attitude
+		median
+			() const
+		{
+			// fetch median points
+			using namespace engabra::g3;
+			Vector const intoA{ theIntoVecs[0].median() };
+			Vector const intoB{ theIntoVecs[1].median() };
+
+			constexpr align::DirPair fromDirPair{ e1, e2 };
+			align::DirPair const intoDirPair{ intoA, intoB };
+
+			return align::attitudeFromDirPairs(fromDirPair, intoDirPair);
+		}
+
+	}; // Attitudes
 
 
 } // [track]
