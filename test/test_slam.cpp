@@ -30,12 +30,13 @@ SLAM (Simultaneous Location and Mapping) is a computer vision concept
 in which moving cameras establish their own location relative to various
 detected landmark features, the location of which must also be determined.
 
-This example code exploares the type of SLAM in which detected space
-features are classified and associated with individual rigid bodies. This
-example code demonstrates simulation of a sequence of sensing events as
-if by a moving video camera. Each event produces a rigid body orientation
-with one or more object space bodies. The result of the program is to
-compute a 3D model of the orientation of all the object space bodies.
+This example code exploares the type of SLAM in which detected object
+space features are classified and associated with individual rigid
+bodies. This example code demonstrates simulation of a sequence of
+sensing events as if by a moving video camera. Each event produces a
+rigid body orientation with one or more object space bodies. The result
+of the program is to compute a 3D model of the orientation of all the
+object space bodies.
 
 A main test feature is that the object model is updated after each new
 observation is added in order to simulate a real-time use case in which
@@ -56,8 +57,9 @@ OriNet is providing continously updated object space model information.
 #include <vector>
 
 
-namespace
+namespace sim
 {
+	//! Uniformly distributed index into (non-empty) container.
 	template <typename Container>
 	inline
 	std::size_t
@@ -65,6 +67,12 @@ namespace
 		( Container const & container
 		)
 	{
+		if (container.empty())
+		{
+			std::cerr << "FATAL:"
+				" calling randomIndexInto with empty container" << std::endl;
+			exit(1);
+		}
 		static std::mt19937 gen(35364653u);
 		std::uniform_int_distribution<> dist(0u, container.size()-1u);
 		return dist(gen);
@@ -102,7 +110,7 @@ namespace
 		//! Orientation at time tau for deterministic trajectory model.
 		inline
 		rigibra::Transform
-		randomOrientation
+		perturbedOrientation
 			( double const & tau // [s]
 			, double const & locSigma = 1./100.
 			, double const & angSigma = 5./1000.
@@ -226,6 +234,41 @@ namespace
 		}
 
 	}; // TrajectoryCircle
+
+	//! Simulate camera observing several features.
+	inline
+	std::vector<rigibra::Transform>
+	xFormCamWrtFeas
+		( TrajectoryCircle const & trajCam
+		, double const & tau
+		, std::vector<rigibra::Transform> const & xFeatures
+		, std::size_t const & numFeas = 3u
+		)
+	{
+		using rigibra::Transform;
+		std::vector<Transform> xCamWrtFeas;
+		xCamWrtFeas.reserve(numFeas);
+
+		// get camera position
+		Transform const xCamWrtRef{ trajCam.perturbedOrientation(tau) };
+
+		// get relative transformations to several targets
+		for (std::size_t nFea{0u} ; nFea < numFeas ; ++nFea)
+		{
+			std::size_t const randNdx{ randomIndexInto(xFeatures) };
+			Transform const & xFeaWrtRef = xFeatures[randNdx];
+			Transform const xRefWrtFea{ inverse(xFeaWrtRef) };
+			Transform const xCamWrtFea{ xCamWrtRef * xRefWrtFea };
+			xCamWrtFeas.emplace_back(xCamWrtFea);
+		}
+		return xCamWrtFeas;
+	}
+
+} // [sim]
+
+
+namespace
+{
 	//! Examples for documentation
 	void
 	test0
@@ -249,9 +292,29 @@ namespace
 				, locMinMax, angMinMax
 				)
 			};
+auto const locSorter
+	{ [] (Transform const & xfm1, Transform const & xfm2)
+		{
+		//	using namespace engabra::g3;
+		//	return (magnitude(xfm1.theLoc) < magnitude(xfm2.theLoc));
+			return (xfm1.theLoc[0] < xfm2.theLoc[0]);
+		}
+	};
+std::vector<Transform> xSorts{ xFeatures };
+std::sort(xSorts.begin(), xSorts.end(), locSorter);
+
+std::cout << "xSorts...\n";
+for (Transform const & xSort : xSorts)
+{
+	std::cout << xSort << '\n';
+}
+std::cout << '\n';
+/*
+*/
+
 
 		// simulate on going camera trajectory
-		TrajectoryCircle const trajCam{};
+		sim::TrajectoryCircle const trajCam{};
 
 		// update network geometry continously for a period of time
 		orinet::network::Geometry netGeo;
@@ -265,27 +328,20 @@ namespace
 				break;
 			}
 
-			// get camera position
-			Transform const xCamWrtRef{ trajCam.randomOrientation(tau) };
+			//
+			// simulate a single exposure along with feature extraction
+			//
 
-			// get relative transformations to several targets
-			std::vector<Transform> xCamWrtFeas;
-			constexpr std::size_t numFeas{ 3u };
-			xCamWrtFeas.reserve(numFeas);
-			for (std::size_t nFea{0u} ; nFea < numFeas ; ++nFea)
-			{
-				std::size_t const randNdx{ randomIndexInto(xFeatures) };
-				Transform const & xFeaWrtRef = xFeatures[randNdx];
-				Transform const xRefWrtFea{ inverse(xFeaWrtRef) };
-				Transform const xCamWrtFea{ xCamWrtRef * xRefWrtFea };
-				xCamWrtFeas.emplace_back(xCamWrtFea);
-			}
+			std::vector<Transform> const xCamWrtFeas
+				{ sim::xFormCamWrtFeas(trajCam, tau, xFeatures) };
 
 			// generate network edges
 std::cout << '\n';
+			std::size_t const numFeas{ xCamWrtFeas.size() };
 			for (std::size_t ndx1{0u} ; ndx1 < numFeas ; ++ndx1)
 			{
 				Transform const & xCamWrtFea1 = xCamWrtFeas[ndx1];
+std::cout << xCamWrtFea1 << '\n';
 				for (std::size_t ndx2{ndx1+1u} ; ndx2 < numFeas ; ++ndx2)
 				{
 					Transform const & xCamWrtFea2 = xCamWrtFeas[ndx2];
@@ -295,8 +351,9 @@ std::cout << '\n';
 					constexpr double fitErr{ 1. }; // treat all the same
 					orinet::network::EdgeOri const edge{ x2w1, fitErr };
 					netGeo.addEdge(std::make_pair(ndx1, ndx2), edge);
-std::cout << x2w1 << '\n';
+std::cout << xCamWrtFea2 << '\n';
 				}
+std::cout << '\n';
 			}
 //std::cout << "netGeo.sizeEdges(): " << netGeo.sizeEdges() << '\n';
 
