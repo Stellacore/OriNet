@@ -30,6 +30,7 @@ set(ProgNames
 	test_nearness
 	test_network
 	test_slam
+	test_stat
 	test_robust
 
 	)
