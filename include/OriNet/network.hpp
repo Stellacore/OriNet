@@ -36,7 +36,9 @@
 #include <Rigibra>
 
 #include <filesystem>
+#include <iostream>
 #include <map>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -300,6 +302,22 @@ namespace network
 			, rigibra::Transform const & staXform0
 			) const;
 
+		//! \brief Descriptive information about this instance
+		std::string
+		infoString
+			( std::string const & title = {}
+			) const;
+
+		/*! \brief Detailed information about this instance
+		 *
+		 * \note The Vertex type (StaFrame) must have operator<<()
+		 * overloaded!
+		 */
+		std::string
+		infoStringContents
+			( std::string const & title = {}
+			) const;
+
 		//! \brief Save graph information to graphviz '.dot' graphic file.
 		// Geometry::
 		void
@@ -313,6 +331,34 @@ namespace network
 
 
 } // [orinet]
+
+namespace
+{
+	//! Put object info to stream
+	inline
+	std::ostream &
+	operator<<
+		( std::ostream & ostrm
+		, orinet::network::StaFrame const & staFrame
+		)
+	{
+		ostrm << staFrame.theStaKey;
+		return ostrm;
+	}
+
+	//! Put geo::infoString() to stream.
+	inline
+	std::ostream &
+	operator<<
+		( std::ostream & ostrm
+		, orinet::network::Geometry const & geo
+		)
+	{
+		ostrm << geo.infoString();
+		return ostrm;
+	}
+
+} //[anon]
 
 
 #endif // OriNet_network_INCL_

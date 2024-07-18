@@ -44,6 +44,7 @@ Example:
 #include <Rigibra>
 
 #include <filesystem>
+#include <iomanip>
 #include <map>
 #include <sstream>
 #include <string>
@@ -318,6 +319,73 @@ std::cout << "vId0: " << vId0 << '\n';
 	}
 
 	return gotXforms;
+}
+
+std::string
+Geometry :: infoString
+	( std::string const & title
+	) const
+{
+	std::ostringstream oss;
+	if (! title.empty())
+	{
+		oss << title << ' ';
+	}
+	oss
+		<< "sizeVerts: " << sizeVerts()
+		<< ' '
+		<< "sizeEdges: " << sizeEdges()
+		<< '\n';
+	return oss.str();
+}
+
+std::string
+Geometry :: infoStringContents
+	( std::string const & title
+	) const
+{
+	std::ostringstream oss;
+	oss << infoString(title);
+	//
+	using GType = graaf::undirected_graph<StaFrame, EdgeOri>;
+	//
+	// report vertices
+	oss << "vertices...\n";
+	GType::vertex_id_to_vertex_t const & vTypeById = theGraph.get_vertices();
+	for (GType::vertex_id_to_vertex_t ::const_iterator
+		iter{vTypeById.cbegin()} ; vTypeById.cend() != iter ; ++iter)
+	{
+		graaf::vertex_id_t const & vId = iter->first;
+		GType::vertex_t const & vType = vTypeById.at(vId);
+		oss
+		//	<< "VertId: " << vId
+		//	<< ' '
+			<< "VertKey: " << std::setw(8u) << vType
+			<< '\n';
+	}
+	//
+	// report edges
+	oss << "edges...\n";
+	GType::edge_id_to_edge_t const & eTypeById = theGraph.get_edges();
+	for (GType::edge_id_to_edge_t ::const_iterator
+		iter{eTypeById.cbegin()} ; eTypeById.cend() != iter ; ++iter)
+	{
+		graaf::edge_id_t const & eId = iter->first;
+		GType::edge_t const & eType = eTypeById.at(eId);
+		oss
+		//	<< "EdgeId:From,Into: "
+		//	<< "Ids: " << eId.first << ", " << eId.second
+		//	<< ' '
+			<< "EdgeKey:From,Into: "
+				<< std::setw(8u) << vTypeById.at(eId.first)
+				<< ' '
+				<< std::setw(8u) << vTypeById.at(eId.second)
+				<< ' '
+				<< std::setw(12u) << std::fixed << eType.get_weight()
+			<< '\n';
+	}
+
+	return oss.str();
 }
 
 void
