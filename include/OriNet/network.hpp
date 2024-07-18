@@ -36,7 +36,9 @@
 #include <Rigibra>
 
 #include <filesystem>
+#include <iostream>
 #include <map>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -54,7 +56,7 @@ namespace network
 	// using EdgeId = std::pair<std::size_t, std::size_t>;
 
 	//! Station orientations referenced by index (e.g. to external collection)
-	using StaNdx = std::size_t;
+	using StaKey = std::size_t;
 
 	/*! \brief Relative orientations between stations (.first < .second order)
 	 *
@@ -69,29 +71,37 @@ namespace network
 	 * orientation indices (values stored in nodes). The forward direction
 	 * is defined by the logic:
 
-	 * \arg Strictly \b required that: (LoHiPair.first < LoHiPair.second)
-	 * \arg The "From" station is associated with LoHiPair.first
-	 * \arg The "Into" station is associated with LoHiPair.second
+	 * \arg Strictly \b required that: (LoHiKeyPair.first < LoHiKeyPair.second)
+	 * \arg The "From" station is associated with LoHiKeyPair.first
+	 * \arg The "Into" station is associated with LoHiKeyPair.second
 	 * \arg Forward transform iterpreted as From(WithRespectTo)Into
 	 */
-	using LoHiPair = std::pair<StaNdx, StaNdx>;
+	using LoHiKeyPair = std::pair<StaKey, StaKey>;
 
 	/*! \brief Station Frame - i.e. associated with a rigid body pose.
 	 *
 	 */
 	struct StaFrame
 	{
-		StaNdx theStaNdx;
+		StaKey theStaKey;
+
+		inline
+		StaKey
+		key
+			() const
+		{
+			return theStaKey;
+		}
 
 	}; // StaFrame
 
 	/*! \brief Rigid body orientation betweem two station frames.
 	 *
 	 * NOTE: the forward direction of the transformation is associated
-	 * with StaFrame.theStaNdx values in the following sense.
-	 * \arg If (frameA.theStaNdx < frameB.theStaNdx), then transform
+	 * with StaFrame.theStaKey values in the following sense.
+	 * \arg If (frameA.theStaKey < frameB.theStaKey), then transform
 	 *      theLoHiXform represents frame B w.r.t. A.
-	 * \arg If (frameB.theStaNdx < frameA.theStaNdx), then transform
+	 * \arg If (frameB.theStaKey < frameA.theStaKey), then transform
 	 *      theLoHiXform represents frame A w.r.t. B.
 	 *
 	 * The inverse() function provides the transformation for an
@@ -212,29 +222,29 @@ namespace network
 	class Geometry
 	{
 		//! Lookup map: station data index from graph vertex index 
-		std::map<StaNdx, VertId> theVertIdFromStaNdx{};
+		std::map<StaKey, VertId> theVertIdFromStaKey{};
 
 		//! Graph data structure for storing/processing network relationships
 		graaf::undirected_graph<StaFrame, EdgeOri> theGraph{};
 
-		//! Check if staNdx already in graph, if not, then add vertex
+		//! Check if staKey already in graph, if not, then add vertex
 		// Geometry::
 		void
 		ensureStaFrameExists
-			( StaNdx const & staNdx
+			( StaKey const & staKey
 			);
 
 		//! Graaf vertex ID value for station index
 		// Geometry::
 		VertId
-		vertIdForStaNdx
-			( StaNdx const & staNdx
+		vertIdForStaKey
+			( StaKey const & staKey
 			) const;
 
 		//! External station index for Graaf vertex ID value
 		// Geometry::
-		StaNdx
-		staNdxForVertId
+		StaKey
+		staKeyForVertId
 			( VertId const & vertId
 			) const;
 
@@ -248,7 +258,7 @@ namespace network
 		// Geometry::
 		void
 		addEdge
-			( LoHiPair const & staNdxLoHi
+			( LoHiKeyPair const & staKeyLoHi
 			, EdgeOri const & edgeOri
 			);
 
@@ -296,8 +306,24 @@ namespace network
 		 */
 		std::vector<rigibra::Transform>
 		propagateTransforms
-			( StaNdx const & staNdx0
+			( StaKey const & staKey0
 			, rigibra::Transform const & staXform0
+			) const;
+
+		//! \brief Descriptive information about this instance
+		std::string
+		infoString
+			( std::string const & title = {}
+			) const;
+
+		/*! \brief Detailed information about this instance
+		 *
+		 * \note The Vertex type (StaFrame) must have operator<<()
+		 * overloaded!
+		 */
+		std::string
+		infoStringContents
+			( std::string const & title = {}
 			) const;
 
 		//! \brief Save graph information to graphviz '.dot' graphic file.
@@ -313,6 +339,36 @@ namespace network
 
 
 } // [orinet]
+
+namespace
+{
+	/*
+	//! Put object info to stream
+	inline
+	std::ostream &
+	operator<<
+		( std::ostream & ostrm
+		, orinet::network::StaFrame const & staFrame
+		)
+	{
+		ostrm << staFrame.key();
+		return ostrm;
+	}
+	*/
+
+	//! Put geo::infoString() to stream.
+	inline
+	std::ostream &
+	operator<<
+		( std::ostream & ostrm
+		, orinet::network::Geometry const & geo
+		)
+	{
+		ostrm << geo.infoString();
+		return ostrm;
+	}
+
+} //[anon]
 
 
 #endif // OriNet_network_INCL_

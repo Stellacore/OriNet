@@ -35,10 +35,12 @@
 #include <Engabra>
 #include <Rigibra>
 
-#include <limits>
 #include <cmath>
 #include <iostream>
+#include <limits>
+#include <set>
 #include <sstream>
+#include <string>
 
 
 namespace
@@ -93,8 +95,8 @@ namespace
 			};
 
 		// specify a few arbitrary relative orientations to define network
-		using orinet::network::LoHiPair;
-		std::vector<LoHiPair> const edgeLoHis
+		using orinet::network::LoHiKeyPair;
+		std::vector<LoHiKeyPair> const edgeLoHis
 			{ {0u, 1u}, {0u, 2u}, {0u, 4u}
 			, {1u, 2u}, {1u, 4u}
 			, {2u, 3u}, {2u, 5u}
@@ -102,14 +104,14 @@ namespace
 			, {4u, 5u}
 			};
 		double const fitErr{ .001 }; // assume all RelOri of equal quality
-		for (LoHiPair const & edgeLoHi : edgeLoHis)
+		for (LoHiKeyPair const & edgeLoHi : edgeLoHis)
 		{
-			using orinet::network::StaNdx;
+			using orinet::network::StaKey;
 			using orinet::network::EdgeOri;
-			StaNdx const & fromNdx = edgeLoHi.first;
-			StaNdx const & intoNdx = edgeLoHi.second;
+			StaKey const & fromKey = edgeLoHi.first;
+			StaKey const & intoKey = edgeLoHi.second;
 			EdgeOri const edge
-				{ ro(expStas[fromNdx], expStas[intoNdx]), fitErr };
+				{ ro(expStas[fromKey], expStas[intoKey]), fitErr };
 			netGeo.addEdge(edgeLoHi, edge);
 		}
 
@@ -129,10 +131,10 @@ namespace
 		// [DoxyExamplePropagate]
 
 		// propagate relative orientations into station orientations
-		constexpr orinet::network::StaNdx holdStaNdx{ 3u };
-		Transform const holdStaOri{ expStas[holdStaNdx] };
+		constexpr orinet::network::StaKey holdStaKey{ 3u };
+		Transform const holdStaOri{ expStas[holdStaKey] };
 		std::vector<Transform> const gotStas
-			{ mstGeo.propagateTransforms(holdStaNdx, holdStaOri) };
+			{ mstGeo.propagateTransforms(holdStaKey, holdStaOri) };
 
 		// [DoxyExamplePropagate]
 
@@ -169,6 +171,95 @@ namespace
 		// [DoxyExample01]
 	}
 
+	//! Check StaKey (station id) vs VertId (graph node) distinctions
+	void
+	test1
+		( std::ostream & oss
+		)
+	{
+		std::vector<std::size_t> const staKeys
+			{ 1000u
+			, 1001u
+			, 1002u
+			, 1003u
+			, 1004u
+			};
+
+		using namespace orinet::network;
+		Geometry netGeo;
+		static double const fitErr{ 1. };
+		static EdgeOri const edge(rigibra::null<rigibra::Transform>(), fitErr);
+		std::size_t const numSta{ staKeys.size() };
+		for (std::size_t fmNdx{0u} ; fmNdx < numSta ; ++fmNdx)
+		{
+			for (std::size_t toNdx{fmNdx + 1u} ; toNdx < numSta ; ++toNdx)
+			{
+				netGeo.addEdge
+					( LoHiKeyPair
+						{ staKeys[fmNdx], staKeys[toNdx] }
+					, edge
+					);
+			}
+		}
+
+		// get descriptive information
+		std::string const info{ netGeo.infoStringContents("netGeo") };
+		// std::cout << info << '\n';
+
+		// check that keys showup in reported info
+		std::istringstream iss(info);
+		std::set<StaKey> gotVertKeys;
+		std::map<StaKey, std::size_t> gotEdgeKeyCounts;
+		std::string line;
+		std::string tmpLabel;
+		StaKey tmpStaKey;
+		while (iss.good())
+		{
+			line.clear();
+			std::getline(iss, line);
+			if (std::string::npos != line.find("VertKey"))
+			{
+				std::istringstream irec(line);
+				irec >> tmpLabel >> tmpStaKey;
+				gotVertKeys.insert(tmpStaKey);
+			}
+			else
+			if (std::string::npos != line.find("EdgeKey"))
+			{
+				std::istringstream irec(line);
+				// check from key
+				irec >> tmpLabel >> tmpStaKey;
+				++gotEdgeKeyCounts[tmpStaKey];
+				// check into key
+				irec >> tmpStaKey;
+				++gotEdgeKeyCounts[tmpStaKey];
+			}
+		}
+
+		// check number of unique vertices
+		if (! (gotVertKeys.size() == staKeys.size()))
+		{
+			oss << "Failure of infoStringContents vertex count test\n";
+			oss << "exp: " << staKeys.size() << '\n';
+			oss << "got: " << gotVertKeys.size() << '\n';
+		}
+
+		// check how many time each vertex occurs in an edge
+		for (std::map<StaKey, std::size_t>::value_type
+			const & gotEdgeKeyCount : gotEdgeKeyCounts)
+		{
+			constexpr std::size_t expCount{ 4u }; // true for all key values
+			StaKey const & gotKey = gotEdgeKeyCount.first;
+			std::size_t const & gotCount = gotEdgeKeyCount.second;
+			if (! (gotCount == expCount))
+			{
+				oss << "Failure of infoStringContents edge count test\n";
+				oss << "key: " << gotKey << '\n';
+				oss << "exp: " << expCount << '\n';
+				oss << "got: " << gotCount << '\n';
+			}
+		}
+	}
 }
 
 //! Check behavior of NS
@@ -180,6 +271,7 @@ main
 	std::stringstream oss;
 
 	test0(oss);
+	test1(oss);
 
 	if (oss.str().empty()) // Only pass if no errors were encountered
 	{
