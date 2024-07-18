@@ -68,7 +68,7 @@ namespace network
 		std::ostringstream lbl;
 		lbl << "label="
 			<< '"'
-			<< vId << "='" << staFrame.theStaNdx << "'"
+			<< vId << "='" << staFrame.theStaKey << "'"
 			<< '"';
 		return lbl.str();
 	}
@@ -115,50 +115,51 @@ namespace network
 
 void
 Geometry :: ensureStaFrameExists
-	( StaNdx const & staNdx
+	( StaKey const & staKey
 	)
 {
-	if (theVertIdFromStaNdx.end() == theVertIdFromStaNdx.find(staNdx))
+	if (theVertIdFromStaKey.end() == theVertIdFromStaKey.find(staKey))
 	{
-		StaFrame const staFrame{ staNdx };
+		StaFrame const staFrame{ staKey };
 		VertId const vId{ theGraph.add_vertex(staFrame) };
-		theVertIdFromStaNdx[staNdx] = vId;
+		theVertIdFromStaKey[staKey] = vId;
 	}
 }
 
 VertId
-Geometry :: vertIdForStaNdx
-	( StaNdx const & staNdx
+Geometry :: vertIdForStaKey
+	( StaKey const & staKey
 	) const
 {
-	return theVertIdFromStaNdx.at(staNdx);
+	return theVertIdFromStaKey.at(staKey);
 }
 
-StaNdx
-Geometry :: staNdxForVertId
+StaKey
+Geometry :: staKeyForVertId
 	( VertId const & vertId
 	) const
 {
 	StaFrame const & staFrame = theGraph.get_vertex(vertId);
-	return staFrame.theStaNdx;
+	return staFrame.theStaKey;
 }
 
 // public:
 
 void
 Geometry :: addEdge
-	( LoHiPair const & staNdxLoHi
+	( LoHiKeyPair const & staKeyLoHi
 	, EdgeOri const & edgeOri
 	)
 {
 	// check if vertices (station nodes) are already in the graph
-	StaNdx const & sta1 = staNdxLoHi.first;
-	StaNdx const & sta2 = staNdxLoHi.second;
+	StaKey const & sta1 = staKeyLoHi.first;
+	StaKey const & sta2 = staKeyLoHi.second;
+
 	ensureStaFrameExists(sta1);
 	ensureStaFrameExists(sta2);
 
-	VertId const vId1{ vertIdForStaNdx(sta1) };
-	VertId const vId2{ vertIdForStaNdx(sta2) };
+	VertId const vId1{ vertIdForStaKey(sta1) };
+	VertId const vId2{ vertIdForStaKey(sta2) };
 	theGraph.add_edge(vId1, vId2, edgeOri);
 }
 
@@ -203,25 +204,25 @@ Geometry :: networkTree
 		StaFrame const & staFrame1 = theGraph.get_vertex(vId1);
 		StaFrame const & staFrame2 = theGraph.get_vertex(vId2);
 
-		StaNdx const & staNdx1 = staFrame1.theStaNdx;
-		StaNdx const & staNdx2 = staFrame2.theStaNdx;
+		StaKey const & staKey1 = staFrame1.theStaKey;
+		StaKey const & staKey2 = staFrame2.theStaKey;
 
 		// set transformation edge consistent with LoHiNdx convention
-		LoHiPair staNdxLoHi;
+		LoHiKeyPair staKeyLoHi;
 		EdgeOri useEdge{};
-		if (staNdx1 < staNdx2)
+		if (staKey1 < staKey2)
 		{
-			staNdxLoHi = { staNdx1, staNdx2 };
+			staKeyLoHi = { staKey1, staKey2 };
 			useEdge = origEdge;
 		}
 		else
-		if (staNdx2 < staNdx1)
+		if (staKey2 < staKey1)
 		{
-			staNdxLoHi = { staNdx2, staNdx1 };
+			staKeyLoHi = { staKey2, staKey1 };
 			useEdge = origEdge.inverse();
 		}
 
-		network.addEdge(staNdxLoHi, useEdge);
+		network.addEdge(staKeyLoHi, useEdge);
 	}
 
 	return network;
@@ -229,23 +230,28 @@ Geometry :: networkTree
 
 std::vector<rigibra::Transform>
 Geometry :: propagateTransforms
-	( StaNdx const & staNdx0
+	( StaKey const & staKey0
 	, rigibra::Transform const & staXform0
 	) const
 {
 	std::vector<rigibra::Transform> gotXforms;
+std::cout << "propagateTransforms\n";
 
 	using namespace rigibra;
 
-	std::size_t const numStaNdxs{ theGraph.vertex_count() };
-	if (0u < numStaNdxs)
+	std::size_t const numStaKeys{ theGraph.vertex_count() };
+std::cout << "numStaKeys: " << numStaKeys << '\n';
+	if (0u < numStaKeys)
 	{
-		gotXforms.resize(numStaNdxs);
+		gotXforms.resize(numStaKeys);
 		static Transform const nullXform{ null<Transform>() };
 		std::fill(gotXforms.begin(), gotXforms.end(), nullXform);
 
+std::cout << "1:\n";
+std::cout << "staKey0: " << staKey0 << '\n';
+std::cout << "staXform0: " << staXform0 << '\n';
 		// set first station orientation
-		gotXforms[staNdx0] = staXform0;
+		gotXforms[staKey0] = staXform0;
 
 		struct Propagator
 		{
@@ -260,22 +266,22 @@ Geometry :: propagateTransforms
 			{
 				VertId const & vId1 = eId.first;
 				VertId const & vId2 = eId.second;
-				StaNdx const staNdx1{ theGeo.staNdxForVertId(vId1) };
-				StaNdx const staNdx2{ theGeo.staNdxForVertId(vId2) };
+				StaKey const staKey1{ theGeo.staKeyForVertId(vId1) };
+				StaKey const staKey2{ theGeo.staKeyForVertId(vId2) };
 
 				EdgeOri const & edgeOri = theGeo.theGraph.get_edge(eId);
 
 				EdgeOri useEdgeOri{ edgeOri };
-				LoHiPair ndxLoHiPair{ staNdx1, staNdx2 };
-				if (staNdx2 < staNdx1)
+				LoHiKeyPair lohiKeys{ staKey1, staKey2 };
+				if (staKey2 < staKey1)
 				{
 					useEdgeOri = edgeOri.inverse();
-					ndxLoHiPair = LoHiPair{ staNdx2, staNdx1 };
+					lohiKeys = LoHiKeyPair{ staKey2, staKey1 };
 				}
 
 				using namespace rigibra;
-				StaNdx const loNdx = ndxLoHiPair.first;
-				StaNdx const hiNdx = ndxLoHiPair.second;
+				StaKey const loNdx = lohiKeys.first;
+				StaKey const hiNdx = lohiKeys.second;
 				Transform const & x1wRef = gotStas[loNdx];
 				Transform const & x2wRef = gotStas[hiNdx];
 
@@ -302,8 +308,10 @@ Geometry :: propagateTransforms
 			}
 
 		}; // Propagator;
+std::cout << "2:\n";
 
-		VertId const vId0{ vertIdForStaNdx(staNdx0) };
+		VertId const vId0{ vertIdForStaKey(staKey0) };
+std::cout << "vId0: " << vId0 << '\n';
 		Propagator const propagator{ *this, gotXforms};
 		graaf::algorithm::breadth_first_traverse
 			(theGraph, vId0, propagator);

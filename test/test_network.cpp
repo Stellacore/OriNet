@@ -93,8 +93,8 @@ namespace
 			};
 
 		// specify a few arbitrary relative orientations to define network
-		using orinet::network::LoHiPair;
-		std::vector<LoHiPair> const edgeLoHis
+		using orinet::network::LoHiKeyPair;
+		std::vector<LoHiKeyPair> const edgeLoHis
 			{ {0u, 1u}, {0u, 2u}, {0u, 4u}
 			, {1u, 2u}, {1u, 4u}
 			, {2u, 3u}, {2u, 5u}
@@ -102,14 +102,14 @@ namespace
 			, {4u, 5u}
 			};
 		double const fitErr{ .001 }; // assume all RelOri of equal quality
-		for (LoHiPair const & edgeLoHi : edgeLoHis)
+		for (LoHiKeyPair const & edgeLoHi : edgeLoHis)
 		{
-			using orinet::network::StaNdx;
+			using orinet::network::StaKey;
 			using orinet::network::EdgeOri;
-			StaNdx const & fromNdx = edgeLoHi.first;
-			StaNdx const & intoNdx = edgeLoHi.second;
+			StaKey const & fromKey = edgeLoHi.first;
+			StaKey const & intoKey = edgeLoHi.second;
 			EdgeOri const edge
-				{ ro(expStas[fromNdx], expStas[intoNdx]), fitErr };
+				{ ro(expStas[fromKey], expStas[intoKey]), fitErr };
 			netGeo.addEdge(edgeLoHi, edge);
 		}
 
@@ -129,10 +129,10 @@ namespace
 		// [DoxyExamplePropagate]
 
 		// propagate relative orientations into station orientations
-		constexpr orinet::network::StaNdx holdStaNdx{ 3u };
-		Transform const holdStaOri{ expStas[holdStaNdx] };
+		constexpr orinet::network::StaKey holdStaKey{ 3u };
+		Transform const holdStaOri{ expStas[holdStaKey] };
 		std::vector<Transform> const gotStas
-			{ mstGeo.propagateTransforms(holdStaNdx, holdStaOri) };
+			{ mstGeo.propagateTransforms(holdStaKey, holdStaOri) };
 
 		// [DoxyExamplePropagate]
 
