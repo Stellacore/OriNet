@@ -238,73 +238,76 @@ Geometry :: propagateTransforms
 	using namespace rigibra;
 
 	std::size_t const numStaNdxs{ theGraph.vertex_count() };
-	gotXforms.resize(numStaNdxs);
-	static Transform const nullXform{ null<Transform>() };
-	std::fill(gotXforms.begin(), gotXforms.end(), nullXform);
-
-	// set first station orientation
-	gotXforms[staNdx0] = staXform0;
-
-	struct Propagator
+	if (0u < numStaNdxs)
 	{
-		Geometry const & theGeo;
-		std::vector<rigibra::Transform> & gotStas;
+		gotXforms.resize(numStaNdxs);
+		static Transform const nullXform{ null<Transform>() };
+		std::fill(gotXforms.begin(), gotXforms.end(), nullXform);
 
-		inline
-		void
-		operator()
-			( graaf::edge_id_t const & eId
-			) const
+		// set first station orientation
+		gotXforms[staNdx0] = staXform0;
+
+		struct Propagator
 		{
-			VertId const & vId1 = eId.first;
-			VertId const & vId2 = eId.second;
-			StaNdx const staNdx1{ theGeo.staNdxForVertId(vId1) };
-			StaNdx const staNdx2{ theGeo.staNdxForVertId(vId2) };
+			Geometry const & theGeo;
+			std::vector<rigibra::Transform> & gotStas;
 
-			EdgeOri const & edgeOri = theGeo.theGraph.get_edge(eId);
-
-			EdgeOri useEdgeOri{ edgeOri };
-			LoHiPair ndxLoHiPair{ staNdx1, staNdx2 };
-			if (staNdx2 < staNdx1)
+			inline
+			void
+			operator()
+				( graaf::edge_id_t const & eId
+				) const
 			{
-				useEdgeOri = edgeOri.inverse();
-				ndxLoHiPair = LoHiPair{ staNdx2, staNdx1 };
+				VertId const & vId1 = eId.first;
+				VertId const & vId2 = eId.second;
+				StaNdx const staNdx1{ theGeo.staNdxForVertId(vId1) };
+				StaNdx const staNdx2{ theGeo.staNdxForVertId(vId2) };
+
+				EdgeOri const & edgeOri = theGeo.theGraph.get_edge(eId);
+
+				EdgeOri useEdgeOri{ edgeOri };
+				LoHiPair ndxLoHiPair{ staNdx1, staNdx2 };
+				if (staNdx2 < staNdx1)
+				{
+					useEdgeOri = edgeOri.inverse();
+					ndxLoHiPair = LoHiPair{ staNdx2, staNdx1 };
+				}
+
+				using namespace rigibra;
+				StaNdx const loNdx = ndxLoHiPair.first;
+				StaNdx const hiNdx = ndxLoHiPair.second;
+				Transform const & x1wRef = gotStas[loNdx];
+				Transform const & x2wRef = gotStas[hiNdx];
+
+				if (isValid(x1wRef))
+				{
+					// propagate from 1 forward into 2
+					Transform const x2w1{ useEdgeOri.xform() };
+					Transform const x2wRef{ x2w1 * x1wRef };
+					gotStas[hiNdx] = x2wRef;
+				}
+				else
+				if (isValid(x2wRef))
+				{
+					// propagate from 2 back to 1
+					Transform const x1w2{ useEdgeOri.xform() };
+					Transform const x1wRef{ x1w2 * x2wRef };
+					gotStas[loNdx] = x1wRef;
+				}
+				else
+				{
+					std::cerr << "FATAL ERROR - bad Graph sort\n";
+					exit(1);
+				}
 			}
 
-			using namespace rigibra;
-			StaNdx const loNdx = ndxLoHiPair.first;
-			StaNdx const hiNdx = ndxLoHiPair.second;
-			Transform const & x1wRef = gotStas[loNdx];
-			Transform const & x2wRef = gotStas[hiNdx];
+		}; // Propagator;
 
-			if (isValid(x1wRef))
-			{
-				// propagate from 1 forward into 2
-				Transform const x2w1{ useEdgeOri.xform() };
-				Transform const x2wRef{ x2w1 * x1wRef };
-				gotStas[hiNdx] = x2wRef;
-			}
-			else
-			if (isValid(x2wRef))
-			{
-				// propagate from 2 back to 1
-				Transform const x1w2{ useEdgeOri.xform() };
-				Transform const x1wRef{ x1w2 * x2wRef };
-				gotStas[loNdx] = x1wRef;
-			}
-			else
-			{
-				std::cerr << "FATAL ERROR - bad Graph sort\n";
-				exit(1);
-			}
-		}
-
-	}; // Propagator;
-
-	VertId const vId0{ vertIdForStaNdx(staNdx0) };
-	Propagator const propagator{ *this, gotXforms};
-	graaf::algorithm::breadth_first_traverse
-		(theGraph, vId0, propagator);
+		VertId const vId0{ vertIdForStaNdx(staNdx0) };
+		Propagator const propagator{ *this, gotXforms};
+		graaf::algorithm::breadth_first_traverse
+			(theGraph, vId0, propagator);
+	}
 
 	return gotXforms;
 }
