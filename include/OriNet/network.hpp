@@ -85,6 +85,14 @@ namespace network
 	{
 		StaKey theStaKey;
 
+		inline
+		StaKey
+		key
+			() const
+		{
+			return theStaKey;
+		}
+
 	}; // StaFrame
 
 	/*! \brief Rigid body orientation betweem two station frames.
@@ -334,6 +342,7 @@ namespace network
 
 namespace
 {
+	/*
 	//! Put object info to stream
 	inline
 	std::ostream &
@@ -342,9 +351,10 @@ namespace
 		, orinet::network::StaFrame const & staFrame
 		)
 	{
-		ostrm << staFrame.theStaKey;
+		ostrm << staFrame.key();
 		return ostrm;
 	}
+	*/
 
 	//! Put geo::infoString() to stream.
 	inline

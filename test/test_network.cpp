@@ -202,8 +202,11 @@ namespace
 			}
 		}
 
-		// check that keys showup in reported info
+		// get descriptive information
 		std::string const info{ netGeo.infoStringContents("netGeo") };
+		// std::cout << info << '\n';
+
+		// check that keys showup in reported info
 		std::istringstream iss(info);
 		std::set<StaKey> gotVertKeys;
 		std::map<StaKey, std::size_t> gotEdgeKeyCounts;

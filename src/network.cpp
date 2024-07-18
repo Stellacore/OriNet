@@ -43,6 +43,7 @@ Example:
 #include <graaflib/io/dot.h>
 #include <Rigibra>
 
+#include <algorithm>
 #include <filesystem>
 #include <iomanip>
 #include <map>
@@ -345,44 +346,65 @@ Geometry :: infoStringContents
 	) const
 {
 	std::ostringstream oss;
-	oss << infoString(title);
 	//
 	using GType = graaf::undirected_graph<StaFrame, EdgeOri>;
+	// Buffer results so that they can be sorted for output
+	// Wastes memory and time, but makes output *MUCH* easier to read.
+	std::vector<std::string> infoVerts;
+	std::vector<std::string> infoEdges;
 	//
 	// report vertices
-	oss << "vertices...\n";
 	GType::vertex_id_to_vertex_t const & vTypeById = theGraph.get_vertices();
 	for (GType::vertex_id_to_vertex_t ::const_iterator
 		iter{vTypeById.cbegin()} ; vTypeById.cend() != iter ; ++iter)
 	{
+		std::ostringstream tmpOss;
 		graaf::vertex_id_t const & vId = iter->first;
 		GType::vertex_t const & vType = vTypeById.at(vId);
-		oss
+		tmpOss
 		//	<< "VertId: " << vId
 		//	<< ' '
-			<< "VertKey: " << std::setw(8u) << vType
-			<< '\n';
+			<< "VertKey: " << std::setw(8u) << vType.key()
+			;
+		infoVerts.emplace_back(tmpOss.str());
 	}
 	//
 	// report edges
-	oss << "edges...\n";
 	GType::edge_id_to_edge_t const & eTypeById = theGraph.get_edges();
 	for (GType::edge_id_to_edge_t ::const_iterator
 		iter{eTypeById.cbegin()} ; eTypeById.cend() != iter ; ++iter)
 	{
+		std::ostringstream tmpOss;
 		graaf::edge_id_t const & eId = iter->first;
 		GType::edge_t const & eType = eTypeById.at(eId);
-		oss
+		tmpOss
 		//	<< "EdgeId:From,Into: "
 		//	<< "Ids: " << eId.first << ", " << eId.second
 		//	<< ' '
 			<< "EdgeKey:From,Into: "
-				<< std::setw(8u) << vTypeById.at(eId.first)
+				<< std::setw(8u) << vTypeById.at(eId.first).key()
 				<< ' '
-				<< std::setw(8u) << vTypeById.at(eId.second)
+				<< std::setw(8u) << vTypeById.at(eId.second).key()
 				<< ' '
 				<< std::setw(12u) << std::fixed << eType.get_weight()
-			<< '\n';
+				;
+		infoEdges.emplace_back(tmpOss.str());
+	}
+
+	// sort vertice and edges
+	std::sort(infoVerts.begin(), infoVerts.end());
+	std::sort(infoEdges.begin(), infoEdges.end());
+
+	oss << infoString(title);
+	oss << "vertices...\n";
+	for (std::string const & infoVert : infoVerts)
+	{
+		oss << infoVert << '\n';
+	}
+	oss << "edges...\n";
+	for (std::string const & infoEdge : infoEdges)
+	{
+		oss << infoEdge << '\n';
 	}
 
 	return oss.str();
