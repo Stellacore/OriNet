@@ -286,6 +286,75 @@ namespace track
 
 	}; // Attitudes
 
+	//! Track running statistics for individual Transforms.
+	class Transforms
+	{
+		Vectors theLocs;
+		Attitudes theAtts;
+
+	public:
+
+		/*! \brief Allocate space to hold all data values.
+		 *
+		 * This implementation holds a copy of all data values.
+		 * Therefore, (for efficiency) construction should allocate
+		 * at least enough space to hold all values. Otherwise
+		 * inserting a values may cause a reallocation/copy
+		 * operations. This should work okay, but will affect
+		 * performance to some degree (depending on size).
+		 */
+		inline
+		explicit
+		Transforms
+			( std::size_t const & reserveSize
+			)
+			: theLocs(reserveSize)
+			, theAtts(reserveSize)
+		{ }
+
+		//! \brief Number of values that have been inserted.
+		inline
+		std::size_t
+		size
+			() const
+		{
+			return theLocs.size();
+		}
+
+		/*! \brief Incorporate attitude information into data collection.
+		 *
+		 * The attitude is used to transform basis vectors, e1 and e2
+		 * into the transform range. Each of the results is individually
+		 * tracked in a track::Vectors instance.
+		 */
+		inline
+		void
+		insert
+			( rigibra::Transform const & value
+			)
+		{
+			theLocs.insert(value.theLoc);
+			theAtts.insert(value.theAtt);
+		}
+
+		/*! \brief Vector comprised of median of all coordinate values.
+		 *
+		 * Returns engabra::g3::null<Vector>() if empty. Otherwise
+		 * returns the middle value (of sorted) list for odd number
+		 * of elements, and the average of the two middle values
+		 * for even number of elements.
+		 */
+		inline
+		rigibra::Transform
+		median
+			() const
+		{
+			// result composed of median position and median attitude
+			return rigibra::Transform{ theLocs.median(), theAtts.median() };
+		}
+
+	}; // Transforms
+
 
 } // [track]
 

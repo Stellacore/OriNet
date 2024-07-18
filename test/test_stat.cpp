@@ -30,6 +30,8 @@
 
 #include "OriNet/stat.hpp"
 
+#include "OriNet/compare.hpp"
+
 #include <Engabra>
 #include <Rigibra>
 
@@ -70,7 +72,7 @@ namespace
 		}
 	}
 
-	//! Examples for documentation
+	//! Test tracking of scalar values
 	void
 	test0
 		( std::ostream & oss
@@ -96,10 +98,9 @@ namespace
 		checkMedian(oss, stats,  0., "six values");
 		stats.insert( 4.);
 		checkMedian(oss, stats,  1., "seven values");
-
 	}
 
-	//! Examples for documentation
+	//! Test tracking of vectors
 	void
 	test1
 		( std::ostream & oss
@@ -145,8 +146,135 @@ namespace
 			oss << "exp: " << expMedian << '\n';
 			oss << "got: " << gotMedian << '\n';
 		}
+	}
 
-//		stat::track::Attitudes
+	//! Test tracking of attitude poses
+	void
+	test2
+		( std::ostream & oss
+		)
+	{
+		// angle sizes for rotation about arbitrary plane
+		double const scale{ .01 };
+		std::vector<double> values{ -8., -6., 1.,  1.,  3., 4., 9. };
+		double const valMedian{ 1. };
+		static std::mt19937 gen(66637789u);
+		std::shuffle(values.begin(), values.end(), gen);
+
+		constexpr std::size_t reserveSize{ 16u };
+		orinet::stat::track::Attitudes stats(reserveSize);
+
+		using namespace rigibra;
+		using namespace engabra::g3;
+
+		// plane of rotation
+		BiVector const rotDir{ direction( 2.*e23 + 3.*e31 - 4.*e12) };
+		Attitude gotMedian{};
+		for (std::size_t nn{0u} ; nn < values.size() ; ++nn)
+		{
+			double const angSize{ scale * values[nn] };
+			PhysAngle const pAng{ angSize * rotDir };
+			Attitude const att{ pAng };
+			stats.insert(att);
+			gotMedian = stats.median();
+		}
+		Attitude expMedian;
+		{
+			double const angSize{ scale * valMedian };
+			PhysAngle const pAng{ angSize * rotDir };
+			Attitude const att{ pAng };
+			expMedian = att;
+		}
+
+		// Test method could probably be improved with some consideration
+
+		Attitude const difMedian{ gotMedian * inverse(expMedian) };
+		constexpr double tolMag{ .000100 };
+		double const difMag{ magnitude(difMedian.physAngle().theBiv) };
+		if (! (difMag < tolMag))
+		{
+			oss << "Failure of attitude tracker median test\n";
+			oss << "exp: " << expMedian << '\n';
+			oss << "got: " << gotMedian << '\n';
+			oss << "dif: " << difMedian << '\n';
+			oss << "difMag: " << io::fixed(difMag) << '\n';
+			oss << "tolMag: " << io::fixed(tolMag) << '\n';
+		}
+	}
+
+	//! Test tracking of attitude poses
+	void
+	test3
+		( std::ostream & oss
+		)
+	{
+		// angle sizes for rotation about arbitrary plane
+		double const scale{ .01 };
+		std::vector<double> values{ -8., -6., 1.,  1.,  3., 4., 9. };
+		double const valMedian{ 1. };
+		static std::mt19937 gen(36366525u);
+		std::shuffle(values.begin(), values.end(), gen);
+
+		std::vector<double> xvals{ values };
+		std::vector<double> yvals{ values };
+		std::vector<double> zvals{ values };
+		std::shuffle(xvals.begin(), xvals.end(), gen);
+		std::shuffle(yvals.begin(), yvals.end(), gen);
+		std::shuffle(zvals.begin(), zvals.end(), gen);
+
+		constexpr std::size_t reserveSize{ 16u };
+		orinet::stat::track::Transforms stats(reserveSize);
+
+		using namespace rigibra;
+		using namespace engabra::g3;
+
+		// plane of rotation
+		BiVector const rotDir{ direction( 2.*e23 + 3.*e31 - 4.*e12) };
+		Transform gotMedian{};
+		for (std::size_t nn{0u} ; nn < values.size() ; ++nn)
+		{
+			// create a jumble of locations
+			Vector const loc{ xvals[nn], yvals[nn], zvals[nn] };
+			// create a jumble of attitudes
+			double const angSize{ scale * values[nn] };
+			PhysAngle const pAng{ angSize * rotDir };
+			Transform const xform{ loc, Attitude{ pAng } };
+			stats.insert(xform);
+			gotMedian = stats.median();
+		}
+		Transform expMedian{};
+		{
+			// create a jumble of locations
+			Vector const loc{ valMedian, valMedian, valMedian };
+			// create a jumble of attitudes
+			double const angSize{ scale * valMedian };
+			PhysAngle const pAng{ angSize * rotDir };
+			Transform const xform{ loc, Attitude{ pAng } };
+			expMedian = xform;
+		}
+
+		// Test method could probably be improved with some consideration
+
+		bool const okayLoc{ nearlyEquals(gotMedian.theLoc, expMedian.theLoc) };
+		//
+		Attitude const difMedian
+			{ gotMedian.theAtt * inverse(expMedian.theAtt) };
+		constexpr double tolAngMag{ .000100 };
+		double const difAngMag{ magnitude(difMedian.physAngle().theBiv) };
+		bool const okayAtt{ (difAngMag < tolAngMag) };
+		//
+		bool const okay{ okayLoc && okayAtt };
+		//
+		if (! okay)
+		{
+			oss << "Failure of attitude tracker median test\n";
+			oss << "exp: " << expMedian << '\n';
+			oss << "got: " << gotMedian << '\n';
+			oss << "  okayLoc: " << okayLoc << '\n';
+			oss << "  okayAtt: " << okayAtt << '\n';
+			oss << "difAngMag: " << io::fixed(difAngMag) << '\n';
+			oss << "tolAngMag: " << io::fixed(tolAngMag) << '\n';
+		}
 
 	}
 
@@ -162,6 +290,8 @@ main
 
 	test0(oss);
 	test1(oss);
+	test2(oss);
+	test3(oss);
 
 	if (oss.str().empty()) // Only pass if no errors were encountered
 	{
