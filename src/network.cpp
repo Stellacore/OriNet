@@ -237,21 +237,16 @@ Geometry :: propagateTransforms
 	) const
 {
 	std::vector<rigibra::Transform> gotXforms;
-std::cout << "propagateTransforms\n";
 
 	using namespace rigibra;
 
 	std::size_t const numStaKeys{ theGraph.vertex_count() };
-std::cout << "numStaKeys: " << numStaKeys << '\n';
 	if (0u < numStaKeys)
 	{
 		gotXforms.resize(numStaKeys);
 		static Transform const nullXform{ null<Transform>() };
 		std::fill(gotXforms.begin(), gotXforms.end(), nullXform);
 
-std::cout << "1:\n";
-std::cout << "staKey0: " << staKey0 << '\n';
-std::cout << "staXform0: " << staXform0 << '\n';
 		// set first station orientation
 		gotXforms[staKey0] = staXform0;
 
@@ -310,10 +305,8 @@ std::cout << "staXform0: " << staXform0 << '\n';
 			}
 
 		}; // Propagator;
-std::cout << "2:\n";
 
 		VertId const vId0{ vertIdForStaKey(staKey0) };
-std::cout << "vId0: " << vId0 << '\n';
 		Propagator const propagator{ *this, gotXforms};
 		graaf::algorithm::breadth_first_traverse
 			(theGraph, vId0, propagator);
