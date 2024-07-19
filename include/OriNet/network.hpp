@@ -70,7 +70,7 @@ namespace network
 	 * of all edge relative orientations is determined by the station
 	 * orientation indices (values stored in nodes). The forward direction
 	 * is defined by the logic:
-
+	 *
 	 * \arg Strictly \b required that: (LoHiKeyPair.first < LoHiKeyPair.second)
 	 * \arg The "From" station is associated with LoHiKeyPair.first
 	 * \arg The "Into" station is associated with LoHiKeyPair.second
@@ -333,16 +333,6 @@ namespace network
 		spanningEdgeOris
 			() const;
 
-		//! Number of vertices in graph
-		std::size_t
-		sizeVerts
-			() const;
-
-		//! Number of edges in graph
-		std::size_t
-		sizeEdges
-			() const;
-
 		/*! \brief Create an instance populated according to edge list
 		 *
 		 * E.g. calling this function with result of spanningEdgeOris()
@@ -371,6 +361,16 @@ namespace network
 			( StaKey const & staKey0
 			, rigibra::Transform const & staXform0
 			) const;
+
+		//! Number of vertices in graph
+		std::size_t
+		sizeVerts
+			() const;
+
+		//! Number of edges in graph
+		std::size_t
+		sizeEdges
+			() const;
 
 		//! \brief Descriptive information about this instance
 		std::string

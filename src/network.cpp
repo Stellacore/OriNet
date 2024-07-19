@@ -173,20 +173,6 @@ Geometry :: spanningEdgeOris
 	return graaf::algorithm::kruskal_minimum_spanning_tree(theGraph);
 }
 
-std::size_t
-Geometry :: sizeVerts
-	() const
-{
-	return theGraph.vertex_count();
-}
-
-std::size_t
-Geometry :: sizeEdges
-	() const
-{
-	return theGraph.edge_count();
-}
-
 Geometry
 Geometry :: networkTree
 	( std::vector<graaf::edge_id_t> const eIds
@@ -314,6 +300,20 @@ Geometry :: propagateTransforms
 	}
 
 	return gotXforms;
+}
+
+std::size_t
+Geometry :: sizeVerts
+	() const
+{
+	return theGraph.vertex_count();
+}
+
+std::size_t
+Geometry :: sizeEdges
+	() const
+{
+	return theGraph.edge_count();
 }
 
 std::string
