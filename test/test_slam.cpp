@@ -30,7 +30,7 @@ SLAM (Simultaneous Location and Mapping) is a computer vision concept
 in which moving cameras establish their own location relative to various
 detected landmark features, the location of which must also be determined.
 
-This example code exploares the type of SLAM in which detected object
+This example code explores the type of SLAM in which detected object
 space features are classified and associated with individual rigid
 bodies. This example code demonstrates simulation of a sequence of
 sensing events as if by a moving video camera. Each event produces a
@@ -40,7 +40,7 @@ object space bodies.
 
 A main test feature is that the object model is updated after each new
 observation is added in order to simulate a real-time use case in which
-OriNet is providing continously updated object space model information.
+OriNet is providing continuously updated object space model information.
 
 */
 
@@ -52,6 +52,7 @@ OriNet is providing continously updated object space model information.
 #include <Rigibra>
 
 #include <iostream>
+#include <map>
 #include <random>
 #include <sstream>
 #include <vector>
@@ -59,6 +60,13 @@ OriNet is providing continously updated object space model information.
 
 namespace sim
 {
+	using CamKey = std::size_t;
+	using FeaKey = std::size_t;
+
+	// use offset values to make visual distinction in diganostic output
+	constexpr FeaKey sFeaKey0{  900 };
+	constexpr CamKey sCamKey0{ 1000 };
+
 	//! Uniformly distributed index into (non-empty) container.
 	template <typename Container>
 	inline
@@ -235,10 +243,11 @@ namespace sim
 
 	}; // TrajectoryCircle
 
+
 	//! Simulate camera observing several features.
 	inline
-	std::vector<rigibra::Transform>
-	xFormCamWrtFeas
+	std::map<std::pair<CamKey, FeaKey>, rigibra::Transform>
+	xformCamWrtFeas
 		( TrajectoryCircle const & trajCam
 		, double const & tau
 		, std::vector<rigibra::Transform> const & xFeatures
@@ -246,8 +255,7 @@ namespace sim
 		)
 	{
 		using rigibra::Transform;
-		std::vector<Transform> xCamWrtFeas;
-		xCamWrtFeas.reserve(numFeas);
+		std::map<std::pair<CamKey, FeaKey>, Transform> mapCamFeaXforms;
 
 		// get camera position
 		Transform const xCamWrtRef{ trajCam.perturbedOrientation(tau) };
@@ -259,9 +267,18 @@ namespace sim
 			Transform const & xFeaWrtRef = xFeatures[randNdx];
 			Transform const xRefWrtFea{ inverse(xFeaWrtRef) };
 			Transform const xCamWrtFea{ xCamWrtRef * xRefWrtFea };
-			xCamWrtFeas.emplace_back(xCamWrtFea);
+			//
+			sim::CamKey const & camKey = sim::sCamKey0;
+			sim::FeaKey const feaKey{ sim::sFeaKey0 + nFea };
+			mapCamFeaXforms.emplace_hint
+				( mapCamFeaXforms.end()
+				, std::make_pair
+					( std::make_pair(camKey, feaKey)
+					, xCamWrtFea
+					)
+				);
 		}
-		return xCamWrtFeas;
+		return mapCamFeaXforms;
 	}
 
 } // [sim]
@@ -292,6 +309,7 @@ namespace
 				, locMinMax, angMinMax
 				)
 			};
+
 auto const locSorter
 	{ [] (Transform const & xfm1, Transform const & xfm2)
 		{
@@ -332,33 +350,44 @@ std::cout << '\n';
 			// simulate a single exposure along with feature extraction
 			//
 
-			std::vector<Transform> const xCamWrtFeas
-				{ sim::xFormCamWrtFeas(trajCam, tau, xFeatures) };
+			std::map<std::pair<sim::CamKey, sim::FeaKey>, Transform>
+				const mapCamFeaXforms
+				{ sim::xformCamWrtFeas(trajCam, tau, xFeatures) };
 
 			// generate network edges
-std::cout << '\n';
-			std::size_t const numFeas{ xCamWrtFeas.size() };
-			for (std::size_t ndx1{0u} ; ndx1 < numFeas ; ++ndx1)
+			using Iter = typename
+				std::map<std::pair<sim::CamKey, sim::FeaKey>, Transform>
+				::const_iterator;
+			for (Iter it1{mapCamFeaXforms.cbegin()}
+				; mapCamFeaXforms.cend() != it1 ; ++it1)
 			{
-				Transform const & xCamWrtFea1 = xCamWrtFeas[ndx1];
-std::cout << xCamWrtFea1 << '\n';
-				for (std::size_t ndx2{ndx1+1u} ; ndx2 < numFeas ; ++ndx2)
+				Transform const & xCamWrtFea1 = it1->second;
+				sim::FeaKey const & feaKey1 = it1->first.second;
+				Iter it2{ it1 };
+				++it2;
+				for ( ; mapCamFeaXforms.cend() != it2 ; ++it2)
 				{
-					Transform const & xCamWrtFea2 = xCamWrtFeas[ndx2];
+					Transform const & xCamWrtFea2 = it2->second;
+					sim::FeaKey const & feaKey2 = it2->first.second;
 					Transform const xFea2wrtCam{ inverse(xCamWrtFea2) };
 					Transform const x2w1 { xFea2wrtCam * xCamWrtFea1 };
 
 					constexpr double fitErr{ 1. }; // treat all the same
 					orinet::network::EdgeOri const edge{ x2w1, fitErr };
-					netGeo.addEdge(std::make_pair(ndx1, ndx2), edge);
-std::cout << xCamWrtFea2 << '\n';
+std::cout << "adding edge between: " << feaKey1 << ' ' << feaKey2 << '\n';
+					netGeo.addEdge(std::make_pair(feaKey1, feaKey2), edge);
 				}
-std::cout << '\n';
 			}
-//std::cout << "netGeo.sizeEdges(): " << netGeo.sizeEdges() << '\n';
+std::cout << '\n';
+std::cout << "netGeo.sizeEdges(): " << netGeo.sizeEdges() << '\n';
 
+			sim::FeaKey const & feaKey0
+				= mapCamFeaXforms.cbegin()->first.second;
+			Transform const & xform0
+				= mapCamFeaXforms.cbegin()->second;
 			std::vector<Transform> const fitGeo
-				{ netGeo.propagateTransforms(0u, xFeatures[0]) };
+				{ netGeo.propagateTransforms(feaKey0, xform0) };
+
 std::cout << "fitGeo.size: " << fitGeo.size() << '\n';
 		}
 
