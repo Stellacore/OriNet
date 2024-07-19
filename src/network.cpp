@@ -93,7 +93,7 @@ namespace network
 		return lbl.str();
 	}
 
-
+	/*
 	EdgeOri
 	edgeOriMedianFit
 		( std::vector<rigibra::Transform> const & xHiWrtLos
@@ -113,6 +113,7 @@ namespace network
 		double const & fitErr = stats.theMedMagDiff;
 		return EdgeOri{fitXform, fitErr};
 	}
+	*/
 
 
 void

@@ -96,18 +96,28 @@ namespace network
 	}; // StaFrame
 
 	/*! \brief Base class for edges compatible with Geometry graph structures.
+	 *
+	 * Derived classes should override the xform() method to provide
+	 * a transformation exprssing the geometric relationship between
+	 * stations identified with theFromStaKey and theIntoStaKey values.
 	 */
 	struct EdgeBase : public graaf::weighted_edge<double>
 	{
+		StaKey theFromStaKey{ std::numeric_limits<StaKey>::max() };
+		StaKey theIntoStaKey{ std::numeric_limits<StaKey>::max() };
 		double theFitErr{ engabra::g3::null<double>() };
 
 		//! Value ctor.
 		inline
 		explicit
 		EdgeBase
-			( double const & fitErr
+			( StaKey const & fromStaKey
+			, StaKey const & intoStaKey
+			, double const & fitErr
 			)
-			: theFitErr{ fitErr }
+			: theFromStaKey{ fromStaKey }
+			, theIntoStaKey{ intoStaKey }
+			, theFitErr{ fitErr }
 		{ }
 
 		//! Construct with null/invalid member values.
@@ -120,6 +130,24 @@ namespace network
 		inline
 		~EdgeBase
 			() = default;
+
+		//! Key to station representing domain of edge xform()
+		inline
+		StaKey
+		fromStaKey
+			() const
+		{
+			return theFromStaKey;
+		}
+
+		//! Key to station representing range of edge xform()
+		inline
+		StaKey
+		intoStaKey
+			() const
+		{
+			return theIntoStaKey;
+		}
 
 		//! Edge weight (is transformation fit error - theFitErr)
 		[[nodiscard]]
@@ -180,10 +208,12 @@ namespace network
 		inline
 		explicit
 		EdgeOri
-			( rigibra::Transform const & lohiXform
+			( StaKey const & fromStaKey
+			, StaKey const & intoStaKey
+			, rigibra::Transform const & lohiXform
 			, double const & fitErr
 			)
-			: EdgeBase(fitErr)
+			: EdgeBase(fromStaKey, intoStaKey, fitErr)
 			, theXformLoHi{ lohiXform }
 		{ }
 
@@ -214,7 +244,11 @@ namespace network
 		inverse
 			() const
 		{
-			return EdgeOri(rigibra::inverse(theXformLoHi), theFitErr);
+			return EdgeOri
+				( theIntoStaKey, theFromStaKey
+				, rigibra::inverse(xform())
+				, theFitErr
+				);
 		}
 
 	}; // EdgeOri
