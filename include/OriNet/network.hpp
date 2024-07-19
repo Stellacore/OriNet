@@ -165,16 +165,16 @@ namespace network
 	 * NOTE: the forward direction of the transformation is associated
 	 * with StaFrame.theStaKey values in the following sense.
 	 * \arg If (frameA.theStaKey < frameB.theStaKey), then transform
-	 *      theLoHiXform represents frame B w.r.t. A.
+	 *      theXformLoHi represents frame B w.r.t. A.
 	 * \arg If (frameB.theStaKey < frameA.theStaKey), then transform
-	 *      theLoHiXform represents frame A w.r.t. B.
+	 *      theXformLoHi represents frame A w.r.t. B.
 	 *
 	 * The inverse() function provides the transformation for an
 	 * edge being traversed in the other direction.
 	 */
 	struct EdgeOri : public EdgeBase
 	{
-		rigibra::Transform theLoHiXform{ rigibra::null<rigibra::Transform>() };
+		rigibra::Transform theXformLoHi{ rigibra::null<rigibra::Transform>() };
 
 		//! Value ctor.
 		inline
@@ -184,7 +184,7 @@ namespace network
 			, double const & fitErr
 			)
 			: EdgeBase(fitErr)
-			, theLoHiXform{ lohiXform }
+			, theXformLoHi{ lohiXform }
 		{ }
 
 		//! Construct with null/invalid member values.
@@ -205,7 +205,7 @@ namespace network
 		xform
 			() const
 		{
-			return theLoHiXform;
+			return theXformLoHi;
 		}
 
 		//! An instance associated with edge in reverse direction.
@@ -214,7 +214,7 @@ namespace network
 		inverse
 			() const
 		{
-			return EdgeOri(rigibra::inverse(theLoHiXform), theFitErr);
+			return EdgeOri(rigibra::inverse(theXformLoHi), theFitErr);
 		}
 
 	}; // EdgeOri
