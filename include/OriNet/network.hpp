@@ -298,21 +298,18 @@ namespace network
 		graaf::undirected_graph<StaFrame, EdgeOri> theGraph{};
 
 		//! Check if staKey already in graph, if not, then add vertex
-		// Geometry::
 		void
 		ensureStaFrameExists
 			( StaKey const & staKey
 			);
 
 		//! Graaf vertex ID value for station index
-		// Geometry::
 		VertId
 		vertIdForStaKey
 			( StaKey const & staKey
 			) const;
 
 		//! External station index for Graaf vertex ID value
-		// Geometry::
 		StaKey
 		staKeyForVertId
 			( VertId const & vertId
@@ -325,7 +322,6 @@ namespace network
 		 * Example:
 	 	 * \snippet test_network.cpp DoxyExampleThin
 		 */
-		// Geometry::
 		void
 		addEdge
 			( LoHiKeyPair const & staKeyLoHi
@@ -333,19 +329,16 @@ namespace network
 			);
 
 		//! Edges forming a minimum path
-		// Geometry::
 		std::vector<graaf::edge_id_t>
 		spanningEdgeOris
 			() const;
 
 		//! Number of vertices in graph
-		// Geometry::
 		std::size_t
 		sizeVerts
 			() const;
 
 		//! Number of edges in graph
-		// Geometry::
 		std::size_t
 		sizeEdges
 			() const;
@@ -359,7 +352,6 @@ namespace network
 		 * Example:
 	 	 * \snippet test_network.cpp DoxyExampleThin
 		 */
-		// Geometry::
 		Geometry
 		networkTree
 			( std::vector<graaf::edge_id_t> const eIds
@@ -397,7 +389,6 @@ namespace network
 			) const;
 
 		//! \brief Save graph information to graphviz '.dot' graphic file.
-		// Geometry::
 		void
 		saveNetworkGraphic
 			( std::filesystem::path const & dotPath
