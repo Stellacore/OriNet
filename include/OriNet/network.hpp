@@ -95,42 +95,30 @@ namespace network
 
 	}; // StaFrame
 
-	/*! \brief Rigid body orientation betweem two station frames.
-	 *
-	 * NOTE: the forward direction of the transformation is associated
-	 * with StaFrame.theStaKey values in the following sense.
-	 * \arg If (frameA.theStaKey < frameB.theStaKey), then transform
-	 *      theLoHiXform represents frame B w.r.t. A.
-	 * \arg If (frameB.theStaKey < frameA.theStaKey), then transform
-	 *      theLoHiXform represents frame A w.r.t. B.
-	 *
-	 * The inverse() function provides the transformation for an
-	 * edge being traversed in the other direction.
+	/*! \brief Base class for edges compatible with Geometry graph structures.
 	 */
-	struct EdgeOri : public graaf::weighted_edge<double>
+	struct EdgeBase : public graaf::weighted_edge<double>
 	{
-		rigibra::Transform theLoHiXform{ rigibra::null<rigibra::Transform>() };
 		double theFitErr{ engabra::g3::null<double>() };
 
 		//! Value ctor.
 		inline
 		explicit
-		EdgeOri
-			( rigibra::Transform const & lohiXform
-			, double const & fitErr
+		EdgeBase
+			( double const & fitErr
 			)
-			: theLoHiXform{ lohiXform }
-			, theFitErr{ fitErr }
+			: theFitErr{ fitErr }
 		{ }
 
 		//! Construct with null/invalid member values.
 		inline
-		EdgeOri
+		EdgeBase
 			() = default;
 
 		//! No-op dtor.
+		virtual
 		inline
-		~EdgeOri
+		~EdgeBase
 			() = default;
 
 		//! Edge weight (is transformation fit error - theFitErr)
@@ -147,7 +135,7 @@ namespace network
 		inline
 		bool
 		operator<
-			( EdgeOri const & other
+			( EdgeBase const & other
 			) const noexcept
 		{
 			return (this->get_weight() < other.get_weight());
@@ -157,13 +145,61 @@ namespace network
 		inline
 		bool
 		operator!=
-			( EdgeOri const & other
+			( EdgeBase const & other
 			) const noexcept
 		{
 			return ((other < (*this)) || ((*this) < other));
 		}
 
 		//! Transformation (Hi-Ndx w.r.t. Lo-Ndx)
+		virtual
+		inline
+		rigibra::Transform const &
+		xform
+			() const = 0;
+
+	}; // EdgeOri
+
+	/*! \brief Rigid body orientation betweem two station frames.
+	 *
+	 * NOTE: the forward direction of the transformation is associated
+	 * with StaFrame.theStaKey values in the following sense.
+	 * \arg If (frameA.theStaKey < frameB.theStaKey), then transform
+	 *      theLoHiXform represents frame B w.r.t. A.
+	 * \arg If (frameB.theStaKey < frameA.theStaKey), then transform
+	 *      theLoHiXform represents frame A w.r.t. B.
+	 *
+	 * The inverse() function provides the transformation for an
+	 * edge being traversed in the other direction.
+	 */
+	struct EdgeOri : public EdgeBase
+	{
+		rigibra::Transform theLoHiXform{ rigibra::null<rigibra::Transform>() };
+
+		//! Value ctor.
+		inline
+		explicit
+		EdgeOri
+			( rigibra::Transform const & lohiXform
+			, double const & fitErr
+			)
+			: EdgeBase(fitErr)
+			, theLoHiXform{ lohiXform }
+		{ }
+
+		//! Construct with null/invalid member values.
+		inline
+		EdgeOri
+			() = default;
+
+		//! No-op dtor.
+		virtual
+		inline
+		~EdgeOri
+			() = default;
+
+		//! Transformation (Hi-Ndx w.r.t. Lo-Ndx)
+		virtual
 		inline
 		rigibra::Transform const &
 		xform
