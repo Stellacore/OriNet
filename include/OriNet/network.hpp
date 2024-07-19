@@ -83,7 +83,7 @@ namespace network
 	 */
 	struct StaFrame
 	{
-		StaKey theStaKey;
+		StaKey const theStaKey;
 
 		inline
 		StaKey
