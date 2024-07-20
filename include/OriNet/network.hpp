@@ -58,7 +58,26 @@ namespace network
 	//! Station orientations referenced by index (e.g. to external collection)
 	using StaKey = std::size_t;
 
-	/*! \brief Relative orientations between stations (.first < .second order)
+	using LoHiKeyPair = std::pair<StaKey, StaKey>;
+
+	/*! \brief Station Frame - i.e. associated with a rigid body pose.
+	 *
+	 */
+	struct StaFrame
+	{
+		StaKey const theStaKey{ std::numeric_limits<StaKey>::max() };
+
+		inline
+		StaKey
+		key
+			() const
+		{
+			return theStaKey;
+		}
+
+	}; // StaFrame
+
+	/*! \brief Ordered pair of station keys for edge direction interpretation.
 	 *
 	 * A graph structure is used to model the network connectivity and is
 	 * execeptionally useful for network traversal operations. However,
@@ -71,29 +90,104 @@ namespace network
 	 * orientation indices (values stored in nodes). The forward direction
 	 * is defined by the logic:
 	 *
-	 * \arg Strictly \b required that: (LoHiKeyPair.first < LoHiKeyPair.second)
-	 * \arg The "From" station is associated with LoHiKeyPair.first
-	 * \arg The "Into" station is associated with LoHiKeyPair.second
-	 * \arg Forward transform iterpreted as From(WithRespectTo)Into
+	 * \arg Strictly \b required that: (theFromKey < theIntoKey)
+	 * \arg The "From" station is associated with tranform Domain
+	 * \arg The "Into" station is associated with tranform Range
+	 * \arg Forward transform iterpreted as Into(WithRespectTo)From or
+	 *      operationally interpreted as xInto = tranform(xFrom)
 	 */
-	using LoHiKeyPair = std::pair<StaKey, StaKey>;
-
-	/*! \brief Station Frame - i.e. associated with a rigid body pose.
-	 *
-	 */
-	struct StaFrame
+	struct EdgeDir
 	{
-		StaKey const theStaKey;
+		//! Domain key for edge transformation interpretations
+		StaKey theFromKey{ std::numeric_limits<StaKey>::max() };
+		//! Range key for edge transformation interpretations
+		StaKey theIntoKey{ std::numeric_limits<StaKey>::max() };
 
+		// Check order interpretation
+		enum DirCompare
+		{
+			  Different
+			, Forward
+			, Reverse
+		};
+
+		//! Vertex key interpreted as edge domain.
 		inline
-		StaKey
-		key
+		StaKey const &
+		fromKey
 			() const
 		{
-			return theStaKey;
+			return theFromKey;
 		}
 
-	}; // StaFrame
+		//! Vertex key interpreted as edge range.
+		inline
+		StaKey const &
+		intoKey
+			() const
+		{
+			return theIntoKey;
+		}
+
+		//! True if this edge is potentially valid (keys are different)
+		inline
+		bool
+		isValid
+			() const
+		{
+			return
+				(  (theFromKey < std::numeric_limits<StaKey>::max())
+				&& (theIntoKey < std::numeric_limits<StaKey>::max())
+				&& (theFromKey != theIntoKey)
+				);
+		}
+
+		//! Compare this direction iterpretation with that of testDir.
+		inline
+		DirCompare
+		compareTo
+			( EdgeDir const & testDir
+			) const
+		{
+			DirCompare relation{ Different };
+			if (isValid())
+			{
+				if  (  (testDir.fromKey() == fromKey())
+					&& (testDir.intoKey() == intoKey())
+					)
+				{
+					relation = Forward;
+				}
+				else
+				if  (  (testDir.intoKey() == fromKey())
+					&& (testDir.fromKey() == intoKey())
+					)
+				{
+					relation = Reverse;
+				}
+			}
+			return relation;
+		}
+
+		//! True if this edge is in the "forward" direction (FromKey < IntoKey)
+		inline
+		bool
+		isForward
+			() const
+		{
+			return (theFromKey < theIntoKey);
+		}
+
+		//! True if this edge is in the "reverse" direction (IntoKey < FromKey)
+		inline
+		bool
+		isReverse
+			() const
+		{
+			return (theIntoKey < theFromKey);
+		}
+
+	}; // EdgeDir
 
 	/*! \brief Base class for edges compatible with Geometry graph structures.
 	 *
@@ -103,21 +197,15 @@ namespace network
 	 */
 	struct EdgeBase : public graaf::weighted_edge<double>
 	{
-		StaKey theFromStaKey{ std::numeric_limits<StaKey>::max() };
-		StaKey theIntoStaKey{ std::numeric_limits<StaKey>::max() };
-		double theFitErr{ engabra::g3::null<double>() };
+		EdgeDir theEdgeDir{};
 
 		//! Value ctor.
 		inline
 		explicit
 		EdgeBase
-			( StaKey const & fromStaKey
-			, StaKey const & intoStaKey
-			, double const & fitErr
+			( EdgeDir const & edgeDir
 			)
-			: theFromStaKey{ fromStaKey }
-			, theIntoStaKey{ intoStaKey }
-			, theFitErr{ fitErr }
+			: theEdgeDir{ edgeDir }
 		{ }
 
 		//! Construct with null/invalid member values.
@@ -131,32 +219,24 @@ namespace network
 		~EdgeBase
 			() = default;
 
-		//! Key to station representing domain of edge xform()
+		//! Edge direction information
 		inline
-		StaKey
-		fromStaKey
+		EdgeDir const &
+		edgeDir
 			() const
 		{
-			return theFromStaKey;
-		}
-
-		//! Key to station representing range of edge xform()
-		inline
-		StaKey
-		intoStaKey
-			() const
-		{
-			return theIntoStaKey;
+			return theEdgeDir;
 		}
 
 		//! Edge weight (is transformation fit error - theFitErr)
 		[[nodiscard]]
 		inline
+		virtual
 		double
 		get_weight
 			() const noexcept override
 		{
-			return theFitErr;
+			return 1.;
 		}
 
 		//! Sort in order of increasing edge weight (transformation error)
@@ -186,35 +266,32 @@ namespace network
 		xform
 			() const = 0;
 
-	}; // EdgeOri
+	}; // EdgeBase
 
 	/*! \brief Rigid body orientation betweem two station frames.
 	 *
 	 * NOTE: the forward direction of the transformation is associated
-	 * with StaFrame.theStaKey values in the following sense.
-	 * \arg If (frameA.theStaKey < frameB.theStaKey), then transform
-	 *      theXformLoHi represents frame B w.r.t. A.
-	 * \arg If (frameB.theStaKey < frameA.theStaKey), then transform
-	 *      theXformLoHi represents frame A w.r.t. B.
+	 * with EdgeBase keys (theFromStaKey, theIntoStaKey).
 	 *
 	 * The inverse() function provides the transformation for an
 	 * edge being traversed in the other direction.
 	 */
 	struct EdgeOri : public EdgeBase
 	{
-		rigibra::Transform theXformLoHi{ rigibra::null<rigibra::Transform>() };
+		rigibra::Transform theXform{ rigibra::null<rigibra::Transform>() };
+		double theFitErr{ engabra::g3::null<double>() };
 
 		//! Value ctor.
 		inline
 		explicit
 		EdgeOri
-			( StaKey const & fromStaKey
-			, StaKey const & intoStaKey
-			, rigibra::Transform const & lohiXform
+			( EdgeDir const & edgeDir
+			, rigibra::Transform const & xform
 			, double const & fitErr
 			)
-			: EdgeBase(fromStaKey, intoStaKey, fitErr)
-			, theXformLoHi{ lohiXform }
+			: EdgeBase(edgeDir)
+			, theXform{ xform }
+			, theFitErr{ fitErr }
 		{ }
 
 		//! Construct with null/invalid member values.
@@ -235,7 +312,7 @@ namespace network
 		xform
 			() const
 		{
-			return theXformLoHi;
+			return theXform;
 		}
 
 		//! An instance associated with edge in reverse direction.
@@ -244,20 +321,27 @@ namespace network
 		inverse
 			() const
 		{
-			return EdgeOri
-				( theIntoStaKey, theFromStaKey
-				, rigibra::inverse(xform())
-				, theFitErr
-				);
+			// TODO figure out what this should be
+			// invert by reversing keys
+			/*
+			EdgeDir revDir
+				{ .theFromKey = theEdgeDir.intoKey()
+				, .theIntoKey = theEdgeDir.fromKey()
+				};
+			*/
+		//	return EdgeOri(revDir, xform(), theFitErr);
+			return EdgeOri(theEdgeDir, rigibra::inverse(xform()), theFitErr);
 		}
 
 	}; // EdgeOri
 
+	/*
 	//! Robust transformation computed from collection of transforms
 	EdgeOri
 	edgeOriMedianFit
 		( std::vector<rigibra::Transform> const & xHiWrtLos
 		);
+	*/
 
 
 	/*! \brief Representation of the geometry of a rigid body network.

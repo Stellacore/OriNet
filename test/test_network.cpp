@@ -106,12 +106,11 @@ namespace
 		double const fitErr{ .001 }; // assume all RelOri of equal quality
 		for (LoHiKeyPair const & edgeLoHi : edgeLoHis)
 		{
-			using orinet::network::StaKey;
-			using orinet::network::EdgeOri;
+			using namespace orinet::network;
 			StaKey const & fromKey = edgeLoHi.first;
 			StaKey const & intoKey = edgeLoHi.second;
 			EdgeOri const edge
-				{ fromKey, intoKey
+				{ EdgeDir{ fromKey, intoKey }
 				, ro(expStas[fromKey], expStas[intoKey])
 				, fitErr
 				};
@@ -200,10 +199,9 @@ namespace
 				StaKey const & intoKey = staKeys[toNdx];
 				using namespace rigibra;
 				Transform const xIntoWrtFrom{ null<Transform>() };
-				netGeo.addEdge
-					( LoHiKeyPair{ fromKey, intoKey }
-					, EdgeOri{ fromKey, intoKey, xIntoWrtFrom, fitErr }
-					);
+				EdgeOri const edge
+					{ EdgeDir{ fromKey, intoKey }, xIntoWrtFrom, fitErr };
+				netGeo.addEdge(LoHiKeyPair{ fromKey, intoKey }, edge);
 			}
 		}
 
