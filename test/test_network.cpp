@@ -124,7 +124,7 @@ namespace
 		// compute minimum path spanning tree
 		// (along minimum relative orientation transform errors)
 		using orinet::network::EdgeId;
-		std::vector<EdgeId> const eIds{ netGeo.spanningEdgeOris() };
+		std::vector<EdgeId> const eIds{ netGeo.spanningEdgeBases() };
 
 		orinet::network::Geometry const mstGeo{ netGeo.networkTree(eIds) };
 

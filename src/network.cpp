@@ -80,7 +80,7 @@ namespace network
 	std::string
 	edgeLabel
 		( graaf::edge_id_t const & eId
-		, EdgeOri const & edge
+		, EdgeBase const & edge
 		)
 	{
 		std::ostringstream lbl;
@@ -129,7 +129,7 @@ Geometry :: staKeyForVertId
 void
 Geometry :: addEdge
 	( LoHiKeyPair const & staKeyLoHi
-	, EdgeOri const & edge
+	, EdgeBase const & edge
 	)
 {
 	// check if vertices (station nodes) are already in the graph
@@ -145,7 +145,7 @@ Geometry :: addEdge
 }
 
 std::vector<graaf::edge_id_t>
-Geometry :: spanningEdgeOris
+Geometry :: spanningEdgeBases
 	() const
 {
 	return graaf::algorithm::kruskal_minimum_spanning_tree(theGraph);
@@ -165,7 +165,7 @@ Geometry :: networkTree
 		VertId const & vId2 = eId.second;
 
 		// get edge data
-		EdgeOri const & origEdge = theGraph.get_edge(eId);
+		EdgeBase const & origEdge = theGraph.get_edge(eId);
 
 		// get vertex data
 		StaFrame const & staFrame1 = theGraph.get_vertex(vId1);
@@ -176,7 +176,7 @@ Geometry :: networkTree
 
 		// set transformation edge consistent with LoHiNdx convention
 		LoHiKeyPair staKeyLoHi;
-		EdgeOri useEdge{};
+		EdgeBase useEdge{ };
 		if (staKey1 < staKey2)
 		{
 			staKeyLoHi = { staKey1, staKey2 };
@@ -186,7 +186,8 @@ Geometry :: networkTree
 		if (staKey2 < staKey1)
 		{
 			staKeyLoHi = { staKey2, staKey1 };
-			useEdge = origEdge.edgeReversed();
+			useEdge = origEdge;
+			useEdge.reverseSelf();
 		}
 
 		network.addEdge(staKeyLoHi, useEdge);
@@ -321,7 +322,7 @@ Geometry :: infoStringContents
 {
 	std::ostringstream oss;
 	//
-	using GType = graaf::undirected_graph<StaFrame, EdgeOri>;
+	using GType = graaf::undirected_graph<StaFrame, EdgeBase>;
 	// Buffer results so that they can be sorted for output
 	// Wastes memory and time, but makes output *MUCH* easier to read.
 	std::vector<std::string> infoVerts;
