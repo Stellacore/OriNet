@@ -58,24 +58,6 @@ namespace network
 	//! Station orientations referenced by index (e.g. to external collection)
 	using StaKey = std::size_t;
 
-	/*! \brief Relative orientations between stations (.first < .second order)
-	 *
-	 * A graph structure is used to model the network connectivity and is
-	 * execeptionally useful for network traversal operations. However,
-	 * some algorithms (minimum spanning tree in particular) require an
-	 * undirected graph. This is contrary to the directed nature of
-	 * rigid body orientations between two station nodes.
-	 *
-	 * To resolve the directed/undirected contention, the forward direction
-	 * of all edge relative orientations is determined by the station
-	 * orientation indices (values stored in nodes). The forward direction
-	 * is defined by the logic:
-
-	 * \arg Strictly \b required that: (LoHiKeyPair.first < LoHiKeyPair.second)
-	 * \arg The "From" station is associated with LoHiKeyPair.first
-	 * \arg The "Into" station is associated with LoHiKeyPair.second
-	 * \arg Forward transform iterpreted as From(WithRespectTo)Into
-	 */
 	using LoHiKeyPair = std::pair<StaKey, StaKey>;
 
 	/*! \brief Station Frame - i.e. associated with a rigid body pose.
@@ -83,7 +65,7 @@ namespace network
 	 */
 	struct StaFrame
 	{
-		StaKey const theStaKey;
+		StaKey const theStaKey{ std::numeric_limits<StaKey>::max() };
 
 		inline
 		StaKey
@@ -95,59 +77,174 @@ namespace network
 
 	}; // StaFrame
 
-	/*! \brief Rigid body orientation betweem two station frames.
+	/*! \brief Ordered pair of station keys for edge direction interpretation.
 	 *
-	 * NOTE: the forward direction of the transformation is associated
-	 * with StaFrame.theStaKey values in the following sense.
-	 * \arg If (frameA.theStaKey < frameB.theStaKey), then transform
-	 *      theLoHiXform represents frame B w.r.t. A.
-	 * \arg If (frameB.theStaKey < frameA.theStaKey), then transform
-	 *      theLoHiXform represents frame A w.r.t. B.
+	 * A graph structure is used to model the network connectivity and is
+	 * execeptionally useful for network traversal operations. However,
+	 * some algorithms (minimum spanning tree in particular) require an
+	 * undirected graph. This is contrary to the directed nature of
+	 * rigid body orientations between two station nodes.
 	 *
-	 * The inverse() function provides the transformation for an
-	 * edge being traversed in the other direction.
+	 * To resolve the directed/undirected contention, the forward direction
+	 * of all edge relative orientations is determined by the station
+	 * orientation indices (values stored in nodes). The forward direction
+	 * is defined by the logic:
+	 *
+	 * \arg Strictly \b required that: (theFromKey < theIntoKey)
+	 * \arg The "From" station is associated with tranform Domain
+	 * \arg The "Into" station is associated with tranform Range
+	 * \arg Forward transform iterpreted as Into(WithRespectTo)From or
+	 *      operationally interpreted as xInto = tranform(xFrom)
 	 */
-	struct EdgeOri : public graaf::weighted_edge<double>
+	struct EdgeDir
 	{
-		rigibra::Transform theLoHiXform{ rigibra::null<rigibra::Transform>() };
-		double theFitErr{ engabra::g3::null<double>() };
+		//! Domain key for edge transformation interpretations
+		StaKey theFromKey{ std::numeric_limits<StaKey>::max() };
+
+		//! Range key for edge transformation interpretations
+		StaKey theIntoKey{ std::numeric_limits<StaKey>::max() };
+
+		// Check order interpretation
+		enum DirCompare
+		{
+			  Different
+			, Forward
+			, Reverse
+		};
+
+		//! Vertex key interpreted as edge domain.
+		inline
+		StaKey const &
+		fromKey
+			() const
+		{
+			return theFromKey;
+		}
+
+		//! Vertex key interpreted as edge range.
+		inline
+		StaKey const &
+		intoKey
+			() const
+		{
+			return theIntoKey;
+		}
+
+		//! True if this edge is potentially valid (keys are different)
+		inline
+		bool
+		isValid
+			() const
+		{
+			return
+				(  (theFromKey < std::numeric_limits<StaKey>::max())
+				&& (theIntoKey < std::numeric_limits<StaKey>::max())
+				&& (theFromKey != theIntoKey)
+				);
+		}
+
+		//! Compare this direction iterpretation with that of testDir.
+		inline
+		DirCompare
+		compareTo
+			( EdgeDir const & testDir
+			) const
+		{
+			DirCompare relation{ Different };
+			if (isValid())
+			{
+				if  (  (testDir.fromKey() == fromKey())
+					&& (testDir.intoKey() == intoKey())
+					)
+				{
+					relation = Forward;
+				}
+				else
+				if  (  (testDir.intoKey() == fromKey())
+					&& (testDir.fromKey() == intoKey())
+					)
+				{
+					relation = Reverse;
+				}
+			}
+			return relation;
+		}
+
+		//! True if this edge is in the "forward" direction (FromKey < IntoKey)
+		inline
+		bool
+		isForward
+			() const
+		{
+			return (theFromKey < theIntoKey);
+		}
+
+		//! True if this edge is in the "reverse" direction (IntoKey < FromKey)
+		inline
+		bool
+		isReverse
+			() const
+		{
+			return (theIntoKey < theFromKey);
+		}
+
+	}; // EdgeDir
+
+	/*! \brief Base class for edges compatible with Geometry graph structures.
+	 *
+	 * Derived classes should override the xform() method to provide
+	 * a transformation exprssing the geometric relationship between
+	 * stations identified with theFromStaKey and theIntoStaKey values.
+	 */
+	struct EdgeBase : public graaf::weighted_edge<double>
+	{
+		EdgeDir theEdgeDir{};
 
 		//! Value ctor.
 		inline
 		explicit
-		EdgeOri
-			( rigibra::Transform const & lohiXform
-			, double const & fitErr
+		EdgeBase
+			( EdgeDir const & edgeDir
 			)
-			: theLoHiXform{ lohiXform }
-			, theFitErr{ fitErr }
+			: theEdgeDir{ edgeDir }
 		{ }
 
 		//! Construct with null/invalid member values.
 		inline
-		EdgeOri
+		EdgeBase
 			() = default;
 
 		//! No-op dtor.
+		virtual
 		inline
-		~EdgeOri
+		~EdgeBase
 			() = default;
+
+		//! Edge direction information
+		inline
+		EdgeDir const &
+		edgeDir
+			() const
+		{
+			return theEdgeDir;
+		}
 
 		//! Edge weight (is transformation fit error - theFitErr)
 		[[nodiscard]]
 		inline
+		virtual
 		double
 		get_weight
 			() const noexcept override
 		{
-			return theFitErr;
+			return 1.;
 		}
 
 		//! Sort in order of increasing edge weight (transformation error)
 		inline
 		bool
 		operator<
-			( EdgeOri const & other
+			( EdgeBase const & other
 			) const noexcept
 		{
 			return (this->get_weight() < other.get_weight());
@@ -157,37 +254,83 @@ namespace network
 		inline
 		bool
 		operator!=
-			( EdgeOri const & other
+			( EdgeBase const & other
 			) const noexcept
 		{
 			return ((other < (*this)) || ((*this) < other));
 		}
 
 		//! Transformation (Hi-Ndx w.r.t. Lo-Ndx)
+		virtual
+		inline
+		rigibra::Transform const &
+		xform
+			() const = 0;
+
+	}; // EdgeBase
+
+	/*! \brief Rigid body orientation betweem two station frames.
+	 *
+	 * NOTE: the forward direction of the transformation is associated
+	 * with EdgeBase keys (theFromStaKey, theIntoStaKey).
+	 *
+	 * The inverse() function provides the transformation for an
+	 * edge being traversed in the other direction.
+	 */
+	struct EdgeOri : public EdgeBase
+	{
+		rigibra::Transform theXform{ rigibra::null<rigibra::Transform>() };
+		double theFitErr{ engabra::g3::null<double>() };
+
+		//! Value ctor.
+		inline
+		explicit
+		EdgeOri
+			( EdgeDir const & edgeDir
+			, rigibra::Transform const & xform
+			, double const & fitErr
+			)
+			: EdgeBase(edgeDir)
+			, theXform{ xform }
+			, theFitErr{ fitErr }
+		{ }
+
+		//! Construct with null/invalid member values.
+		inline
+		EdgeOri
+			() = default;
+
+		//! No-op dtor.
+		virtual
+		inline
+		~EdgeOri
+			() = default;
+
+		//! Transformation (Hi-Ndx w.r.t. Lo-Ndx)
+		virtual
 		inline
 		rigibra::Transform const &
 		xform
 			() const
 		{
-			return theLoHiXform;
+			return theXform;
 		}
 
 		//! An instance associated with edge in reverse direction.
 		inline
 		EdgeOri
-		inverse
+		edgeReversed
 			() const
 		{
-			return EdgeOri(rigibra::inverse(theLoHiXform), theFitErr);
+			// invert *BOTH* interpretation keys and transform details
+			EdgeDir revDir
+				{ .theFromKey = theEdgeDir.intoKey()
+				, .theIntoKey = theEdgeDir.fromKey()
+				};
+			return EdgeOri(revDir, rigibra::inverse(xform()), theFitErr);
 		}
 
 	}; // EdgeOri
-
-	//! Robust transformation computed from collection of transforms
-	EdgeOri
-	edgeOriMedianFit
-		( std::vector<rigibra::Transform> const & xHiWrtLos
-		);
 
 
 	/*! \brief Representation of the geometry of a rigid body network.
@@ -228,21 +371,18 @@ namespace network
 		graaf::undirected_graph<StaFrame, EdgeOri> theGraph{};
 
 		//! Check if staKey already in graph, if not, then add vertex
-		// Geometry::
 		void
 		ensureStaFrameExists
 			( StaKey const & staKey
 			);
 
 		//! Graaf vertex ID value for station index
-		// Geometry::
 		VertId
 		vertIdForStaKey
 			( StaKey const & staKey
 			) const;
 
 		//! External station index for Graaf vertex ID value
-		// Geometry::
 		StaKey
 		staKeyForVertId
 			( VertId const & vertId
@@ -255,7 +395,6 @@ namespace network
 		 * Example:
 	 	 * \snippet test_network.cpp DoxyExampleThin
 		 */
-		// Geometry::
 		void
 		addEdge
 			( LoHiKeyPair const & staKeyLoHi
@@ -263,21 +402,8 @@ namespace network
 			);
 
 		//! Edges forming a minimum path
-		// Geometry::
 		std::vector<graaf::edge_id_t>
 		spanningEdgeOris
-			() const;
-
-		//! Number of vertices in graph
-		// Geometry::
-		std::size_t
-		sizeVerts
-			() const;
-
-		//! Number of edges in graph
-		// Geometry::
-		std::size_t
-		sizeEdges
 			() const;
 
 		/*! \brief Create an instance populated according to edge list
@@ -289,7 +415,6 @@ namespace network
 		 * Example:
 	 	 * \snippet test_network.cpp DoxyExampleThin
 		 */
-		// Geometry::
 		Geometry
 		networkTree
 			( std::vector<graaf::edge_id_t> const eIds
@@ -310,6 +435,16 @@ namespace network
 			, rigibra::Transform const & staXform0
 			) const;
 
+		//! Number of vertices in graph
+		std::size_t
+		sizeVerts
+			() const;
+
+		//! Number of edges in graph
+		std::size_t
+		sizeEdges
+			() const;
+
 		//! \brief Descriptive information about this instance
 		std::string
 		infoString
@@ -327,7 +462,6 @@ namespace network
 			) const;
 
 		//! \brief Save graph information to graphviz '.dot' graphic file.
-		// Geometry::
 		void
 		saveNetworkGraphic
 			( std::filesystem::path const & dotPath

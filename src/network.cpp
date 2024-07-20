@@ -94,27 +94,6 @@ namespace network
 	}
 
 
-	EdgeOri
-	edgeOriMedianFit
-		( std::vector<rigibra::Transform> const & xHiWrtLos
-		)
-	{
-		// compute robust fit to collection of transforms
-		rigibra::Transform const fitXform
-			{ orinet::robust::transformViaEffect
-				(xHiWrtLos.cbegin(), xHiWrtLos.cend())
-			};
-		// estimate quality of the fit value
-		orinet::compare::Stats const stats
-			{ orinet::compare::differenceStats
-				(xHiWrtLos.cbegin(), xHiWrtLos.cend(), fitXform, false)
-			};
-		// generate weighted edge from the data
-		double const & fitErr = stats.theMedMagDiff;
-		return EdgeOri{fitXform, fitErr};
-	}
-
-
 void
 Geometry :: ensureStaFrameExists
 	( StaKey const & staKey
@@ -172,20 +151,6 @@ Geometry :: spanningEdgeOris
 	return graaf::algorithm::kruskal_minimum_spanning_tree(theGraph);
 }
 
-std::size_t
-Geometry :: sizeVerts
-	() const
-{
-	return theGraph.vertex_count();
-}
-
-std::size_t
-Geometry :: sizeEdges
-	() const
-{
-	return theGraph.edge_count();
-}
-
 Geometry
 Geometry :: networkTree
 	( std::vector<graaf::edge_id_t> const eIds
@@ -221,7 +186,7 @@ Geometry :: networkTree
 		if (staKey2 < staKey1)
 		{
 			staKeyLoHi = { staKey2, staKey1 };
-			useEdge = origEdge.inverse();
+			useEdge = origEdge.edgeReversed();
 		}
 
 		network.addEdge(staKeyLoHi, useEdge);
@@ -272,7 +237,7 @@ Geometry :: propagateTransforms
 				LoHiKeyPair lohiKeys{ staKey1, staKey2 };
 				if (staKey2 < staKey1)
 				{
-					useEdgeOri = edgeOri.inverse();
+					useEdgeOri = edgeOri.edgeReversed();
 					lohiKeys = LoHiKeyPair{ staKey2, staKey1 };
 				}
 
@@ -313,6 +278,20 @@ Geometry :: propagateTransforms
 	}
 
 	return gotXforms;
+}
+
+std::size_t
+Geometry :: sizeVerts
+	() const
+{
+	return theGraph.vertex_count();
+}
+
+std::size_t
+Geometry :: sizeEdges
+	() const
+{
+	return theGraph.edge_count();
 }
 
 std::string

@@ -106,12 +106,14 @@ namespace
 		double const fitErr{ .001 }; // assume all RelOri of equal quality
 		for (LoHiKeyPair const & edgeLoHi : edgeLoHis)
 		{
-			using orinet::network::StaKey;
-			using orinet::network::EdgeOri;
+			using namespace orinet::network;
 			StaKey const & fromKey = edgeLoHi.first;
 			StaKey const & intoKey = edgeLoHi.second;
 			EdgeOri const edge
-				{ ro(expStas[fromKey], expStas[intoKey]), fitErr };
+				{ EdgeDir{ fromKey, intoKey }
+				, ro(expStas[fromKey], expStas[intoKey])
+				, fitErr
+				};
 			netGeo.addEdge(edgeLoHi, edge);
 		}
 
@@ -187,18 +189,19 @@ namespace
 
 		using namespace orinet::network;
 		Geometry netGeo;
-		static double const fitErr{ 1. };
-		static EdgeOri const edge(rigibra::null<rigibra::Transform>(), fitErr);
+		constexpr double fitErr{ 1. };
 		std::size_t const numSta{ staKeys.size() };
 		for (std::size_t fmNdx{0u} ; fmNdx < numSta ; ++fmNdx)
 		{
 			for (std::size_t toNdx{fmNdx + 1u} ; toNdx < numSta ; ++toNdx)
 			{
-				netGeo.addEdge
-					( LoHiKeyPair
-						{ staKeys[fmNdx], staKeys[toNdx] }
-					, edge
-					);
+				StaKey const & fromKey = staKeys[fmNdx];
+				StaKey const & intoKey = staKeys[toNdx];
+				using namespace rigibra;
+				Transform const xIntoWrtFrom{ null<Transform>() };
+				EdgeOri const edge
+					{ EdgeDir{ fromKey, intoKey }, xIntoWrtFrom, fitErr };
+				netGeo.addEdge(LoHiKeyPair{ fromKey, intoKey }, edge);
 			}
 		}
 

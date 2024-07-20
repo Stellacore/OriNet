@@ -373,7 +373,9 @@ std::cout << '\n';
 					Transform const x2w1 { xFea2wrtCam * xCamWrtFea1 };
 
 					constexpr double fitErr{ 1. }; // treat all the same
-					orinet::network::EdgeOri const edge{ x2w1, fitErr };
+					using namespace orinet::network;
+					EdgeOri const edge
+						{ EdgeDir{ feaKey1, feaKey2 }, x2w1, fitErr };
 std::cout << "adding edge between: " << feaKey1 << ' ' << feaKey2 << '\n';
 					netGeo.addEdge(std::make_pair(feaKey1, feaKey2), edge);
 				}
