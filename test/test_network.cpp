@@ -45,9 +45,110 @@
 
 namespace
 {
-	//! Examples for documentation
+	//! Check StaKey (station id) vs VertId (graph node) distinctions
 	void
 	test0
+		( std::ostream & oss
+		)
+	{
+	}
+
+	//! Check StaKey (station id) vs VertId (graph node) distinctions
+	void
+	test1
+		( std::ostream & oss
+		)
+	{
+		std::vector<std::size_t> const staKeys
+			{ 1000u
+			, 1001u
+			, 1002u
+			, 1003u
+			, 1004u
+			};
+
+		using namespace orinet::network;
+		Geometry netGeo;
+		constexpr double fitErr{ 1. };
+		std::size_t const numSta{ staKeys.size() };
+		for (std::size_t fmNdx{0u} ; fmNdx < numSta ; ++fmNdx)
+		{
+			for (std::size_t toNdx{fmNdx + 1u} ; toNdx < numSta ; ++toNdx)
+			{
+				StaKey const & fromKey = staKeys[fmNdx];
+				StaKey const & intoKey = staKeys[toNdx];
+				using namespace rigibra;
+				Transform const xIntoWrtFrom{ null<Transform>() };
+				std::shared_ptr<EdgeOri> const ptEdge
+					{ std::make_shared<EdgeOri>
+						(EdgeDir{ fromKey, intoKey }, xIntoWrtFrom, fitErr)
+					};
+				netGeo.addEdge(LoHiKeyPair{ fromKey, intoKey }, ptEdge);
+			}
+		}
+
+		// get descriptive information
+		std::string const info{ netGeo.infoStringContents("netGeo") };
+		// std::cout << info << '\n';
+
+		// check that keys showup in reported info
+		std::istringstream iss(info);
+		std::set<StaKey> gotVertKeys;
+		std::map<StaKey, std::size_t> gotEdgeKeyCounts;
+		std::string line;
+		std::string tmpLabel;
+		StaKey tmpStaKey;
+		while (iss.good())
+		{
+			line.clear();
+			std::getline(iss, line);
+			if (std::string::npos != line.find("VertKey"))
+			{
+				std::istringstream irec(line);
+				irec >> tmpLabel >> tmpStaKey;
+				gotVertKeys.insert(tmpStaKey);
+			}
+			else
+			if (std::string::npos != line.find("EdgeKey"))
+			{
+				std::istringstream irec(line);
+				// check from key
+				irec >> tmpLabel >> tmpStaKey;
+				++gotEdgeKeyCounts[tmpStaKey];
+				// check into key
+				irec >> tmpStaKey;
+				++gotEdgeKeyCounts[tmpStaKey];
+			}
+		}
+
+		// check number of unique vertices
+		if (! (gotVertKeys.size() == staKeys.size()))
+		{
+			oss << "Failure of infoStringContents vertex count test\n";
+			oss << "exp: " << staKeys.size() << '\n';
+			oss << "got: " << gotVertKeys.size() << '\n';
+		}
+
+		// check how many time each vertex occurs in an edge
+		for (std::map<StaKey, std::size_t>::value_type
+			const & gotEdgeKeyCount : gotEdgeKeyCounts)
+		{
+			constexpr std::size_t expCount{ 4u }; // true for all key values
+			StaKey const & gotKey = gotEdgeKeyCount.first;
+			std::size_t const & gotCount = gotEdgeKeyCount.second;
+			if (! (gotCount == expCount))
+			{
+				oss << "Failure of infoStringContents edge count test\n";
+				oss << "key: " << gotKey << '\n';
+				oss << "exp: " << expCount << '\n';
+				oss << "got: " << gotCount << '\n';
+			}
+		}
+	}
+
+	//! Examples for documentation
+	void
+	test2
 		( std::ostream & oss
 		)
 	{
@@ -175,98 +276,6 @@ namespace
 		// [DoxyExample01]
 	}
 
-	//! Check StaKey (station id) vs VertId (graph node) distinctions
-	void
-	test1
-		( std::ostream & oss
-		)
-	{
-		std::vector<std::size_t> const staKeys
-			{ 1000u
-			, 1001u
-			, 1002u
-			, 1003u
-			, 1004u
-			};
-
-		using namespace orinet::network;
-		Geometry netGeo;
-		constexpr double fitErr{ 1. };
-		std::size_t const numSta{ staKeys.size() };
-		for (std::size_t fmNdx{0u} ; fmNdx < numSta ; ++fmNdx)
-		{
-			for (std::size_t toNdx{fmNdx + 1u} ; toNdx < numSta ; ++toNdx)
-			{
-				StaKey const & fromKey = staKeys[fmNdx];
-				StaKey const & intoKey = staKeys[toNdx];
-				using namespace rigibra;
-				Transform const xIntoWrtFrom{ null<Transform>() };
-				std::shared_ptr<EdgeOri> const ptEdge
-					{ std::make_shared<EdgeOri>
-						(EdgeDir{ fromKey, intoKey }, xIntoWrtFrom, fitErr)
-					};
-				netGeo.addEdge(LoHiKeyPair{ fromKey, intoKey }, ptEdge);
-			}
-		}
-
-		// get descriptive information
-		std::string const info{ netGeo.infoStringContents("netGeo") };
-		// std::cout << info << '\n';
-
-		// check that keys showup in reported info
-		std::istringstream iss(info);
-		std::set<StaKey> gotVertKeys;
-		std::map<StaKey, std::size_t> gotEdgeKeyCounts;
-		std::string line;
-		std::string tmpLabel;
-		StaKey tmpStaKey;
-		while (iss.good())
-		{
-			line.clear();
-			std::getline(iss, line);
-			if (std::string::npos != line.find("VertKey"))
-			{
-				std::istringstream irec(line);
-				irec >> tmpLabel >> tmpStaKey;
-				gotVertKeys.insert(tmpStaKey);
-			}
-			else
-			if (std::string::npos != line.find("EdgeKey"))
-			{
-				std::istringstream irec(line);
-				// check from key
-				irec >> tmpLabel >> tmpStaKey;
-				++gotEdgeKeyCounts[tmpStaKey];
-				// check into key
-				irec >> tmpStaKey;
-				++gotEdgeKeyCounts[tmpStaKey];
-			}
-		}
-
-		// check number of unique vertices
-		if (! (gotVertKeys.size() == staKeys.size()))
-		{
-			oss << "Failure of infoStringContents vertex count test\n";
-			oss << "exp: " << staKeys.size() << '\n';
-			oss << "got: " << gotVertKeys.size() << '\n';
-		}
-
-		// check how many time each vertex occurs in an edge
-		for (std::map<StaKey, std::size_t>::value_type
-			const & gotEdgeKeyCount : gotEdgeKeyCounts)
-		{
-			constexpr std::size_t expCount{ 4u }; // true for all key values
-			StaKey const & gotKey = gotEdgeKeyCount.first;
-			std::size_t const & gotCount = gotEdgeKeyCount.second;
-			if (! (gotCount == expCount))
-			{
-				oss << "Failure of infoStringContents edge count test\n";
-				oss << "key: " << gotKey << '\n';
-				oss << "exp: " << expCount << '\n';
-				oss << "got: " << gotCount << '\n';
-			}
-		}
-	}
 }
 
 //! Check behavior of NS
@@ -279,6 +288,7 @@ main
 
 	test0(oss);
 	test1(oss);
+	test2(oss);
 
 	if (oss.str().empty()) // Only pass if no errors were encountered
 	{
