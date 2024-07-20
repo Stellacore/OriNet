@@ -36,12 +36,15 @@ Example:
 
 
 #include "networkVert.hpp"
+#include "stat.hpp"
 
 #include <Engabra>
 #include <graaflib/edge.h>
 #include <Rigibra>
 
 #include <iostream>
+#include <sstream>
+#include <string>
 
 
 namespace orinet
@@ -179,6 +182,33 @@ namespace network
 			return revDir;
 		}
 
+		//! Descriptive information about this instance
+		inline
+		std::string
+		infoString
+			( std::string const & title = {}
+			) const
+		{
+			std::ostringstream oss;
+			if (! title.empty())
+			{
+				oss << title << ' ';
+			}
+			if (isValid())
+			{
+				oss
+					<< "from: " << theFromKey
+					<< ' '
+					<< "into: " << theIntoKey
+					;
+			}
+			else
+			{
+				std::cout << "<null>";
+			}
+			return oss.str();
+		}
+
 	}; // EdgeDir
 
 	/*! \brief Base class for edges compatible with Geometry graph structures.
@@ -305,6 +335,34 @@ namespace network
 			return std::make_shared<EdgeBase>(theEdgeDir.reverseEdgeDir());
 		}
 
+		//! Descriptive information about this instance
+		virtual
+		inline
+		std::string
+		infoString
+			( std::string const & title = {}
+			) const
+		{
+			std::ostringstream oss;
+			if (! title.empty())
+			{
+				oss << title << ' ';
+			}
+			if (isValid())
+			{
+				oss
+					<< theEdgeDir.infoString()
+					<< ' '
+					<< "xform: " << xform()
+					;
+			}
+			else
+			{
+				std::cout << "<null>";
+			}
+			return oss.str();
+		}
+
 	}; // EdgeBase
 
 	/*! \brief Rigid body orientation betweem two station frames.
@@ -312,7 +370,7 @@ namespace network
 	 * NOTE: the forward direction of the transformation is associated
 	 * with EdgeBase keys (theFromStaKey, theIntoStaKey).
 	 *
-	 * The inverse() function provides the transformation for an
+	 * The reversedInstance() function provides the transformation for an
 	 * edge being traversed in the other direction.
 	 */
 	struct EdgeOri : public EdgeBase
@@ -392,8 +450,153 @@ namespace network
 				);
 		}
 
+		//! Descriptive information about this instance
+		virtual
+		inline
+		std::string
+		infoString
+			( std::string const & title = {}
+			) const
+		{
+			std::ostringstream oss;
+			if (isValid())
+			{
+				oss << EdgeBase::infoString(title);
+				oss << ' '
+					<< "fitErr: " << get_weight()
+					;
+			}
+			else
+			{
+				std::cout << "<null>";
+			}
+			return oss.str();
+		}
+
 	}; // EdgeOri
 
+
+	/*! \brief Robust rigid body transformation tracking betweem two stations.
+	 *
+	 * NOTE: the forward direction of the transformation is associated
+	 * with EdgeBase keys (theFromStaKey, theIntoStaKey).
+	 *
+	 * The reversedInstance() function provides the transformation for an
+	 * edge being traversed in the other direction.
+	 */
+	struct EdgeRobust : public EdgeBase
+	{
+		stat::track::Transforms theXformTracker;
+
+		//! Value ctor.
+		inline
+		explicit
+		EdgeRobust
+			( EdgeDir const & edgeDir
+			, rigibra::Transform const & xform
+			, std::size_t const & reserveSize
+			)
+			: EdgeBase(edgeDir)
+			, theXformTracker(reserveSize)
+		{
+			accumulateXform(xform);
+		}
+
+		//! Construct with null/invalid member values.
+		inline
+		EdgeRobust
+			() = default;
+
+		//! No-op dtor.
+		virtual
+		inline
+		~EdgeRobust
+			() = default;
+
+		//! True if this instance has valid data
+		inline
+		bool
+		isValid
+			() const
+		{
+			return
+				(  theEdgeDir.isValid()
+				&& rigibra::isValid(xform())
+				);
+		}
+
+		//! Insert xform into transform accumulation tracker's running total
+		inline
+		void
+		accumulateXform
+			( rigibra::Transform const & xform
+			)
+		{
+			theXformTracker.insert(xform);
+		}
+
+		//! Transformation (Hi-Ndx w.r.t. Lo-Ndx)
+		virtual
+		inline
+		rigibra::Transform
+		xform
+			() const
+		{
+			return theXformTracker.median();
+		}
+
+		//! \brief Unity for now - assuming all medians() are similar quality
+		// TODO (transformation 50 percentile error) TODO
+		[[nodiscard]]
+		inline
+		virtual
+		double
+		get_weight
+			() const noexcept override
+		{
+			// TODO compute
+			constexpr double weight{ 1. };
+			return weight;
+		}
+
+		//! An instance associated with edge in reverse direction.
+		virtual
+		inline
+		std::shared_ptr<EdgeBase>
+		reversedInstance
+			() const
+		{
+			return std::make_shared<EdgeOri>
+				( edgeDir().reverseEdgeDir()
+				, rigibra::inverse(xform())
+				, get_weight()  // assume this stays the same
+				);
+		}
+
+		//! Descriptive information about this instance
+		virtual
+		inline
+		std::string
+		infoString
+			( std::string const & title = {}
+			) const
+		{
+			std::ostringstream oss;
+			if (isValid())
+			{
+				oss << EdgeBase::infoString(title);
+				oss << ' '
+					<< "trackSize: " << theXformTracker.size()
+					;
+			}
+			else
+			{
+				std::cout << "<null>";
+			}
+			return oss.str();
+		}
+
+	}; // EdgeRobust
 
 
 } // [network]
@@ -410,13 +613,7 @@ namespace
 		, orinet::network::EdgeDir const & edgeDir
 		)
 	{
-		ostrm
-			<< "from: " << edgeDir.theFromKey
-			<< ' '
-			<< "into: " << edgeDir.theIntoKey
-			<< ' '
-			<< "isValid: " << std::boolalpha << edgeDir.isValid()
-			;
+		ostrm << edgeDir.infoString();
 		return ostrm;
 	}
 
@@ -428,13 +625,7 @@ namespace
 		, orinet::network::EdgeBase const & edge
 		)
 	{
-		ostrm
-			<< "edgeDir: " << edge.theEdgeDir
-			<< ' '
-			<< "xform: " << edge.xform()
-			<< ' '
-			<< "isValid: " << std::boolalpha << edge.isValid()
-			;
+		ostrm << edge.infoString();
 		return ostrm;
 	}
 
@@ -446,15 +637,19 @@ namespace
 		, orinet::network::EdgeOri const & edge
 		)
 	{
-		orinet::network::EdgeBase const * const ptBase
-			= static_cast<orinet::network::EdgeBase const *>(&edge);
-		ostrm
-			<< *ptBase
-			<< "  " << "xform: " << edge.xform()
-			<< "  " << "fitErr: " << edge.get_weight()
-			<< ' '
-			<< "isValid: " << std::boolalpha << edge.isValid()
-			;
+		ostrm << edge.infoString();
+		return ostrm;
+	}
+
+	//! Put instance to stream.
+	inline
+	std::ostream &
+	operator<<
+		( std::ostream & ostrm
+		, orinet::network::EdgeRobust const & edge
+		)
+	{
+		ostrm << edge.infoString();
 		return ostrm;
 	}
 
