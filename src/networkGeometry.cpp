@@ -31,7 +31,7 @@ Example:
 
 */
 
-#include "OriNet/network.hpp"
+#include "OriNet/networkGeometry.hpp"
 
 #include "OriNet/compare.hpp"
 #include "OriNet/robust.hpp"

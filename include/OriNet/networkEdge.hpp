@@ -30,7 +30,7 @@
 \brief Contains TODO
 
 Example:
-\snippet test_networkEdge.cpp DoxyExample01
+\snippet test_network.cpp DoxyExample01
 
 */
 
