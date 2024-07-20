@@ -79,6 +79,13 @@ namespace network
 	 * Compute each station orientation using the thinned (minimum
 	 * spanning tree) orientation network.
 	 * \snippet test_network.cpp DoxyExamplePropagate
+	 *
+	 * \note The methods, networkTree() and propagateTransforms(), can
+	 * return data structures involving edges of a different type
+	 * than in this original instance. E.g. if a graph has EdgeRobust
+	 * instances in it, and the EdgeRobust::reversedInstance() return
+	 * a EdgeOri type, then the networkTree() may contain a mix of
+	 * these two types of edge instances.
 	 */
 	class Geometry
 	{
@@ -161,6 +168,10 @@ namespace network
 		 * E.g. calling this function with result of spanningEdgeOris()
 		 * will return a new network that minimally spans this original
 		 * instance.
+		 *
+		 * Note: the spanning tree, in general, contains reversed edges.
+		 * In these cases. If the forward edge is a derived type, then
+		 * the reversed edge may be of a different type.
 		 *
 		 * Example:
 	 	 * \snippet test_network.cpp DoxyExampleThin
