@@ -80,7 +80,7 @@ namespace network
 	std::string
 	edgeLabel
 		( graaf::edge_id_t const & eId
-		, EdgeOri const & edgeOri
+		, EdgeOri const & edge
 		)
 	{
 		std::ostringstream lbl;
@@ -88,7 +88,7 @@ namespace network
 			<< '"'
 			<< eId.first << "-->" << eId.second
 			<< '\n'
-			<< edgeOri.get_weight()
+			<< edge.get_weight()
 			<< '"';
 		return lbl.str();
 	}
@@ -129,7 +129,7 @@ Geometry :: staKeyForVertId
 void
 Geometry :: addEdge
 	( LoHiKeyPair const & staKeyLoHi
-	, EdgeOri const & edgeOri
+	, EdgeOri const & edge
 	)
 {
 	// check if vertices (station nodes) are already in the graph
@@ -141,7 +141,7 @@ Geometry :: addEdge
 
 	VertId const vId1{ vertIdForStaKey(sta1) };
 	VertId const vId2{ vertIdForStaKey(sta2) };
-	theGraph.add_edge(vId1, vId2, edgeOri);
+	theGraph.add_edge(vId1, vId2, edge);
 }
 
 std::vector<graaf::edge_id_t>
@@ -197,12 +197,13 @@ Geometry :: networkTree
 
 std::vector<rigibra::Transform>
 Geometry :: propagateTransforms
-	( StaKey const & staKey0
-	, rigibra::Transform const & staXform0
+	( StaKey const & // staKey0
+	, rigibra::Transform const & // staXform0
 	) const
 {
 	std::vector<rigibra::Transform> gotXforms;
 
+/*
 	using namespace rigibra;
 
 	std::size_t const numStaKeys{ theGraph.vertex_count() };
@@ -276,6 +277,7 @@ Geometry :: propagateTransforms
 		graaf::algorithm::breadth_first_traverse
 			(theGraph, vId0, propagator);
 	}
+*/
 
 	return gotXforms;
 }

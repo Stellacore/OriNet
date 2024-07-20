@@ -398,7 +398,7 @@ namespace network
 		void
 		addEdge
 			( LoHiKeyPair const & staKeyLoHi
-			, EdgeOri const & edgeOri
+			, EdgeOri const & edge
 			);
 
 		//! Edges forming a minimum path
