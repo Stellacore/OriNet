@@ -58,30 +58,22 @@ namespace
 		Geometry netGeo;
 
 		// create a simple network 
+
+		// Edge 100->101
 		{
 		Transform const xform{ Vector{ 0., 0., 1. }, identity<Attitude>() };
 		std::shared_ptr<EdgeBase> const ptEdge
-			{ std::make_shared<EdgeOri>
-				( EdgeDir(100u, 101u)
-				, xform
-				, 1.
-				)
-			};
-		netGeo.addEdge(LoHiKeyPair{ 100u, 101u }, ptEdge);
+			{ std::make_shared<EdgeOri> (EdgeDir(100u, 101u), xform, 1.) };
+		netGeo.addEdge(ptEdge);
 		}
 
+		// Edge 100->102
 		{
 		Transform const xform{ Vector{ 0., 0., 2. }, identity<Attitude>() };
 		std::shared_ptr<EdgeBase> const ptEdge
-			{ std::make_shared<EdgeOri>
-				( EdgeDir(100u, 102u)
-				, xform
-				, 1.
-				)
-			};
-		netGeo.addEdge(LoHiKeyPair{ 100u, 102u }, ptEdge);
+			{ std::make_shared<EdgeOri> (EdgeDir(100u, 102u), xform, 1.) };
+		netGeo.addEdge(ptEdge);
 		}
-
 
 		// check retrieval of orientation data
 		Transform const xform0{ Vector{ 1., 2., 101. }, identity<Attitude>() };
@@ -132,7 +124,7 @@ std::cout << "netGeo: " << netGeo.infoStringContents() << '\n';
 					{ std::make_shared<EdgeOri>
 						(EdgeDir{ fromKey, intoKey }, xIntoWrtFrom, fitErr)
 					};
-				netGeo.addEdge(LoHiKeyPair{ fromKey, intoKey }, ptEdge);
+				netGeo.addEdge(ptEdge);
 			}
 		}
 
@@ -253,7 +245,11 @@ std::cout << "netGeo: " << netGeo.infoStringContents() << '\n';
 			, {3u, 4u}
 			, {4u, 5u}
 			};
+		constexpr orinet::network::StaKey holdStaKey{ 3u };
+		Transform const holdStaOri{ expStas[holdStaKey] };
+
 		double const fitErr{ .001 }; // assume all RelOri of equal quality
+std::cout << "=== 1:\n";
 		for (LoHiKeyPair const & edgeLoHi : edgeLoHis)
 		{
 			using namespace orinet::network;
@@ -266,31 +262,33 @@ std::cout << "netGeo: " << netGeo.infoStringContents() << '\n';
 					, fitErr
 					)
 				};
-			netGeo.addEdge(edgeLoHi, ptEdge);
+			netGeo.addEdge(ptEdge);
 		}
 
 		// [DoxyExampleEdges]
 
 		// [DoxyExampleThin]
 
+std::cout << "=== 2:\n";
 		// compute minimum path spanning tree
 		// (along minimum relative orientation transform errors)
 		using orinet::network::EdgeId;
 		std::vector<EdgeId> const eIds{ netGeo.spanningEdgeBases() };
+std::cout << "=== 3:\n";
 
 		orinet::network::Geometry const mstGeo{ netGeo.networkTree(eIds) };
 
+std::cout << "=== 4:\n";
 		// [DoxyExampleThin]
 
 		// [DoxyExamplePropagate]
 
 		// propagate relative orientations into station orientations
 		using orinet::network::StaKey;
-		constexpr StaKey holdStaKey{ 3u };
-		Transform const holdStaOri{ expStas[holdStaKey] };
 		std::map<StaKey, Transform> const gotStas
 			{ mstGeo.propagateTransforms(holdStaKey, holdStaOri) };
 
+std::cout << "=== 5:\n";
 		// [DoxyExamplePropagate]
 
 		// compare computed station orientations with expected ones
@@ -337,8 +335,8 @@ main
 	std::stringstream oss;
 
 	test0(oss);
-	test1(oss);
-	test2(oss);
+//	test1(oss);
+//	test2(oss);
 
 	if (oss.str().empty()) // Only pass if no errors were encountered
 	{

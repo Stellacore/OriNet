@@ -379,7 +379,7 @@ std::cout << '\n';
 							(EdgeDir{ feaKey1, feaKey2 }, x2w1, fitErr)
 						};
 std::cout << "adding edge between: " << feaKey1 << ' ' << feaKey2 << '\n';
-					netGeo.addEdge(std::make_pair(feaKey1, feaKey2), ptEdge);
+					netGeo.addEdge(ptEdge);
 				}
 			}
 std::cout << '\n';

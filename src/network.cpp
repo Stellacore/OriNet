@@ -128,13 +128,12 @@ Geometry :: staKeyForVertId
 
 void
 Geometry :: addEdge
-	( LoHiKeyPair const & staKeyLoHi
-	, std::shared_ptr<EdgeBase> const & ptEdge
+	( std::shared_ptr<EdgeBase> const & ptEdge
 	)
 {
 	// check if vertices (station nodes) are already in the graph
-	StaKey const & sta1 = staKeyLoHi.first;
-	StaKey const & sta2 = staKeyLoHi.second;
+	StaKey const & sta1 = ptEdge->fromKey();
+	StaKey const & sta2 = ptEdge->intoKey();
 
 	ensureStaFrameExists(sta1);
 	ensureStaFrameExists(sta2);
@@ -175,22 +174,18 @@ Geometry :: networkTree
 		StaKey const & staKey2 = staFrame2.theStaKey;
 
 		// set transformation edge consistent with LoHiNdx convention
-		LoHiKeyPair staKeyLoHi;
 		std::shared_ptr<EdgeBase> ptUseEdge{ std::make_shared<EdgeBase>() };
 		if (staKey1 < staKey2)
 		{
-			staKeyLoHi = { staKey1, staKey2 };
-			*ptUseEdge = *ptOrigEdge;
+			ptUseEdge = ptOrigEdge;
 		}
 		else
 		if (staKey2 < staKey1)
 		{
-			staKeyLoHi = { staKey2, staKey1 };
-			*ptUseEdge = *ptOrigEdge;
-			ptUseEdge->reverseSelf();
+			ptUseEdge = ptOrigEdge->reversedInstance();
 		}
 
-		network.addEdge(staKeyLoHi, ptUseEdge);
+		network.addEdge(ptUseEdge);
 	}
 
 	return network;
@@ -217,7 +212,7 @@ std::cout << "::staXform0: " << staXform0 << '\n';
 
 		struct Propagator
 		{
-			Geometry const * thePtGeo;
+			Geometry const * const thePtGeo;
 			std::map<StaKey, rigibra::Transform> * const thePtStaXforms;
 
 			inline
@@ -226,85 +221,96 @@ std::cout << "::staXform0: " << staXform0 << '\n';
 				( graaf::edge_id_t const & eId
 				) const
 			{
+std::cout << '\n';
+std::cout << "--thePtStaXforms.size: " << thePtStaXforms->size() << '\n';
+for (std::map<StaKey, rigibra::Transform>::value_type
+	const & staXform : *thePtStaXforms)
+{
+	std::cout
+		<< "--StaXforms: " << staXform.first
+		<< ' ' << staXform.second
+		<< "  isValid: " << isValid(staXform.second)
+		<< '\n';
+}
+
 				VertId const & vId1 = eId.first;
 				VertId const & vId2 = eId.second;
 				StaKey const staKey1{ thePtGeo->staKeyForVertId(vId1) };
 				StaKey const staKey2{ thePtGeo->staKeyForVertId(vId2) };
-std::cout << '\n';
+
+//std::cout << "::vId1: " << vId1 << '\n';
+//std::cout << "::vId2: " << vId2 << '\n';
 std::cout << "::staKey1: " << staKey1 << '\n';
 std::cout << "::staKey2: " << staKey2 << '\n';
 
 				std::shared_ptr<EdgeBase>
-					const & ptEdgeBase = thePtGeo->theGraph.get_edge(eId);
-				EdgeOri const * const ptEdgeOri
-					{ static_cast<EdgeOri const *>(ptEdgeBase.get()) };
-				EdgeOri const edgeOri{ *ptEdgeOri };
+					const & ptGraphEdge = thePtGeo->theGraph.get_edge(eId);
 
+std::cout << "::ptGraphEdge: " << *ptGraphEdge << '\n';
 
-std::cout << "::ptEdgeBase: " << *ptEdgeBase << '\n';
-std::cout << "::ptEdgeOri: " << *ptEdgeOri << '\n';
+				std::shared_ptr<EdgeBase> ptUseEdge = ptGraphEdge;
 
-				EdgeOri useEdgeOri{ edgeOri };
-std::cout << "::edgeOri: " << edgeOri << '\n';
-std::cout << "::useEdgeOri(a): " << useEdgeOri << '\n';
-				LoHiKeyPair lohiKeys{ staKey1, staKey2 };
-				if (staKey2 < staKey1)
+std::cout << ":: useEdge(a): " << *ptUseEdge << '\n';
+
+				EdgeDir const & haveDir = ptGraphEdge->edgeDir();
+				EdgeDir const wantDir{ staKey1, staKey2 };
+				if (EdgeDir::Reverse == wantDir.compareTo(haveDir))
 				{
-					useEdgeOri.reverseSelf();
-					lohiKeys = LoHiKeyPair{ staKey2, staKey1 };
+std::cout << ":: ----- REVERSE\n";
+					ptUseEdge = ptGraphEdge->reversedInstance();
 				}
-std::cout << "::useEdgeOri(b): " << useEdgeOri << '\n';
+std::cout << ":: useEdge(b): " << *ptUseEdge << '\n';
+
+				StaKey const fromKey{ ptUseEdge->fromKey() };
+				StaKey const intoKey{ ptUseEdge->intoKey() };
+
+std::cout << "::fromKey: " << fromKey << '\n';
+std::cout << "::intoKey: " << intoKey << '\n';
 
 				using namespace rigibra;
-				StaKey const loNdx = lohiKeys.first;
-				StaKey const hiNdx = lohiKeys.second;
 
-				// Transform const & x1wRef = staXforms.at(loNdx);
-				// Transform const & x2wRef = staXforms.at(hiNdx);
-
-				using Iter
-					= std::map<StaKey, rigibra::Transform>::const_iterator;
-				Transform x1wRef{ null<Transform>() };
-				Transform x2wRef{ null<Transform>() };
-				Iter const it1{ thePtStaXforms->find(loNdx) };
-				if (thePtStaXforms->end() != it1)
+				// get starting transform wrt Ref
+				std::map<StaKey, Transform>::const_iterator
+					const itFrom{ thePtStaXforms->find(fromKey) };
+				Transform xFromWrtRef{ null<Transform>() };
+				if (thePtStaXforms->end() != itFrom)
 				{
-					x1wRef = it1->second;
-				}
-				Iter const it2{ thePtStaXforms->find(hiNdx) };
-				if (thePtStaXforms->end() != it2)
-				{
-					x2wRef = it2->second;
-				}
-
-std::cout << "::x1wRef: " << x1wRef << '\n';
-std::cout << "::x2wRef: " << x2wRef << '\n';
-				if (isValid(x1wRef))
-				{
-					// propagate from 1 forward into 2
-					Transform const x2w1{ useEdgeOri.xform() };
-					Transform const x2wRef{ x2w1 * x1wRef };
-					(*thePtStaXforms)[hiNdx] = x2wRef;
-				}
-				else
-				if (isValid(x2wRef))
-				{
-					// propagate from 2 back to 1
-					Transform const x1w2{ useEdgeOri.xform() };
-					Transform const x1wRef{ x1w2 * x2wRef };
-					(*thePtStaXforms)[loNdx] = x1wRef;
+					xFromWrtRef = itFrom->second;
+std::cout << "::xFromWrtRef: " << xFromWrtRef << '\n';
 				}
 				else
 				{
-					std::cerr << "FATAL ERROR - bad Graph sort\n";
+					std::cerr << "FATAL ERROR - bad Graph xFromWrtRef\n";
 					exit(1);
 				}
+
+				// get (re)directed edge transform Into wrt From
+				Transform xIntoWrtFrom{ null<Transform>() };
+				if (isValid(xFromWrtRef))
+				{
+std::cout << "::useE.xform(): " << ptUseEdge->xform() << '\n';
+					xIntoWrtFrom = ptUseEdge->xform();
+				}
+				else
+				{
+					std::cerr << "FATAL ERROR - bad Graph useEdge\n";
+					exit(1);
+				}
+std::cout << "::xIntoWrtFrom: " << xIntoWrtFrom << '\n';
+
+				// compute ending location
+				Transform xIntoWrtRef{ xIntoWrtFrom * xFromWrtRef };
+				(*thePtStaXforms)[intoKey] = xIntoWrtRef;
+std::cout << "::xIntoWrtRef : " << xIntoWrtRef << '\n';
+
 			}
 
 		}; // Propagator;
 
 		VertId const vId0{ vertIdForStaKey(staKey0) };
-		Propagator const propagator{ this, &staXforms};
+std::cout << "::staKey0: " << staKey0 << '\n';
+std::cout << "::vId0   : " << vId0 << '\n';
+		Propagator const propagator{ this, &staXforms };
 		graaf::algorithm::breadth_first_traverse
 			(theGraph, vId0, propagator);
 	}
