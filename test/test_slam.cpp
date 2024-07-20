@@ -340,6 +340,7 @@ std::cout << '\n';
 		constexpr double dtau{ 1./32. };
 		for (;;)
 		{
+std::cout << '\n';
 			tau = tau + dtau;
 			if (.125 < tau)
 			{
@@ -374,16 +375,29 @@ std::cout << '\n';
 
 					constexpr double fitErr{ 1. }; // treat all the same
 					using namespace orinet::network;
-					std::shared_ptr<EdgeBase> const ptEdge
-						{ std::make_shared<EdgeOri>
-							(EdgeDir{ feaKey1, feaKey2 }, x2w1, fitErr)
-						};
-std::cout << "adding edge between: " << feaKey1 << ' ' << feaKey2 << '\n';
-					netGeo.addEdge(ptEdge);
+
+					EdgeDir const edgeDir{ feaKey1, feaKey2 };
+
+					std::shared_ptr<EdgeBase> ptGraphEdge
+						{ netGeo.edge(edgeDir) };
+					if (ptGraphEdge)
+					{
+						// accumulate into existing edge
+//						ptGraphEdge->accumulateXform(x2w1);
+std::cout << " accumulating onto edge: " << feaKey1 << ' ' << feaKey2 << '\n';
+					}
+					else
+					{
+						std::shared_ptr<EdgeBase> const ptEdge
+							{ std::make_shared<EdgeOri>
+								(edgeDir, x2w1, fitErr)
+							};
+						// insert new edge into geometry network
+std::cout << "adding new edge between: " << feaKey1 << ' ' << feaKey2 << '\n';
+						netGeo.insertEdge(ptEdge);
+					}
 				}
 			}
-std::cout << '\n';
-std::cout << "netGeo.sizeEdges(): " << netGeo.sizeEdges() << '\n';
 
 			sim::FeaKey const & feaKey0
 				= mapCamFeaXforms.cbegin()->first.second;
@@ -393,8 +407,9 @@ std::cout << "netGeo.sizeEdges(): " << netGeo.sizeEdges() << '\n';
 			std::map<StaKey, Transform> const fitGeo
 				{ netGeo.propagateTransforms(feaKey0, xform0) };
 
-std::cout << "fitGeo.size: " << fitGeo.size() << '\n';
-		}
+		} // over time
+
+std::cout << "netGeo:\n" << netGeo.infoStringContents() << '\n';
 
 		// [DoxyExample01]
 

@@ -121,7 +121,7 @@ namespace network
 	 	 * \snippet test_network.cpp DoxyExampleThin
 		 */
 		void
-		addEdge
+		insertEdge
 			( std::shared_ptr<EdgeBase> const & ptEdge
 			);
 

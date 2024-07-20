@@ -145,7 +145,7 @@ Geometry :: staKeyForVertId
 // public:
 
 void
-Geometry :: addEdge
+Geometry :: insertEdge
 	( std::shared_ptr<EdgeBase> const & ptEdge
 	)
 {
@@ -160,7 +160,7 @@ Geometry :: addEdge
 	VertId const vId2{ vertIdForStaKey(sta2) };
 	if (! (isValid(vId1) && isValid(vId2)))
 	{
-		std::cerr << "FATAL: Geometry::addEdge bad vertex management\n"
+		std::cerr << "FATAL: Geometry::insertEdge bad vertex management\n"
 			<< " sta1: " << sta1
 			<< " sta2: " << sta2
 			<< " vId1: " << vId1
@@ -241,7 +241,7 @@ Geometry :: networkTree
 			ptUseEdge = ptOrigEdge->reversedInstance();
 		}
 
-		network.addEdge(ptUseEdge);
+		network.insertEdge(ptUseEdge);
 	}
 
 	return network;

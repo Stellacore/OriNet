@@ -64,7 +64,7 @@ namespace
 		Transform const xform{ Vector{ 0., 0., 1. }, identity<Attitude>() };
 		std::shared_ptr<EdgeBase> const ptEdge
 			{ std::make_shared<EdgeOri> (EdgeDir(100u, 101u), xform, 1.) };
-		netGeo.addEdge(ptEdge);
+		netGeo.insertEdge(ptEdge);
 		}
 
 		// Edge 100->102
@@ -72,7 +72,7 @@ namespace
 		Transform const xform{ Vector{ 0., 0., 2. }, identity<Attitude>() };
 		std::shared_ptr<EdgeBase> const ptEdge
 			{ std::make_shared<EdgeOri> (EdgeDir(100u, 102u), xform, 1.) };
-		netGeo.addEdge(ptEdge);
+		netGeo.insertEdge(ptEdge);
 		}
 
 		// check retrieval of orientation data
@@ -133,7 +133,7 @@ namespace
 					{ std::make_shared<EdgeOri>
 						(EdgeDir{ fromKey, intoKey }, xIntoWrtFrom, fitErr)
 					};
-				netGeo.addEdge(ptEdge);
+				netGeo.insertEdge(ptEdge);
 			}
 		}
 
@@ -270,7 +270,7 @@ namespace
 					, fitErr
 					)
 				};
-			netGeo.addEdge(ptEdge);
+			netGeo.insertEdge(ptEdge);
 		}
 
 		// [DoxyExampleEdges]
