@@ -233,6 +233,10 @@ for (std::map<StaKey, rigibra::Transform>::value_type
 		<< '\n';
 }
 
+				//
+				// Obtain tranform matching graph traversal direction
+				//
+
 				VertId const & vId1 = eId.first;
 				VertId const & vId2 = eId.second;
 				StaKey const staKey1{ thePtGeo->staKeyForVertId(vId1) };
@@ -250,8 +254,6 @@ std::cout << "::ptGraphEdge: " << *ptGraphEdge << '\n';
 
 				std::shared_ptr<EdgeBase> ptUseEdge = ptGraphEdge;
 
-std::cout << ":: useEdge(a): " << *ptUseEdge << '\n';
-
 				EdgeDir const & haveDir = ptGraphEdge->edgeDir();
 				EdgeDir const wantDir{ staKey1, staKey2 };
 				if (EdgeDir::Reverse == wantDir.compareTo(haveDir))
@@ -261,15 +263,19 @@ std::cout << ":: ----- REVERSE\n";
 				}
 std::cout << ":: useEdge(b): " << *ptUseEdge << '\n';
 
+				//
+				// Propagate transform in graph traveral direction
+				//
+
+				using namespace rigibra;
+
 				StaKey const fromKey{ ptUseEdge->fromKey() };
 				StaKey const intoKey{ ptUseEdge->intoKey() };
 
 std::cout << "::fromKey: " << fromKey << '\n';
 std::cout << "::intoKey: " << intoKey << '\n';
 
-				using namespace rigibra;
-
-				// get starting transform wrt Ref
+				// get starting transform wrt Ref (from prior activity)
 				std::map<StaKey, Transform>::const_iterator
 					const itFrom{ thePtStaXforms->find(fromKey) };
 				Transform xFromWrtRef{ null<Transform>() };
@@ -298,9 +304,10 @@ std::cout << "::useE.xform(): " << ptUseEdge->xform() << '\n';
 				}
 std::cout << "::xIntoWrtFrom: " << xIntoWrtFrom << '\n';
 
-				// compute ending location
+				// compute ending propagated transform
 				Transform xIntoWrtRef{ xIntoWrtFrom * xFromWrtRef };
 				(*thePtStaXforms)[intoKey] = xIntoWrtRef;
+
 std::cout << "::xIntoWrtRef : " << xIntoWrtRef << '\n';
 
 			}
@@ -308,8 +315,6 @@ std::cout << "::xIntoWrtRef : " << xIntoWrtRef << '\n';
 		}; // Propagator;
 
 		VertId const vId0{ vertIdForStaKey(staKey0) };
-std::cout << "::staKey0: " << staKey0 << '\n';
-std::cout << "::vId0   : " << vId0 << '\n';
 		Propagator const propagator{ this, &staXforms };
 		graaf::algorithm::breadth_first_traverse
 			(theGraph, vId0, propagator);
@@ -406,15 +411,16 @@ Geometry :: infoStringContents
 	std::sort(infoEdges.begin(), infoEdges.end());
 
 	oss << infoString(title);
-	oss << "vertices...\n";
+	oss << "vertices...";
 	for (std::string const & infoVert : infoVerts)
 	{
-		oss << infoVert << '\n';
+		oss << '\n' << infoVert;
 	}
-	oss << "edges...\n";
+	oss << '\n';
+	oss << "edges...";
 	for (std::string const & infoEdge : infoEdges)
 	{
-		oss << infoEdge << '\n';
+		oss << '\n' << infoEdge;
 	}
 
 	return oss.str();

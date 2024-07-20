@@ -80,17 +80,26 @@ namespace
 		std::map<StaKey, Transform> const gotXforms
 			{ netGeo.propagateTransforms(101u, xform0) };
 
-std::cout << '\n';
-std::cout << '\n';
-std::cout << "netGeo: " << netGeo.infoStringContents() << '\n';
-		for (std::map<StaKey, Transform>::value_type
-			const & gotXform : gotXforms)
+		Transform const expXform2
+			{ Vector{ 1., 2., 102. }, identity<Attitude>() };
+		Transform const gotXform2{ gotXforms.at(102u) };
+		if (! rigibra::nearlyEquals(gotXform2, expXform2))
 		{
-			std::cout
-				<< "gotXform: "
-				<< gotXform.first
-				<< " "
-				<< gotXform.second << '\n';
+			oss << "Failure of simple propagation test\n";
+			oss << "exp: " << expXform2 << '\n';
+			oss << "got: " << gotXform2 << '\n';
+			oss << '\n';
+			oss << "netGeo: " << netGeo.infoStringContents() << '\n';
+			for (std::map<StaKey, Transform>::value_type
+				const & gotXform : gotXforms)
+			{
+				oss
+					<< "gotXform: "
+					<< gotXform.first
+					<< " "
+					<< gotXform.second << '\n';
+			}
+			oss << '\n';
 		}
 	}
 
@@ -249,7 +258,6 @@ std::cout << "netGeo: " << netGeo.infoStringContents() << '\n';
 		Transform const holdStaOri{ expStas[holdStaKey] };
 
 		double const fitErr{ .001 }; // assume all RelOri of equal quality
-std::cout << "=== 1:\n";
 		for (LoHiKeyPair const & edgeLoHi : edgeLoHis)
 		{
 			using namespace orinet::network;
@@ -269,16 +277,13 @@ std::cout << "=== 1:\n";
 
 		// [DoxyExampleThin]
 
-std::cout << "=== 2:\n";
 		// compute minimum path spanning tree
 		// (along minimum relative orientation transform errors)
 		using orinet::network::EdgeId;
 		std::vector<EdgeId> const eIds{ netGeo.spanningEdgeBases() };
-std::cout << "=== 3:\n";
 
 		orinet::network::Geometry const mstGeo{ netGeo.networkTree(eIds) };
 
-std::cout << "=== 4:\n";
 		// [DoxyExampleThin]
 
 		// [DoxyExamplePropagate]
@@ -288,7 +293,6 @@ std::cout << "=== 4:\n";
 		std::map<StaKey, Transform> const gotStas
 			{ mstGeo.propagateTransforms(holdStaKey, holdStaOri) };
 
-std::cout << "=== 5:\n";
 		// [DoxyExamplePropagate]
 
 		// compare computed station orientations with expected ones
@@ -335,8 +339,8 @@ main
 	std::stringstream oss;
 
 	test0(oss);
-//	test1(oss);
-//	test2(oss);
+	test1(oss);
+	test2(oss);
 
 	if (oss.str().empty()) // Only pass if no errors were encountered
 	{
