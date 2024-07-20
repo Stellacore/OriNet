@@ -89,6 +89,12 @@ namespace network
 		graaf::undirected_graph<StaFrame, std::shared_ptr<EdgeBase> >
 			theGraph{};
 
+		//! True if station is already a node in graph
+		bool
+		isStaFrameInGraph
+			( StaKey const & staKey
+			) const;
+
 		//! Check if staKey already in graph, if not, then add vertex
 		void
 		ensureStaFrameExists
@@ -118,6 +124,12 @@ namespace network
 		addEdge
 			( std::shared_ptr<EdgeBase> const & ptEdge
 			);
+
+		//! Edge (expressed in order of edgeDir key values).
+		std::shared_ptr<EdgeBase>
+		edge
+			( EdgeDir const & edgeDir
+			) const;
 
 		//! Edges forming a minimum path
 		std::vector<graaf::edge_id_t>

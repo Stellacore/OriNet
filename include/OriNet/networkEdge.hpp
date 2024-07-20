@@ -76,10 +76,10 @@ namespace network
 	struct EdgeDir
 	{
 		//! Domain key for edge transformation interpretations
-		StaKey theFromKey{ std::numeric_limits<StaKey>::max() };
+		StaKey theFromKey{ sNullKey };
 
 		//! Range key for edge transformation interpretations
-		StaKey theIntoKey{ std::numeric_limits<StaKey>::max() };
+		StaKey theIntoKey{ sNullKey };
 
 		// Check order interpretation
 		enum DirCompare
@@ -114,8 +114,8 @@ namespace network
 			() const
 		{
 			return
-				(  (theFromKey < std::numeric_limits<StaKey>::max())
-				&& (theIntoKey < std::numeric_limits<StaKey>::max())
+				(  (orinet::network::isValid(theFromKey))
+				&& (orinet::network::isValid(theIntoKey))
 				&& (theFromKey != theIntoKey)
 				);
 		}

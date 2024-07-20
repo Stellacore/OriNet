@@ -94,12 +94,20 @@ namespace network
 	}
 
 
+bool
+Geometry :: isStaFrameInGraph
+	( StaKey const & staKey
+	) const
+{
+	return (theVertIdFromStaKey.end() != theVertIdFromStaKey.find(staKey));
+}
+
 void
 Geometry :: ensureStaFrameExists
 	( StaKey const & staKey
 	)
 {
-	if (theVertIdFromStaKey.end() == theVertIdFromStaKey.find(staKey))
+	if (! isStaFrameInGraph(staKey))
 	{
 		StaFrame const staFrame{ staKey };
 		VertId const vId{ theGraph.add_vertex(staFrame) };
@@ -112,6 +120,7 @@ Geometry :: vertIdForStaKey
 	( StaKey const & staKey
 	) const
 {
+std::cout << "## vertIdForStaKey: " << staKey << '\n';
 	return theVertIdFromStaKey.at(staKey);
 }
 
@@ -120,8 +129,13 @@ Geometry :: staKeyForVertId
 	( VertId const & vertId
 	) const
 {
-	StaFrame const & staFrame = theGraph.get_vertex(vertId);
-	return staFrame.theStaKey;
+	StaKey staKey{ sNullKey };
+	if (theGraph.has_vertex(vertId))
+	{
+		StaFrame const & staFrame = theGraph.get_vertex(vertId);
+		staKey = staFrame.theStaKey;
+	}
+	return staKey;
 }
 
 // public:
@@ -141,6 +155,44 @@ Geometry :: addEdge
 	VertId const vId1{ vertIdForStaKey(sta1) };
 	VertId const vId2{ vertIdForStaKey(sta2) };
 	theGraph.add_edge(vId1, vId2, ptEdge);
+}
+
+std::shared_ptr<EdgeBase>
+Geometry :: edge
+	( EdgeDir const & edgeDir
+	) const
+{
+std::cout << "@@ z:\n";
+	std::shared_ptr<EdgeBase> ptEdge{ nullptr };
+std::cout << "@@ y:\n";
+
+	StaKey const & sta1 = edgeDir.fromKey();
+	StaKey const & sta2 = edgeDir.intoKey();
+std::cout << "@@ x:\n";
+	VertId const vId1{ vertIdForStaKey(sta1) };
+	VertId const vId2{ vertIdForStaKey(sta2) };
+
+std::cout << "@@ A:\n";
+std::cout << "@@@ has1,2: " << theGraph.has_edge(vId1, vId2) << '\n';
+std::cout << "@@ B:\n";
+std::cout << "@@@ has2,1: " << theGraph.has_edge(vId2, vId1) << '\n';
+std::cout << "@@ C:\n";
+
+	if (theGraph.has_edge(vId1, vId2))
+	{
+std::cout << "A1:\n";
+		ptEdge = theGraph.get_edge(vId1, vId2);
+std::cout << "A2:\n";
+	}
+	else
+	if (theGraph.has_edge(vId2, vId1))
+	{
+std::cout << "B1:\n";
+		ptEdge = theGraph.get_edge(vId2, vId1);
+std::cout << "B2:\n";
+	}
+
+	return ptEdge;
 }
 
 std::vector<graaf::edge_id_t>
