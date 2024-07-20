@@ -113,6 +113,20 @@ namespace network
 			( VertId const & vertId
 			) const;
 
+		//! Functor for graph traversal transform propagation
+		struct Propagator
+		{
+			Geometry const * const thePtGeo;
+			std::map<StaKey, rigibra::Transform> * const thePtStaXforms;
+
+			//! Update #thePtStaXforms content with each edge
+			void
+			operator()
+				( graaf::edge_id_t const & eId
+				) const;
+
+		}; // Propagator
+
 	public:
 
 		/*! \brief Insert transformation edge into graph
