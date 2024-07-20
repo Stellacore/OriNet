@@ -128,13 +128,12 @@ Geometry :: staKeyForVertId
 
 void
 Geometry :: addEdge
-	( LoHiKeyPair const & staKeyLoHi
-	, std::shared_ptr<EdgeBase> const & ptEdge
+	( std::shared_ptr<EdgeBase> const & ptEdge
 	)
 {
 	// check if vertices (station nodes) are already in the graph
-	StaKey const & sta1 = staKeyLoHi.first;
-	StaKey const & sta2 = staKeyLoHi.second;
+	StaKey const & sta1 = ptEdge->fromKey();
+	StaKey const & sta2 = ptEdge->intoKey();
 
 	ensureStaFrameExists(sta1);
 	ensureStaFrameExists(sta2);
@@ -175,51 +174,43 @@ Geometry :: networkTree
 		StaKey const & staKey2 = staFrame2.theStaKey;
 
 		// set transformation edge consistent with LoHiNdx convention
-		LoHiKeyPair staKeyLoHi;
 		std::shared_ptr<EdgeBase> ptUseEdge{ std::make_shared<EdgeBase>() };
 		if (staKey1 < staKey2)
 		{
-			staKeyLoHi = { staKey1, staKey2 };
-			*ptUseEdge = *ptOrigEdge;
+			ptUseEdge = ptOrigEdge;
 		}
 		else
 		if (staKey2 < staKey1)
 		{
-			staKeyLoHi = { staKey2, staKey1 };
-			*ptUseEdge = *ptOrigEdge;
-			ptUseEdge->reverseSelf();
+			ptUseEdge = ptOrigEdge->reversedInstance();
 		}
 
-		network.addEdge(staKeyLoHi, ptUseEdge);
+		network.addEdge(ptUseEdge);
 	}
 
 	return network;
 }
 
-std::vector<rigibra::Transform>
+std::map<StaKey, rigibra::Transform>
 Geometry :: propagateTransforms
 	( StaKey const & staKey0
 	, rigibra::Transform const & staXform0
 	) const
 {
-	std::vector<rigibra::Transform> gotXforms;
+	std::map<StaKey, rigibra::Transform> staXforms;
 
 	using namespace rigibra;
 
 	std::size_t const numStaKeys{ theGraph.vertex_count() };
 	if (0u < numStaKeys)
 	{
-		gotXforms.resize(numStaKeys);
-		static Transform const nullXform{ null<Transform>() };
-		std::fill(gotXforms.begin(), gotXforms.end(), nullXform);
-
 		// set first station orientation
-		gotXforms[staKey0] = staXform0;
+		staXforms[staKey0] = staXform0;
 
 		struct Propagator
 		{
-			Geometry const & theGeo;
-			std::vector<rigibra::Transform> & gotStas;
+			Geometry const * const thePtGeo;
+			std::map<StaKey, rigibra::Transform> * const thePtStaXforms;
 
 			inline
 			void
@@ -227,60 +218,80 @@ Geometry :: propagateTransforms
 				( graaf::edge_id_t const & eId
 				) const
 			{
+				//
+				// Obtain tranform matching graph traversal direction
+				//
+
 				VertId const & vId1 = eId.first;
 				VertId const & vId2 = eId.second;
-				StaKey const staKey1{ theGeo.staKeyForVertId(vId1) };
-				StaKey const staKey2{ theGeo.staKeyForVertId(vId2) };
+				StaKey const staKey1{ thePtGeo->staKeyForVertId(vId1) };
+				StaKey const staKey2{ thePtGeo->staKeyForVertId(vId2) };
 
-/*
-				EdgeOri const & edgeOri = theGeo.theGraph.get_edge(eId);
+				// edge from graph traversal
+				std::shared_ptr<EdgeBase>
+					const & ptGraphEdge = thePtGeo->theGraph.get_edge(eId);
 
-				EdgeOri useEdgeOri{ edgeOri };
-				LoHiKeyPair lohiKeys{ staKey1, staKey2 };
-				if (staKey2 < staKey1)
+				// edge for use in computation (may need reversing)
+				std::shared_ptr<EdgeBase> ptUseEdge = ptGraphEdge;
+
+				// check if edge needs to be reversed
+				EdgeDir const & haveDir = ptGraphEdge->edgeDir();
+				EdgeDir const wantDir{ staKey1, staKey2 };
+				if (EdgeDir::Reverse == wantDir.compareTo(haveDir))
 				{
-					useEdgeOri = edgeOri.edgeReversed();
-					lohiKeys = LoHiKeyPair{ staKey2, staKey1 };
+					ptUseEdge = ptGraphEdge->reversedInstance();
 				}
+
+				//
+				// Propagate transform in graph traveral direction
+				//
 
 				using namespace rigibra;
-				StaKey const loNdx = lohiKeys.first;
-				StaKey const hiNdx = lohiKeys.second;
-				Transform const & x1wRef = gotStas[loNdx];
-				Transform const & x2wRef = gotStas[hiNdx];
 
-				if (isValid(x1wRef))
+				// keys for accessing absolute orientation map being built
+				StaKey const fromKey{ ptUseEdge->fromKey() };
+				StaKey const intoKey{ ptUseEdge->intoKey() };
+
+				// get starting transform wrt Ref (from prior activity)
+				std::map<StaKey, Transform>::const_iterator
+					const itFrom{ thePtStaXforms->find(fromKey) };
+				Transform xFromWrtRef{ null<Transform>() };
+				if (thePtStaXforms->end() != itFrom)
 				{
-					// propagate from 1 forward into 2
-					Transform const x2w1{ useEdgeOri.xform() };
-					Transform const x2wRef{ x2w1 * x1wRef };
-					gotStas[hiNdx] = x2wRef;
-				}
-				else
-				if (isValid(x2wRef))
-				{
-					// propagate from 2 back to 1
-					Transform const x1w2{ useEdgeOri.xform() };
-					Transform const x1wRef{ x1w2 * x2wRef };
-					gotStas[loNdx] = x1wRef;
+					xFromWrtRef = itFrom->second;
 				}
 				else
 				{
-					std::cerr << "FATAL ERROR - bad Graph sort\n";
-					exit(1);
+					std::cerr << "FATAL ERROR - bad Graph xFromWrtRef\n";
+					// exit(1);
 				}
-*/
+
+				// get (re)directed edge transform Into wrt From
+				Transform xIntoWrtFrom{ null<Transform>() };
+				if (isValid(xFromWrtRef))
+				{
+					xIntoWrtFrom = ptUseEdge->xform();
+				}
+				else
+				{
+					std::cerr << "FATAL ERROR - bad Graph useEdge\n";
+					// exit(1);
+				}
+
+				// compute ending propagated transform
+				Transform xIntoWrtRef{ xIntoWrtFrom * xFromWrtRef };
+				(*thePtStaXforms)[intoKey] = xIntoWrtRef;
 			}
 
 		}; // Propagator;
 
 		VertId const vId0{ vertIdForStaKey(staKey0) };
-		Propagator const propagator{ *this, gotXforms};
+		Propagator const propagator{ this, &staXforms };
 		graaf::algorithm::breadth_first_traverse
 			(theGraph, vId0, propagator);
 	}
 
-	return gotXforms;
+	return staXforms;
 }
 
 std::size_t
@@ -371,15 +382,16 @@ Geometry :: infoStringContents
 	std::sort(infoEdges.begin(), infoEdges.end());
 
 	oss << infoString(title);
-	oss << "vertices...\n";
+	oss << "vertices...";
 	for (std::string const & infoVert : infoVerts)
 	{
-		oss << infoVert << '\n';
+		oss << '\n' << infoVert;
 	}
-	oss << "edges...\n";
+	oss << '\n';
+	oss << "edges...";
 	for (std::string const & infoEdge : infoEdges)
 	{
-		oss << infoEdge << '\n';
+		oss << '\n' << infoEdge;
 	}
 
 	return oss.str();

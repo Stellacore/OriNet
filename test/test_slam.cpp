@@ -374,12 +374,12 @@ std::cout << '\n';
 
 					constexpr double fitErr{ 1. }; // treat all the same
 					using namespace orinet::network;
-					std::shared_ptr<EdgeOri> const ptEdge
+					std::shared_ptr<EdgeBase> const ptEdge
 						{ std::make_shared<EdgeOri>
 							(EdgeDir{ feaKey1, feaKey2 }, x2w1, fitErr)
 						};
 std::cout << "adding edge between: " << feaKey1 << ' ' << feaKey2 << '\n';
-					netGeo.addEdge(std::make_pair(feaKey1, feaKey2), ptEdge);
+					netGeo.addEdge(ptEdge);
 				}
 			}
 std::cout << '\n';
@@ -389,7 +389,8 @@ std::cout << "netGeo.sizeEdges(): " << netGeo.sizeEdges() << '\n';
 				= mapCamFeaXforms.cbegin()->first.second;
 			Transform const & xform0
 				= mapCamFeaXforms.cbegin()->second;
-			std::vector<Transform> const fitGeo
+			using orinet::network::StaKey;
+			std::map<StaKey, Transform> const fitGeo
 				{ netGeo.propagateTransforms(feaKey0, xform0) };
 
 std::cout << "fitGeo.size: " << fitGeo.size() << '\n';

@@ -244,7 +244,38 @@ namespace network
 			return theEdgeDir;
 		}
 
-		//! Edge weight (is transformation fit error - theFitErr)
+		//! Starting point of directed edge
+		inline
+		StaKey
+		fromKey
+			() const
+		{
+			return theEdgeDir.fromKey();
+		}
+
+		//! Ending point of directed edge
+		inline
+		StaKey
+		intoKey
+			() const
+		{
+			return theEdgeDir.intoKey();
+		}
+
+		//! True if this instance has valid data
+		inline
+		bool
+		isValid
+			() const
+		{
+			return
+				(  theEdgeDir.isValid()
+				&& rigibra::isValid(xform())
+				&& engabra::g3::isValid(get_weight())
+				);
+		}
+
+		//! Edge weight (null value)
 		[[nodiscard]]
 		inline
 		virtual
@@ -252,7 +283,7 @@ namespace network
 		get_weight
 			() const noexcept override
 		{
-			constexpr double wgt{ 1. };
+			constexpr double wgt{ engabra::g3::null<double>() };
 			return wgt;
 		}
 
@@ -291,11 +322,11 @@ namespace network
 		//! An instance associated with edge in reverse direction.
 		virtual
 		inline
-		void
-		reverseSelf
-			()
+		std::shared_ptr<EdgeBase>
+		reversedInstance
+			() const
 		{
-			theEdgeDir = theEdgeDir.reverseEdgeDir();
+			return std::make_shared<EdgeBase>(theEdgeDir.reverseEdgeDir());
 		}
 
 	}; // EdgeBase
@@ -337,6 +368,19 @@ namespace network
 		~EdgeOri
 			() = default;
 
+		//! True if this instance has valid data
+		inline
+		bool
+		isValid
+			() const
+		{
+			return
+				(  theEdgeDir.isValid()
+				&& engabra::g3::isValid(theFitErr)
+				&& rigibra::isValid(xform())
+				);
+		}
+
 		//! Transformation (Hi-Ndx w.r.t. Lo-Ndx)
 		virtual
 		inline
@@ -347,17 +391,29 @@ namespace network
 			return theXform;
 		}
 
-		//! An instance with edge direction AND data values inversed.
+		//! Edge weight (transformation fit error - theFitErr)
+		[[nodiscard]]
+		inline
+		virtual
+		double
+		get_weight
+			() const noexcept override
+		{
+			return theFitErr;
+		}
+
+		//! An instance associated with edge in reverse direction.
 		virtual
 		inline
-		void
-		reverseSelf
-			()
+		std::shared_ptr<EdgeBase>
+		reversedInstance
+			() const
 		{
-			// invert *BOTH* interpretation keys and transform details
-			EdgeBase::reverseSelf();
-			theXform = rigibra::inverse(theXform);
-			// theFitErr = theFitErr; // assume this stays the same
+			return std::make_shared<EdgeOri>
+				( edgeDir().reverseEdgeDir()
+				, rigibra::inverse(xform())
+				, theFitErr  // assume this stays the same
+				);
 		}
 
 	}; // EdgeOri
@@ -428,8 +484,7 @@ namespace network
 		 */
 		void
 		addEdge
-			( LoHiKeyPair const & staKeyLoHi
-			, std::shared_ptr<EdgeBase> const & ptEdge
+			( std::shared_ptr<EdgeBase> const & ptEdge
 			);
 
 		//! Edges forming a minimum path
@@ -460,7 +515,7 @@ namespace network
 		 * Example:
 	 	 * \snippet test_network.cpp DoxyExamplePropagate
 		 */
-		std::vector<rigibra::Transform>
+		std::map<StaKey, rigibra::Transform>
 		propagateTransforms
 			( StaKey const & staKey0
 			, rigibra::Transform const & staXform0
@@ -507,7 +562,6 @@ namespace network
 
 namespace
 {
-	/*
 	//! Put object info to stream
 	inline
 	std::ostream &
@@ -519,9 +573,64 @@ namespace
 		ostrm << staFrame.key();
 		return ostrm;
 	}
-	*/
 
-	//! Put geo::infoString() to stream.
+	//! Put instance to stream.
+	inline
+	std::ostream &
+	operator<<
+		( std::ostream & ostrm
+		, orinet::network::EdgeDir const & edgeDir
+		)
+	{
+		ostrm
+			<< "from: " << edgeDir.theFromKey
+			<< ' '
+			<< "into: " << edgeDir.theIntoKey
+			<< ' '
+			<< "isValid: " << std::boolalpha << edgeDir.isValid()
+			;
+		return ostrm;
+	}
+
+	//! Put instance to stream.
+	inline
+	std::ostream &
+	operator<<
+		( std::ostream & ostrm
+		, orinet::network::EdgeBase const & edge
+		)
+	{
+		ostrm
+			<< "edgeDir: " << edge.theEdgeDir
+			<< ' '
+			<< "xform: " << edge.xform()
+			<< ' '
+			<< "isValid: " << std::boolalpha << edge.isValid()
+			;
+		return ostrm;
+	}
+
+	//! Put instance to stream.
+	inline
+	std::ostream &
+	operator<<
+		( std::ostream & ostrm
+		, orinet::network::EdgeOri const & edge
+		)
+	{
+		orinet::network::EdgeBase const * const ptBase
+			= static_cast<orinet::network::EdgeBase const *>(&edge);
+		ostrm
+			<< *ptBase
+			<< "  " << "xform: " << edge.xform()
+			<< "  " << "fitErr: " << edge.get_weight()
+			<< ' '
+			<< "isValid: " << std::boolalpha << edge.isValid()
+			;
+		return ostrm;
+	}
+
+	//! Put instance to stream.
 	inline
 	std::ostream &
 	operator<<

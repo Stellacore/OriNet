@@ -51,6 +51,56 @@ namespace
 		( std::ostream & oss
 		)
 	{
+		using namespace orinet::network;
+		using namespace rigibra;
+		using namespace engabra::g3;
+
+		Geometry netGeo;
+
+		// create a simple network 
+
+		// Edge 100->101
+		{
+		Transform const xform{ Vector{ 0., 0., 1. }, identity<Attitude>() };
+		std::shared_ptr<EdgeBase> const ptEdge
+			{ std::make_shared<EdgeOri> (EdgeDir(100u, 101u), xform, 1.) };
+		netGeo.addEdge(ptEdge);
+		}
+
+		// Edge 100->102
+		{
+		Transform const xform{ Vector{ 0., 0., 2. }, identity<Attitude>() };
+		std::shared_ptr<EdgeBase> const ptEdge
+			{ std::make_shared<EdgeOri> (EdgeDir(100u, 102u), xform, 1.) };
+		netGeo.addEdge(ptEdge);
+		}
+
+		// check retrieval of orientation data
+		Transform const xform0{ Vector{ 1., 2., 101. }, identity<Attitude>() };
+		std::map<StaKey, Transform> const gotXforms
+			{ netGeo.propagateTransforms(101u, xform0) };
+
+		Transform const expXform2
+			{ Vector{ 1., 2., 102. }, identity<Attitude>() };
+		Transform const gotXform2{ gotXforms.at(102u) };
+		if (! rigibra::nearlyEquals(gotXform2, expXform2))
+		{
+			oss << "Failure of simple propagation test\n";
+			oss << "exp: " << expXform2 << '\n';
+			oss << "got: " << gotXform2 << '\n';
+			oss << '\n';
+			oss << "netGeo: " << netGeo.infoStringContents() << '\n';
+			for (std::map<StaKey, Transform>::value_type
+				const & gotXform : gotXforms)
+			{
+				oss
+					<< "gotXform: "
+					<< gotXform.first
+					<< " "
+					<< gotXform.second << '\n';
+			}
+			oss << '\n';
+		}
 	}
 
 	//! Check StaKey (station id) vs VertId (graph node) distinctions
@@ -79,11 +129,11 @@ namespace
 				StaKey const & intoKey = staKeys[toNdx];
 				using namespace rigibra;
 				Transform const xIntoWrtFrom{ null<Transform>() };
-				std::shared_ptr<EdgeOri> const ptEdge
+				std::shared_ptr<EdgeBase> const ptEdge
 					{ std::make_shared<EdgeOri>
 						(EdgeDir{ fromKey, intoKey }, xIntoWrtFrom, fitErr)
 					};
-				netGeo.addEdge(LoHiKeyPair{ fromKey, intoKey }, ptEdge);
+				netGeo.addEdge(ptEdge);
 			}
 		}
 
@@ -204,20 +254,23 @@ namespace
 			, {3u, 4u}
 			, {4u, 5u}
 			};
+		constexpr orinet::network::StaKey holdStaKey{ 3u };
+		Transform const holdStaOri{ expStas[holdStaKey] };
+
 		double const fitErr{ .001 }; // assume all RelOri of equal quality
 		for (LoHiKeyPair const & edgeLoHi : edgeLoHis)
 		{
 			using namespace orinet::network;
 			StaKey const & fromKey = edgeLoHi.first;
 			StaKey const & intoKey = edgeLoHi.second;
-			std::shared_ptr<EdgeOri> const ptEdge
+			std::shared_ptr<EdgeBase> const ptEdge
 				{ std::make_shared<EdgeOri>
 					( EdgeDir{ fromKey, intoKey }
 					, ro(expStas[fromKey], expStas[intoKey])
 					, fitErr
 					)
 				};
-			netGeo.addEdge(edgeLoHi, ptEdge);
+			netGeo.addEdge(ptEdge);
 		}
 
 		// [DoxyExampleEdges]
@@ -236,9 +289,8 @@ namespace
 		// [DoxyExamplePropagate]
 
 		// propagate relative orientations into station orientations
-		constexpr orinet::network::StaKey holdStaKey{ 3u };
-		Transform const holdStaOri{ expStas[holdStaKey] };
-		std::vector<Transform> const gotStas
+		using orinet::network::StaKey;
+		std::map<StaKey, Transform> const gotStas
 			{ mstGeo.propagateTransforms(holdStaKey, holdStaOri) };
 
 		// [DoxyExamplePropagate]
@@ -255,8 +307,8 @@ namespace
 			std::size_t const numSta{ expStas.size() };
 			for (std::size_t nn{0u} ; nn < numSta ; ++nn)
 			{
-				Transform const & gotSta = gotStas[nn];
-				Transform const & expSta = expStas[nn];
+				Transform const & gotSta = gotStas.at(nn);
+				Transform const & expSta = expStas.at(nn);
 				// use nearly exact comparison since no noise in sim data
 				// adjust tolerance to range of station values
 				double const locMag
