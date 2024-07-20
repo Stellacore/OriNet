@@ -378,10 +378,10 @@ std::cout << '\n';
 					Transform const xFea2wrtCam{ inverse(xCamWrtFea2) };
 					Transform const x2w1 { xFea2wrtCam * xCamWrtFea1 };
 
+/*
 std::cout
 	<< "feaKey1,2: " << feaKey1 << ' ' << feaKey2
 	<< " x2w1: " << x2w1 << '\n';
-/*
 */
 
 					using namespace orinet::network;
@@ -398,43 +398,52 @@ std::cout
 								(ptGraphEdge.get())
 							};
 						ptEdgeRobust->accumulateXform(x2w1);
-std::cout << " accumulating onto edge: " << feaKey1 << ' ' << feaKey2 << '\n';
+//std::cout << " accumulating onto edge: " << feaKey1 << ' ' << feaKey2 << '\n';
 ////std::cout << " x2w1: " << x2w1 << '\n';
 //std::cout << ptEdgeRobust->infoString("robustEdge") << '\n';
 					}
 					else
 					{
-						constexpr std::size_t reserveSize{ 32u };
+						constexpr std::size_t reserveSize{ 4096u };
 						std::shared_ptr<EdgeBase> const ptEdge
 							{ std::make_shared<EdgeRobust>
 								(edgeDir, x2w1, reserveSize)
 							};
 						// insert new edge into geometry network
-std::cout << "adding new edge between: " << feaKey1 << ' ' << feaKey2 << '\n';
+//std::cout << "adding new edge between: " << feaKey1 << ' ' << feaKey2 << '\n';
 						netGeo.insertEdge(ptEdge);
 					}
 				}
 			}
 
-			sim::FeaKey const & feaKey0
-				= mapCamFeaXforms.cbegin()->first.second;
-			Transform const & xform0
-				= mapCamFeaXforms.cbegin()->second;
+			// Lock-in first iteration's first camera station as reference
+			static sim::FeaKey const feaKey0
+				{ mapCamFeaXforms.cbegin()->first.second };
+			static Transform const xform0
+				{ mapCamFeaXforms.cbegin()->second };
+
+/*
+std::cout
+	<< "feaKey0: " << feaKey0
+	<< " xform0: " << xform0
+	<< '\n';
+*/
+
 			using orinet::network::StaKey;
 			std::map<StaKey, Transform> const fitGeos
 				{ netGeo.propagateTransforms(feaKey0, xform0) };
 
-/*
 std::cout << '\n';
 for (std::map<StaKey, Transform>::value_type const & fitGeo : fitGeos)
 {
 	std::cout << "** fitGeo: " << fitGeo.first << ' ' << fitGeo.second << '\n';
 }
+/*
 */
 
 		} // over time
 
-//std::cout << "netGeo:\n" << netGeo.infoStringContents() << '\n';
+std::cout << "netGeo:\n" << netGeo.infoStringContents() << '\n';
 
 		// [DoxyExample01]
 
