@@ -113,6 +113,12 @@ namespace network
 			( VertId const & vertId
 			) const;
 
+		//! EdgeBase instance for graaflib::edge_id_t edge
+		std::shared_ptr<EdgeBase>
+		edgeBaseForEdgeId
+			( graaf::edge_id_t const & eId
+			) const;
+
 		//! Functor for graph traversal transform propagation
 		struct Propagator
 		{
