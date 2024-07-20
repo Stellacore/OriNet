@@ -80,7 +80,7 @@ namespace network
 	std::string
 	edgeLabel
 		( graaf::edge_id_t const & eId
-		, EdgeBase const & edge
+		, std::shared_ptr<EdgeBase> const & ptEdge
 		)
 	{
 		std::ostringstream lbl;
@@ -88,7 +88,7 @@ namespace network
 			<< '"'
 			<< eId.first << "-->" << eId.second
 			<< '\n'
-			<< edge.get_weight()
+			<< ptEdge->get_weight()
 			<< '"';
 		return lbl.str();
 	}
@@ -129,7 +129,7 @@ Geometry :: staKeyForVertId
 void
 Geometry :: addEdge
 	( LoHiKeyPair const & staKeyLoHi
-	, EdgeBase const & edge
+	, std::shared_ptr<EdgeBase> const & ptEdge
 	)
 {
 	// check if vertices (station nodes) are already in the graph
@@ -141,7 +141,7 @@ Geometry :: addEdge
 
 	VertId const vId1{ vertIdForStaKey(sta1) };
 	VertId const vId2{ vertIdForStaKey(sta2) };
-	theGraph.add_edge(vId1, vId2, edge);
+	theGraph.add_edge(vId1, vId2, ptEdge);
 }
 
 std::vector<graaf::edge_id_t>
@@ -165,7 +165,7 @@ Geometry :: networkTree
 		VertId const & vId2 = eId.second;
 
 		// get edge data
-		EdgeBase const & origEdge = theGraph.get_edge(eId);
+		std::shared_ptr<EdgeBase> const & ptOrigEdge = theGraph.get_edge(eId);
 
 		// get vertex data
 		StaFrame const & staFrame1 = theGraph.get_vertex(vId1);
@@ -176,21 +176,21 @@ Geometry :: networkTree
 
 		// set transformation edge consistent with LoHiNdx convention
 		LoHiKeyPair staKeyLoHi;
-		EdgeBase useEdge{ };
+		std::shared_ptr<EdgeBase> ptUseEdge{ std::make_shared<EdgeBase>() };
 		if (staKey1 < staKey2)
 		{
 			staKeyLoHi = { staKey1, staKey2 };
-			useEdge = origEdge;
+			*ptUseEdge = *ptOrigEdge;
 		}
 		else
 		if (staKey2 < staKey1)
 		{
 			staKeyLoHi = { staKey2, staKey1 };
-			useEdge = origEdge;
-			useEdge.reverseSelf();
+			*ptUseEdge = *ptOrigEdge;
+			ptUseEdge->reverseSelf();
 		}
 
-		network.addEdge(staKeyLoHi, useEdge);
+		network.addEdge(staKeyLoHi, ptUseEdge);
 	}
 
 	return network;
@@ -198,13 +198,12 @@ Geometry :: networkTree
 
 std::vector<rigibra::Transform>
 Geometry :: propagateTransforms
-	( StaKey const & // staKey0
-	, rigibra::Transform const & // staXform0
+	( StaKey const & staKey0
+	, rigibra::Transform const & staXform0
 	) const
 {
 	std::vector<rigibra::Transform> gotXforms;
 
-/*
 	using namespace rigibra;
 
 	std::size_t const numStaKeys{ theGraph.vertex_count() };
@@ -233,6 +232,7 @@ Geometry :: propagateTransforms
 				StaKey const staKey1{ theGeo.staKeyForVertId(vId1) };
 				StaKey const staKey2{ theGeo.staKeyForVertId(vId2) };
 
+/*
 				EdgeOri const & edgeOri = theGeo.theGraph.get_edge(eId);
 
 				EdgeOri useEdgeOri{ edgeOri };
@@ -269,6 +269,7 @@ Geometry :: propagateTransforms
 					std::cerr << "FATAL ERROR - bad Graph sort\n";
 					exit(1);
 				}
+*/
 			}
 
 		}; // Propagator;
@@ -278,7 +279,6 @@ Geometry :: propagateTransforms
 		graaf::algorithm::breadth_first_traverse
 			(theGraph, vId0, propagator);
 	}
-*/
 
 	return gotXforms;
 }
@@ -322,7 +322,7 @@ Geometry :: infoStringContents
 {
 	std::ostringstream oss;
 	//
-	using GType = graaf::undirected_graph<StaFrame, EdgeBase>;
+	using GType = graaf::undirected_graph<StaFrame, std::shared_ptr<EdgeBase> >;
 	// Buffer results so that they can be sorted for output
 	// Wastes memory and time, but makes output *MUCH* easier to read.
 	std::vector<std::string> infoVerts;
@@ -361,7 +361,7 @@ Geometry :: infoStringContents
 				<< ' '
 				<< std::setw(8u) << vTypeById.at(eId.second).key()
 				<< ' '
-				<< std::setw(12u) << std::fixed << eType.get_weight()
+				<< std::setw(12u) << std::fixed << eType->get_weight()
 				;
 		infoEdges.emplace_back(tmpOss.str());
 	}

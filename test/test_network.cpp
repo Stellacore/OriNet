@@ -109,12 +109,14 @@ namespace
 			using namespace orinet::network;
 			StaKey const & fromKey = edgeLoHi.first;
 			StaKey const & intoKey = edgeLoHi.second;
-			EdgeOri const edge
-				{ EdgeDir{ fromKey, intoKey }
-				, ro(expStas[fromKey], expStas[intoKey])
-				, fitErr
+			std::shared_ptr<EdgeOri> const ptEdge
+				{ std::make_shared<EdgeOri>
+					( EdgeDir{ fromKey, intoKey }
+					, ro(expStas[fromKey], expStas[intoKey])
+					, fitErr
+					)
 				};
-			netGeo.addEdge(edgeLoHi, edge);
+			netGeo.addEdge(edgeLoHi, ptEdge);
 		}
 
 		// [DoxyExampleEdges]
@@ -199,9 +201,11 @@ namespace
 				StaKey const & intoKey = staKeys[toNdx];
 				using namespace rigibra;
 				Transform const xIntoWrtFrom{ null<Transform>() };
-				EdgeOri const edge
-					{ EdgeDir{ fromKey, intoKey }, xIntoWrtFrom, fitErr };
-				netGeo.addEdge(LoHiKeyPair{ fromKey, intoKey }, edge);
+				std::shared_ptr<EdgeOri> const ptEdge
+					{ std::make_shared<EdgeOri>
+						(EdgeDir{ fromKey, intoKey }, xIntoWrtFrom, fitErr)
+					};
+				netGeo.addEdge(LoHiKeyPair{ fromKey, intoKey }, ptEdge);
 			}
 		}
 

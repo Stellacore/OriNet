@@ -38,6 +38,7 @@
 #include <filesystem>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -397,7 +398,8 @@ namespace network
 		std::map<StaKey, VertId> theVertIdFromStaKey{};
 
 		//! Graph data structure for storing/processing network relationships
-		graaf::undirected_graph<StaFrame, EdgeBase> theGraph{};
+		graaf::undirected_graph<StaFrame, std::shared_ptr<EdgeBase> >
+			theGraph{};
 
 		//! Check if staKey already in graph, if not, then add vertex
 		void
@@ -427,7 +429,7 @@ namespace network
 		void
 		addEdge
 			( LoHiKeyPair const & staKeyLoHi
-			, EdgeBase const & edge
+			, std::shared_ptr<EdgeBase> const & ptEdge
 			);
 
 		//! Edges forming a minimum path
