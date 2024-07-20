@@ -246,7 +246,7 @@ namespace
 			};
 
 		// specify a few arbitrary relative orientations to define network
-		using orinet::network::LoHiKeyPair;
+		using LoHiKeyPair = std::pair<std::size_t, std::size_t>;
 		std::vector<LoHiKeyPair> const edgeLoHis
 			{ {0u, 1u}, {0u, 2u}, {0u, 4u}
 			, {1u, 2u}, {1u, 4u}
