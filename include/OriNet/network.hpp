@@ -332,14 +332,6 @@ namespace network
 
 	}; // EdgeOri
 
-	/*
-	//! Robust transformation computed from collection of transforms
-	EdgeOri
-	edgeOriMedianFit
-		( std::vector<rigibra::Transform> const & xHiWrtLos
-		);
-	*/
-
 
 	/*! \brief Representation of the geometry of a rigid body network.
 	 *
