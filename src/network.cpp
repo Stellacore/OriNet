@@ -80,7 +80,7 @@ namespace network
 	std::string
 	edgeLabel
 		( graaf::edge_id_t const & eId
-		, EdgeOri const & edgeOri
+		, std::shared_ptr<EdgeBase> const & ptEdge
 		)
 	{
 		std::ostringstream lbl;
@@ -88,7 +88,7 @@ namespace network
 			<< '"'
 			<< eId.first << "-->" << eId.second
 			<< '\n'
-			<< edgeOri.get_weight()
+			<< ptEdge->get_weight()
 			<< '"';
 		return lbl.str();
 	}
@@ -129,7 +129,7 @@ Geometry :: staKeyForVertId
 void
 Geometry :: addEdge
 	( LoHiKeyPair const & staKeyLoHi
-	, EdgeOri const & edgeOri
+	, std::shared_ptr<EdgeBase> const & ptEdge
 	)
 {
 	// check if vertices (station nodes) are already in the graph
@@ -141,11 +141,11 @@ Geometry :: addEdge
 
 	VertId const vId1{ vertIdForStaKey(sta1) };
 	VertId const vId2{ vertIdForStaKey(sta2) };
-	theGraph.add_edge(vId1, vId2, edgeOri);
+	theGraph.add_edge(vId1, vId2, ptEdge);
 }
 
 std::vector<graaf::edge_id_t>
-Geometry :: spanningEdgeOris
+Geometry :: spanningEdgeBases
 	() const
 {
 	return graaf::algorithm::kruskal_minimum_spanning_tree(theGraph);
@@ -165,7 +165,7 @@ Geometry :: networkTree
 		VertId const & vId2 = eId.second;
 
 		// get edge data
-		EdgeOri const & origEdge = theGraph.get_edge(eId);
+		std::shared_ptr<EdgeBase> const & ptOrigEdge = theGraph.get_edge(eId);
 
 		// get vertex data
 		StaFrame const & staFrame1 = theGraph.get_vertex(vId1);
@@ -176,20 +176,21 @@ Geometry :: networkTree
 
 		// set transformation edge consistent with LoHiNdx convention
 		LoHiKeyPair staKeyLoHi;
-		EdgeOri useEdge{};
+		std::shared_ptr<EdgeBase> ptUseEdge{ std::make_shared<EdgeBase>() };
 		if (staKey1 < staKey2)
 		{
 			staKeyLoHi = { staKey1, staKey2 };
-			useEdge = origEdge;
+			*ptUseEdge = *ptOrigEdge;
 		}
 		else
 		if (staKey2 < staKey1)
 		{
 			staKeyLoHi = { staKey2, staKey1 };
-			useEdge = origEdge.edgeReversed();
+			*ptUseEdge = *ptOrigEdge;
+			ptUseEdge->reverseSelf();
 		}
 
-		network.addEdge(staKeyLoHi, useEdge);
+		network.addEdge(staKeyLoHi, ptUseEdge);
 	}
 
 	return network;
@@ -231,6 +232,7 @@ Geometry :: propagateTransforms
 				StaKey const staKey1{ theGeo.staKeyForVertId(vId1) };
 				StaKey const staKey2{ theGeo.staKeyForVertId(vId2) };
 
+/*
 				EdgeOri const & edgeOri = theGeo.theGraph.get_edge(eId);
 
 				EdgeOri useEdgeOri{ edgeOri };
@@ -267,6 +269,7 @@ Geometry :: propagateTransforms
 					std::cerr << "FATAL ERROR - bad Graph sort\n";
 					exit(1);
 				}
+*/
 			}
 
 		}; // Propagator;
@@ -319,7 +322,7 @@ Geometry :: infoStringContents
 {
 	std::ostringstream oss;
 	//
-	using GType = graaf::undirected_graph<StaFrame, EdgeOri>;
+	using GType = graaf::undirected_graph<StaFrame, std::shared_ptr<EdgeBase> >;
 	// Buffer results so that they can be sorted for output
 	// Wastes memory and time, but makes output *MUCH* easier to read.
 	std::vector<std::string> infoVerts;
@@ -358,7 +361,7 @@ Geometry :: infoStringContents
 				<< ' '
 				<< std::setw(8u) << vTypeById.at(eId.second).key()
 				<< ' '
-				<< std::setw(12u) << std::fixed << eType.get_weight()
+				<< std::setw(12u) << std::fixed << eType->get_weight()
 				;
 		infoEdges.emplace_back(tmpOss.str());
 	}

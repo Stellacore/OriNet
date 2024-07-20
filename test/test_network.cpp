@@ -45,132 +45,12 @@
 
 namespace
 {
-	//! Examples for documentation
+	//! Check StaKey (station id) vs VertId (graph node) distinctions
 	void
 	test0
 		( std::ostream & oss
 		)
 	{
-		// [DoxyExample01]
-
-		// [DoxyExampleSim]
-
-		constexpr std::pair<double, double> locMinMax{ -50., 100. };
-		constexpr std::pair<double, double> angMinMax{ -3.14, +3.14 };
-
-		using rigibra::Transform;
-		using orinet::random::uniformTransform;
-		std::vector<Transform> const expStas
-			{ uniformTransform(locMinMax, angMinMax) // 0
-			, uniformTransform(locMinMax, angMinMax)
-			, uniformTransform(locMinMax, angMinMax)
-			, uniformTransform(locMinMax, angMinMax)
-			, uniformTransform(locMinMax, angMinMax)
-			, uniformTransform(locMinMax, angMinMax) // 5
-			};
-
-		// [DoxyExampleSim]
-
-		// [DoxyExampleCreate]
-
-		// main network (will have redundant edge relative orientations)
-		orinet::network::Geometry netGeo;
-
-		// [DoxyExampleCreate]
-
-		// [DoxyExampleEdges]
-
-		// relative orientation between stations - IntoWrtFrom
-		std::function<Transform(Transform const &, Transform const &)>
-			const ro
-			{ []
-				( Transform const & xFromWrtRef
-				, Transform const & xIntoWrtRef
-				)
-				{
-					Transform const xRefWrtFrom
-						{ rigibra::inverse(xFromWrtRef) };
-					return (xIntoWrtRef * xRefWrtFrom);
-				}
-			};
-
-		// specify a few arbitrary relative orientations to define network
-		using orinet::network::LoHiKeyPair;
-		std::vector<LoHiKeyPair> const edgeLoHis
-			{ {0u, 1u}, {0u, 2u}, {0u, 4u}
-			, {1u, 2u}, {1u, 4u}
-			, {2u, 3u}, {2u, 5u}
-			, {3u, 4u}
-			, {4u, 5u}
-			};
-		double const fitErr{ .001 }; // assume all RelOri of equal quality
-		for (LoHiKeyPair const & edgeLoHi : edgeLoHis)
-		{
-			using namespace orinet::network;
-			StaKey const & fromKey = edgeLoHi.first;
-			StaKey const & intoKey = edgeLoHi.second;
-			EdgeOri const edge
-				{ EdgeDir{ fromKey, intoKey }
-				, ro(expStas[fromKey], expStas[intoKey])
-				, fitErr
-				};
-			netGeo.addEdge(edgeLoHi, edge);
-		}
-
-		// [DoxyExampleEdges]
-
-		// [DoxyExampleThin]
-
-		// compute minimum path spanning tree
-		// (along minimum relative orientation transform errors)
-		using orinet::network::EdgeId;
-		std::vector<EdgeId> const eIds{ netGeo.spanningEdgeOris() };
-
-		orinet::network::Geometry const mstGeo{ netGeo.networkTree(eIds) };
-
-		// [DoxyExampleThin]
-
-		// [DoxyExamplePropagate]
-
-		// propagate relative orientations into station orientations
-		constexpr orinet::network::StaKey holdStaKey{ 3u };
-		Transform const holdStaOri{ expStas[holdStaKey] };
-		std::vector<Transform> const gotStas
-			{ mstGeo.propagateTransforms(holdStaKey, holdStaOri) };
-
-		// [DoxyExamplePropagate]
-
-		// compare computed station orientations with expected ones
-		if (! (gotStas.size() == expStas.size()))
-		{
-			oss << "Failure of gotStas size test\n";
-			oss << "exp: " << expStas.size() << '\n';
-			oss << "got: " << gotStas.size() << '\n';
-		}
-		else
-		{
-			std::size_t const numSta{ expStas.size() };
-			for (std::size_t nn{0u} ; nn < numSta ; ++nn)
-			{
-				Transform const & gotSta = gotStas[nn];
-				Transform const & expSta = expStas[nn];
-				// use nearly exact comparison since no noise in sim data
-				// adjust tolerance to range of station values
-				double const locMag
-					{ std::hypot(locMinMax.first, locMinMax.second) };
-				double const tol
-					{ locMag * std::numeric_limits<double>::epsilon() };
-				if (! nearlyEquals(gotSta, expSta, tol))
-				{
-					oss << "Failure of gotSta data test\n";
-					oss << " nn: " << nn << '\n';
-					oss << "exp: " << expSta << '\n';
-					oss << "got: " << gotSta << '\n';
-				}
-			}
-		}
-
-		// [DoxyExample01]
 	}
 
 	//! Check StaKey (station id) vs VertId (graph node) distinctions
@@ -199,9 +79,11 @@ namespace
 				StaKey const & intoKey = staKeys[toNdx];
 				using namespace rigibra;
 				Transform const xIntoWrtFrom{ null<Transform>() };
-				EdgeOri const edge
-					{ EdgeDir{ fromKey, intoKey }, xIntoWrtFrom, fitErr };
-				netGeo.addEdge(LoHiKeyPair{ fromKey, intoKey }, edge);
+				std::shared_ptr<EdgeOri> const ptEdge
+					{ std::make_shared<EdgeOri>
+						(EdgeDir{ fromKey, intoKey }, xIntoWrtFrom, fitErr)
+					};
+				netGeo.addEdge(LoHiKeyPair{ fromKey, intoKey }, ptEdge);
 			}
 		}
 
@@ -263,6 +145,137 @@ namespace
 			}
 		}
 	}
+
+	//! Examples for documentation
+	void
+	test2
+		( std::ostream & oss
+		)
+	{
+		// [DoxyExample01]
+
+		// [DoxyExampleSim]
+
+		constexpr std::pair<double, double> locMinMax{ -50., 100. };
+		constexpr std::pair<double, double> angMinMax{ -3.14, +3.14 };
+
+		using rigibra::Transform;
+		using orinet::random::uniformTransform;
+		std::vector<Transform> const expStas
+			{ uniformTransform(locMinMax, angMinMax) // 0
+			, uniformTransform(locMinMax, angMinMax)
+			, uniformTransform(locMinMax, angMinMax)
+			, uniformTransform(locMinMax, angMinMax)
+			, uniformTransform(locMinMax, angMinMax)
+			, uniformTransform(locMinMax, angMinMax) // 5
+			};
+
+		// [DoxyExampleSim]
+
+		// [DoxyExampleCreate]
+
+		// main network (will have redundant edge relative orientations)
+		orinet::network::Geometry netGeo;
+
+		// [DoxyExampleCreate]
+
+		// [DoxyExampleEdges]
+
+		// relative orientation between stations - IntoWrtFrom
+		std::function<Transform(Transform const &, Transform const &)>
+			const ro
+			{ []
+				( Transform const & xFromWrtRef
+				, Transform const & xIntoWrtRef
+				)
+				{
+					Transform const xRefWrtFrom
+						{ rigibra::inverse(xFromWrtRef) };
+					return (xIntoWrtRef * xRefWrtFrom);
+				}
+			};
+
+		// specify a few arbitrary relative orientations to define network
+		using orinet::network::LoHiKeyPair;
+		std::vector<LoHiKeyPair> const edgeLoHis
+			{ {0u, 1u}, {0u, 2u}, {0u, 4u}
+			, {1u, 2u}, {1u, 4u}
+			, {2u, 3u}, {2u, 5u}
+			, {3u, 4u}
+			, {4u, 5u}
+			};
+		double const fitErr{ .001 }; // assume all RelOri of equal quality
+		for (LoHiKeyPair const & edgeLoHi : edgeLoHis)
+		{
+			using namespace orinet::network;
+			StaKey const & fromKey = edgeLoHi.first;
+			StaKey const & intoKey = edgeLoHi.second;
+			std::shared_ptr<EdgeOri> const ptEdge
+				{ std::make_shared<EdgeOri>
+					( EdgeDir{ fromKey, intoKey }
+					, ro(expStas[fromKey], expStas[intoKey])
+					, fitErr
+					)
+				};
+			netGeo.addEdge(edgeLoHi, ptEdge);
+		}
+
+		// [DoxyExampleEdges]
+
+		// [DoxyExampleThin]
+
+		// compute minimum path spanning tree
+		// (along minimum relative orientation transform errors)
+		using orinet::network::EdgeId;
+		std::vector<EdgeId> const eIds{ netGeo.spanningEdgeBases() };
+
+		orinet::network::Geometry const mstGeo{ netGeo.networkTree(eIds) };
+
+		// [DoxyExampleThin]
+
+		// [DoxyExamplePropagate]
+
+		// propagate relative orientations into station orientations
+		constexpr orinet::network::StaKey holdStaKey{ 3u };
+		Transform const holdStaOri{ expStas[holdStaKey] };
+		std::vector<Transform> const gotStas
+			{ mstGeo.propagateTransforms(holdStaKey, holdStaOri) };
+
+		// [DoxyExamplePropagate]
+
+		// compare computed station orientations with expected ones
+		if (! (gotStas.size() == expStas.size()))
+		{
+			oss << "Failure of gotStas size test\n";
+			oss << "exp: " << expStas.size() << '\n';
+			oss << "got: " << gotStas.size() << '\n';
+		}
+		else
+		{
+			std::size_t const numSta{ expStas.size() };
+			for (std::size_t nn{0u} ; nn < numSta ; ++nn)
+			{
+				Transform const & gotSta = gotStas[nn];
+				Transform const & expSta = expStas[nn];
+				// use nearly exact comparison since no noise in sim data
+				// adjust tolerance to range of station values
+				double const locMag
+					{ std::hypot(locMinMax.first, locMinMax.second) };
+				double const tol
+					{ locMag * std::numeric_limits<double>::epsilon() };
+				if (! nearlyEquals(gotSta, expSta, tol))
+				{
+					oss << "Failure of gotSta data test\n";
+					oss << " nn: " << nn << '\n';
+					oss << "exp: " << expSta << '\n';
+					oss << "got: " << gotSta << '\n';
+				}
+			}
+		}
+
+		// [DoxyExample01]
+	}
+
 }
 
 //! Check behavior of NS
@@ -275,6 +288,7 @@ main
 
 	test0(oss);
 	test1(oss);
+	test2(oss);
 
 	if (oss.str().empty()) // Only pass if no errors were encountered
 	{

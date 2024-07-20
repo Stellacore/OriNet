@@ -374,10 +374,12 @@ std::cout << '\n';
 
 					constexpr double fitErr{ 1. }; // treat all the same
 					using namespace orinet::network;
-					EdgeOri const edge
-						{ EdgeDir{ feaKey1, feaKey2 }, x2w1, fitErr };
+					std::shared_ptr<EdgeOri> const ptEdge
+						{ std::make_shared<EdgeOri>
+							(EdgeDir{ feaKey1, feaKey2 }, x2w1, fitErr)
+						};
 std::cout << "adding edge between: " << feaKey1 << ' ' << feaKey2 << '\n';
-					netGeo.addEdge(std::make_pair(feaKey1, feaKey2), edge);
+					netGeo.addEdge(std::make_pair(feaKey1, feaKey2), ptEdge);
 				}
 			}
 std::cout << '\n';

@@ -38,6 +38,7 @@
 #include <filesystem>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -188,6 +189,20 @@ namespace network
 			return (theIntoKey < theFromKey);
 		}
 
+		//! Swap domain and range node keys
+		inline
+		EdgeDir
+		reverseEdgeDir
+			() const
+		{
+			// invert interpretation of keys
+			EdgeDir revDir
+				{ .theFromKey = intoKey()
+				, .theIntoKey = fromKey()
+				};
+			return revDir;
+		}
+
 	}; // EdgeDir
 
 	/*! \brief Base class for edges compatible with Geometry graph structures.
@@ -222,7 +237,7 @@ namespace network
 
 		//! Edge direction information
 		inline
-		EdgeDir const &
+		EdgeDir
 		edgeDir
 			() const
 		{
@@ -237,7 +252,8 @@ namespace network
 		get_weight
 			() const noexcept override
 		{
-			return 1.;
+			constexpr double wgt{ 1. };
+			return wgt;
 		}
 
 		//! Sort in order of increasing edge weight (transformation error)
@@ -263,9 +279,24 @@ namespace network
 		//! Transformation (Hi-Ndx w.r.t. Lo-Ndx)
 		virtual
 		inline
-		rigibra::Transform const &
+		rigibra::Transform
 		xform
-			() const = 0;
+			() const
+		{
+			using namespace rigibra;
+			static Transform const xfm{ null<Transform>() };
+			return xfm;
+		}
+
+		//! An instance associated with edge in reverse direction.
+		virtual
+		inline
+		void
+		reverseSelf
+			()
+		{
+			theEdgeDir = theEdgeDir.reverseEdgeDir();
+		}
 
 	}; // EdgeBase
 
@@ -309,25 +340,24 @@ namespace network
 		//! Transformation (Hi-Ndx w.r.t. Lo-Ndx)
 		virtual
 		inline
-		rigibra::Transform const &
+		rigibra::Transform
 		xform
 			() const
 		{
 			return theXform;
 		}
 
-		//! An instance associated with edge in reverse direction.
+		//! An instance with edge direction AND data values inversed.
+		virtual
 		inline
-		EdgeOri
-		edgeReversed
-			() const
+		void
+		reverseSelf
+			()
 		{
 			// invert *BOTH* interpretation keys and transform details
-			EdgeDir revDir
-				{ .theFromKey = theEdgeDir.intoKey()
-				, .theIntoKey = theEdgeDir.fromKey()
-				};
-			return EdgeOri(revDir, rigibra::inverse(xform()), theFitErr);
+			EdgeBase::reverseSelf();
+			theXform = rigibra::inverse(theXform);
+			// theFitErr = theFitErr; // assume this stays the same
 		}
 
 	}; // EdgeOri
@@ -368,7 +398,8 @@ namespace network
 		std::map<StaKey, VertId> theVertIdFromStaKey{};
 
 		//! Graph data structure for storing/processing network relationships
-		graaf::undirected_graph<StaFrame, EdgeOri> theGraph{};
+		graaf::undirected_graph<StaFrame, std::shared_ptr<EdgeBase> >
+			theGraph{};
 
 		//! Check if staKey already in graph, if not, then add vertex
 		void
@@ -398,12 +429,12 @@ namespace network
 		void
 		addEdge
 			( LoHiKeyPair const & staKeyLoHi
-			, EdgeOri const & edgeOri
+			, std::shared_ptr<EdgeBase> const & ptEdge
 			);
 
 		//! Edges forming a minimum path
 		std::vector<graaf::edge_id_t>
-		spanningEdgeOris
+		spanningEdgeBases
 			() const;
 
 		/*! \brief Create an instance populated according to edge list
