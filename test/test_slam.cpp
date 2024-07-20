@@ -68,21 +68,20 @@ namespace sim
 	constexpr CamKey sCamKey0{ 1000 };
 
 	//! Uniformly distributed index into (non-empty) container.
-	template <typename Container>
 	inline
 	std::size_t
 	randomIndexInto
-		( Container const & container
+		( std::size_t const & size
 		)
 	{
-		if (container.empty())
+		if (! (0u < size))
 		{
 			std::cerr << "FATAL:"
 				" calling randomIndexInto with empty container" << std::endl;
 			exit(1);
 		}
 		static std::mt19937 gen(35364653u);
-		std::uniform_int_distribution<> dist(0u, container.size()-1u);
+		std::uniform_int_distribution<> dist(0u, size-1u);
 		return dist(gen);
 	}
 
@@ -253,7 +252,7 @@ namespace sim
 	xformCamWrtFeas
 		( TrajectoryCircle const & trajCam
 		, double const & tau
-		, std::vector<rigibra::Transform> const & xFeatures
+		, std::map<FeaKey, rigibra::Transform> const & expFeaXforms
 		, std::size_t const & numFeas = 3u
 		)
 	{
@@ -264,16 +263,20 @@ namespace sim
 		Transform const xCamWrtRef{ trajCam.perturbedOrientation(tau) };
 
 		// get relative transformations to several targets
-//		for (std::size_t nFea{0u} ; nFea < numFeas ; ++nFea)
 		while (mapCamFeaXforms.size() < numFeas)
 		{
-			std::size_t const randNdx{ randomIndexInto(xFeatures) };
-			Transform const & xFeaWrtRef = xFeatures[randNdx];
+			// select a pseudo-random feature to be "observed" next
+			std::size_t const randNdx{ randomIndexInto(expFeaXforms.size()) };
+			std::map<FeaKey, Transform>::const_iterator
+				itFeaXform{ expFeaXforms.cbegin() };
+			std::advance(itFeaXform, randNdx);
+			FeaKey const & feaKey = itFeaXform->first;
+			Transform const & xFeaWrtRef = itFeaXform->second;
+
 			Transform const xRefWrtFea{ inverse(xFeaWrtRef) };
 			Transform const xCamWrtFea{ xCamWrtRef * xRefWrtFea };
 			//
 			sim::CamKey const & camKey = sim::sCamKey0;
-			sim::FeaKey const feaKey{ sim::sFeaKey0 + randNdx };
 			mapCamFeaXforms.emplace_hint
 				( mapCamFeaXforms.end()
 				, std::make_pair
@@ -306,7 +309,7 @@ namespace
 		constexpr std::pair<double, double> angMinMax{ -1., 1. };
 //		std::size_t numFea{ 20u };
 std::size_t numFea{ 5u };
-		std::vector<Transform> const xFeatures
+		std::vector<Transform> const feaXforms
 			{ orinet::random::noisyTransforms
 				( identity<Transform>()
 				, numMea, numFea
@@ -314,27 +317,13 @@ std::size_t numFea{ 5u };
 				, locMinMax, angMinMax
 				)
 			};
-
-auto const locSorter
-	{ [] (Transform const & xfm1, Transform const & xfm2)
+		std::map<sim::FeaKey, Transform> expFeaXforms;
+		sim::FeaKey feaKey{ sim::sFeaKey0 };
+		for (Transform const & feaXform : feaXforms)
 		{
-		//	using namespace engabra::g3;
-		//	return (magnitude(xfm1.theLoc) < magnitude(xfm2.theLoc));
-			return (xfm1.theLoc[0] < xfm2.theLoc[0]);
+			expFeaXforms[feaKey] = feaXform;
+			++feaKey;
 		}
-	};
-std::vector<Transform> xSorts{ xFeatures };
-std::sort(xSorts.begin(), xSorts.end(), locSorter);
-
-std::cout << "xSorts...\n";
-for (Transform const & xSort : xSorts)
-{
-	std::cout << xSort << '\n';
-}
-std::cout << '\n';
-/*
-*/
-
 
 		// simulate on going camera trajectory
 		sim::TrajectoryCircle const trajCam{};
@@ -358,7 +347,7 @@ std::cout << '\n';
 
 			std::map<std::pair<sim::CamKey, sim::FeaKey>, Transform>
 				const mapCamFeaXforms
-				{ sim::xformCamWrtFeas(trajCam, tau, xFeatures) };
+				{ sim::xformCamWrtFeas(trajCam, tau, expFeaXforms) };
 
 			// generate network edges
 			using Iter = typename
