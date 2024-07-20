@@ -51,17 +51,17 @@ namespace network
 	//! Station orientations referenced by index (e.g. to external collection)
 	using StaKey = std::size_t;
 
+	//! Indicate a null key (or index type) type
 	constexpr StaKey sNullKey{ std::numeric_limits<StaKey>::max() };
-
 
 	//! \brief True if key is not null
 	inline
 	bool
 	isValid
-		( StaKey const & key
+		( StaKey const & keyOrId
 		)
 	{
-		return (key < sNullKey);
+		return (keyOrId < sNullKey);
 	}
 
 	/*! \brief Station Frame - i.e. associated with a rigid body pose.

@@ -95,7 +95,7 @@ namespace network
 
 
 bool
-Geometry :: isStaFrameInGraph
+Geometry :: hasStaKey
 	( StaKey const & staKey
 	) const
 {
@@ -107,7 +107,7 @@ Geometry :: ensureStaFrameExists
 	( StaKey const & staKey
 	)
 {
-	if (! isStaFrameInGraph(staKey))
+	if (! hasStaKey(staKey))
 	{
 		StaFrame const staFrame{ staKey };
 		VertId const vId{ theGraph.add_vertex(staFrame) };
@@ -120,8 +120,12 @@ Geometry :: vertIdForStaKey
 	( StaKey const & staKey
 	) const
 {
-std::cout << "## vertIdForStaKey: " << staKey << '\n';
-	return theVertIdFromStaKey.at(staKey);
+	VertId id{ sNullKey };
+	if (hasStaKey(staKey))
+	{
+		id = theVertIdFromStaKey.at(staKey);
+	}
+	return id;
 }
 
 StaKey
@@ -154,6 +158,16 @@ Geometry :: addEdge
 
 	VertId const vId1{ vertIdForStaKey(sta1) };
 	VertId const vId2{ vertIdForStaKey(sta2) };
+	if (! (isValid(vId1) && isValid(vId2)))
+	{
+		std::cerr << "FATAL: Geometry::addEdge bad vertex management\n"
+			<< " sta1: " << sta1
+			<< " sta2: " << sta2
+			<< " vId1: " << vId1
+			<< " vId2: " << vId2
+			<< '\n';
+		exit(1);
+	}
 	theGraph.add_edge(vId1, vId2, ptEdge);
 }
 
@@ -162,34 +176,24 @@ Geometry :: edge
 	( EdgeDir const & edgeDir
 	) const
 {
-std::cout << "@@ z:\n";
 	std::shared_ptr<EdgeBase> ptEdge{ nullptr };
-std::cout << "@@ y:\n";
 
 	StaKey const & sta1 = edgeDir.fromKey();
 	StaKey const & sta2 = edgeDir.intoKey();
-std::cout << "@@ x:\n";
+
 	VertId const vId1{ vertIdForStaKey(sta1) };
 	VertId const vId2{ vertIdForStaKey(sta2) };
-
-std::cout << "@@ A:\n";
-std::cout << "@@@ has1,2: " << theGraph.has_edge(vId1, vId2) << '\n';
-std::cout << "@@ B:\n";
-std::cout << "@@@ has2,1: " << theGraph.has_edge(vId2, vId1) << '\n';
-std::cout << "@@ C:\n";
-
-	if (theGraph.has_edge(vId1, vId2))
+	if (isValid(vId1) && isValid(vId2))
 	{
-std::cout << "A1:\n";
-		ptEdge = theGraph.get_edge(vId1, vId2);
-std::cout << "A2:\n";
-	}
-	else
-	if (theGraph.has_edge(vId2, vId1))
-	{
-std::cout << "B1:\n";
-		ptEdge = theGraph.get_edge(vId2, vId1);
-std::cout << "B2:\n";
+		if (theGraph.has_edge(vId1, vId2))
+		{
+			ptEdge = theGraph.get_edge(vId1, vId2);
+		}
+		else
+		if (theGraph.has_edge(vId2, vId1))
+		{
+			ptEdge = theGraph.get_edge(vId2, vId1);
+		}
 	}
 
 	return ptEdge;
@@ -338,9 +342,19 @@ Geometry :: propagateTransforms
 		}; // Propagator;
 
 		VertId const vId0{ vertIdForStaKey(staKey0) };
-		Propagator const propagator{ this, &staXforms };
-		graaf::algorithm::breadth_first_traverse
-			(theGraph, vId0, propagator);
+		if (isValid(vId0))
+		{
+			Propagator const propagator{ this, &staXforms };
+			graaf::algorithm::breadth_first_traverse
+				(theGraph, vId0, propagator);
+		}
+		else
+		{
+			std::cerr << "Invalid initial station reference:"
+				<< " staKey0: " << staKey0
+				<< " vId0: " << vId0
+				<< '\n';
+		}
 	}
 
 	return staXforms;

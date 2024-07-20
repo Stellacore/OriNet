@@ -91,7 +91,7 @@ namespace network
 
 		//! True if station is already a node in graph
 		bool
-		isStaFrameInGraph
+		hasStaKey
 			( StaKey const & staKey
 			) const;
 
