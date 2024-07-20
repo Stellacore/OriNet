@@ -120,9 +120,12 @@ namespace sim
 		rigibra::Transform
 		perturbedOrientation
 			( double const & tau // [s]
-			, double const & locSigma = 1./100.
-			, double const & angSigma = 5./1000.
-			, double const & probErr = .2 // blunder probability
+//			, double const & locSigma = 1./100.
+//			, double const & angSigma = 5./1000.
+//			, double const & probErr = .2 // blunder probability
+, double const & locSigma = 0./100.
+, double const & angSigma = 0./1000.
+, double const & probErr = .0 // blunder probability
 			, std::pair<double, double> const & locMinMax = { -.5, .5 }
 			, std::pair<double, double> const & angMinMax = { -.5, .5 }
 			) const
@@ -261,7 +264,8 @@ namespace sim
 		Transform const xCamWrtRef{ trajCam.perturbedOrientation(tau) };
 
 		// get relative transformations to several targets
-		for (std::size_t nFea{0u} ; nFea < numFeas ; ++nFea)
+//		for (std::size_t nFea{0u} ; nFea < numFeas ; ++nFea)
+		while (mapCamFeaXforms.size() < numFeas)
 		{
 			std::size_t const randNdx{ randomIndexInto(xFeatures) };
 			Transform const & xFeaWrtRef = xFeatures[randNdx];
@@ -269,7 +273,7 @@ namespace sim
 			Transform const xCamWrtFea{ xCamWrtRef * xRefWrtFea };
 			//
 			sim::CamKey const & camKey = sim::sCamKey0;
-			sim::FeaKey const feaKey{ sim::sFeaKey0 + nFea };
+			sim::FeaKey const feaKey{ sim::sFeaKey0 + randNdx };
 			mapCamFeaXforms.emplace_hint
 				( mapCamFeaXforms.end()
 				, std::make_pair
@@ -300,7 +304,8 @@ namespace
 		constexpr double angSigma{ 0. }; // no impact here
 		constexpr std::pair<double, double> locMinMax{ -10., 10. };
 		constexpr std::pair<double, double> angMinMax{ -1., 1. };
-		std::size_t numFea{ 20u };
+//		std::size_t numFea{ 20u };
+std::size_t numFea{ 5u };
 		std::vector<Transform> const xFeatures
 			{ orinet::random::noisyTransforms
 				( identity<Transform>()
@@ -342,7 +347,7 @@ std::cout << '\n';
 		{
 std::cout << '\n';
 			tau = tau + dtau;
-			if (.125 < tau)
+			if (0.125 < tau)
 			{
 				break;
 			}
@@ -373,7 +378,12 @@ std::cout << '\n';
 					Transform const xFea2wrtCam{ inverse(xCamWrtFea2) };
 					Transform const x2w1 { xFea2wrtCam * xCamWrtFea1 };
 
-					constexpr double fitErr{ 1. }; // treat all the same
+std::cout
+	<< "feaKey1,2: " << feaKey1 << ' ' << feaKey2
+	<< " x2w1: " << x2w1 << '\n';
+/*
+*/
+
 					using namespace orinet::network;
 
 					EdgeDir const edgeDir{ feaKey1, feaKey2 };
@@ -383,14 +393,21 @@ std::cout << '\n';
 					if (ptGraphEdge)
 					{
 						// accumulate into existing edge
-//						ptGraphEdge->accumulateXform(x2w1);
+						EdgeRobust * const ptEdgeRobust
+							{ reinterpret_cast<EdgeRobust *>
+								(ptGraphEdge.get())
+							};
+						ptEdgeRobust->accumulateXform(x2w1);
 std::cout << " accumulating onto edge: " << feaKey1 << ' ' << feaKey2 << '\n';
+////std::cout << " x2w1: " << x2w1 << '\n';
+//std::cout << ptEdgeRobust->infoString("robustEdge") << '\n';
 					}
 					else
 					{
+						constexpr std::size_t reserveSize{ 32u };
 						std::shared_ptr<EdgeBase> const ptEdge
-							{ std::make_shared<EdgeOri>
-								(edgeDir, x2w1, fitErr)
+							{ std::make_shared<EdgeRobust>
+								(edgeDir, x2w1, reserveSize)
 							};
 						// insert new edge into geometry network
 std::cout << "adding new edge between: " << feaKey1 << ' ' << feaKey2 << '\n';
@@ -404,12 +421,20 @@ std::cout << "adding new edge between: " << feaKey1 << ' ' << feaKey2 << '\n';
 			Transform const & xform0
 				= mapCamFeaXforms.cbegin()->second;
 			using orinet::network::StaKey;
-			std::map<StaKey, Transform> const fitGeo
+			std::map<StaKey, Transform> const fitGeos
 				{ netGeo.propagateTransforms(feaKey0, xform0) };
+
+/*
+std::cout << '\n';
+for (std::map<StaKey, Transform>::value_type const & fitGeo : fitGeos)
+{
+	std::cout << "** fitGeo: " << fitGeo.first << ' ' << fitGeo.second << '\n';
+}
+*/
 
 		} // over time
 
-std::cout << "netGeo:\n" << netGeo.infoStringContents() << '\n';
+//std::cout << "netGeo:\n" << netGeo.infoStringContents() << '\n';
 
 		// [DoxyExample01]
 
