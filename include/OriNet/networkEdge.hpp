@@ -27,7 +27,7 @@
 #define OriNet_network_Edge_INCL_
 
 /*! \file
-\brief Contains TODO
+\brief Contains Classes and functions for network graph edge management.
 
 Example:
 \snippet test_network.cpp DoxyExample01
@@ -35,8 +35,10 @@ Example:
 */
 
 
+#include "networkVert.hpp"
+
 #include <Engabra>
-#include <graaflib/graph.h>
+#include <graaflib/edge.h>
 #include <Rigibra>
 
 #include <iostream>
@@ -47,32 +49,10 @@ namespace orinet
 namespace network
 {
 
-	//! Vertex type - used in graph structure library
-	using VertId = graaf::vertex_id_t;
-
 	//! Edge type - used in graph structure library
 	using EdgeId = graaf::edge_id_t;
 	// using EdgeId = std::pair<std::size_t, std::size_t>;
 
-	//! Station orientations referenced by index (e.g. to external collection)
-	using StaKey = std::size_t;
-
-	/*! \brief Station Frame - i.e. associated with a rigid body pose.
-	 *
-	 */
-	struct StaFrame
-	{
-		StaKey const theStaKey{ std::numeric_limits<StaKey>::max() };
-
-		inline
-		StaKey
-		key
-			() const
-		{
-			return theStaKey;
-		}
-
-	}; // StaFrame
 
 	/*! \brief Ordered pair of station keys for edge direction interpretation.
 	 *
