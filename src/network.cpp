@@ -208,7 +208,7 @@ Geometry :: networkTree
 		if (staKey2 < staKey1)
 		{
 			staKeyLoHi = { staKey2, staKey1 };
-			useEdge = origEdge.inverse();
+			useEdge = origEdge.edgeReversed();
 		}
 
 		network.addEdge(staKeyLoHi, useEdge);
@@ -259,7 +259,7 @@ Geometry :: propagateTransforms
 				LoHiKeyPair lohiKeys{ staKey1, staKey2 };
 				if (staKey2 < staKey1)
 				{
-					useEdgeOri = edgeOri.inverse();
+					useEdgeOri = edgeOri.edgeReversed();
 					lohiKeys = LoHiKeyPair{ staKey2, staKey1 };
 				}
 

@@ -100,6 +100,7 @@ namespace network
 	{
 		//! Domain key for edge transformation interpretations
 		StaKey theFromKey{ std::numeric_limits<StaKey>::max() };
+
 		//! Range key for edge transformation interpretations
 		StaKey theIntoKey{ std::numeric_limits<StaKey>::max() };
 
@@ -318,19 +319,15 @@ namespace network
 		//! An instance associated with edge in reverse direction.
 		inline
 		EdgeOri
-		inverse
+		edgeReversed
 			() const
 		{
-			// TODO figure out what this should be
-			// invert by reversing keys
-			/*
+			// invert *BOTH* interpretation keys and transform details
 			EdgeDir revDir
 				{ .theFromKey = theEdgeDir.intoKey()
 				, .theIntoKey = theEdgeDir.fromKey()
 				};
-			*/
-		//	return EdgeOri(revDir, xform(), theFitErr);
-			return EdgeOri(theEdgeDir, rigibra::inverse(xform()), theFitErr);
+			return EdgeOri(revDir, rigibra::inverse(xform()), theFitErr);
 		}
 
 	}; // EdgeOri
