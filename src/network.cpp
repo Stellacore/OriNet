@@ -196,30 +196,29 @@ Geometry :: networkTree
 	return network;
 }
 
-std::vector<rigibra::Transform>
+std::map<StaKey, rigibra::Transform>
 Geometry :: propagateTransforms
 	( StaKey const & staKey0
 	, rigibra::Transform const & staXform0
 	) const
 {
-	std::vector<rigibra::Transform> gotXforms;
+	std::map<StaKey, rigibra::Transform> staXforms;
 
 	using namespace rigibra;
 
 	std::size_t const numStaKeys{ theGraph.vertex_count() };
 	if (0u < numStaKeys)
 	{
-		gotXforms.resize(numStaKeys);
-		static Transform const nullXform{ null<Transform>() };
-		std::fill(gotXforms.begin(), gotXforms.end(), nullXform);
-
 		// set first station orientation
-		gotXforms[staKey0] = staXform0;
+		staXforms[staKey0] = staXform0;
+
+std::cout << "::staKey0: " << staKey0 << '\n';
+std::cout << "::staXform0: " << staXform0 << '\n';
 
 		struct Propagator
 		{
 			Geometry const & theGeo;
-			std::vector<rigibra::Transform> & gotStas;
+			std::map<StaKey, rigibra::Transform> * const ptStaXforms;
 
 			inline
 			void
@@ -231,30 +230,61 @@ Geometry :: propagateTransforms
 				VertId const & vId2 = eId.second;
 				StaKey const staKey1{ theGeo.staKeyForVertId(vId1) };
 				StaKey const staKey2{ theGeo.staKeyForVertId(vId2) };
+std::cout << '\n';
+std::cout << "::staKey1: " << staKey1 << '\n';
+std::cout << "::staKey2: " << staKey2 << '\n';
 
-/*
-				EdgeOri const & edgeOri = theGeo.theGraph.get_edge(eId);
+				std::shared_ptr<EdgeBase>
+					const & ptEdgeBase = theGeo.theGraph.get_edge(eId);
+				EdgeOri const * const ptEdgeOri
+					{ static_cast<EdgeOri const *>(ptEdgeBase.get()) };
+				EdgeOri const edgeOri{ *ptEdgeOri };
+
+
+std::cout << "::ptEdgeBase: " << *ptEdgeBase << '\n';
+std::cout << "::ptEdgeOri: " << *ptEdgeOri << '\n';
 
 				EdgeOri useEdgeOri{ edgeOri };
+std::cout << "::edgeOri: " << edgeOri << '\n';
+std::cout << "::useEdgeOri(a): " << useEdgeOri << '\n';
 				LoHiKeyPair lohiKeys{ staKey1, staKey2 };
 				if (staKey2 < staKey1)
 				{
-					useEdgeOri = edgeOri.edgeReversed();
+					useEdgeOri.reverseSelf();
 					lohiKeys = LoHiKeyPair{ staKey2, staKey1 };
 				}
+std::cout << "::useEdgeOri(b): " << useEdgeOri << '\n';
 
 				using namespace rigibra;
 				StaKey const loNdx = lohiKeys.first;
 				StaKey const hiNdx = lohiKeys.second;
-				Transform const & x1wRef = gotStas[loNdx];
-				Transform const & x2wRef = gotStas[hiNdx];
 
+				// Transform const & x1wRef = staXforms.at(loNdx);
+				// Transform const & x2wRef = staXforms.at(hiNdx);
+
+				using Iter
+					= std::map<StaKey, rigibra::Transform>::const_iterator;
+				Transform x1wRef{ null<Transform>() };
+				Transform x2wRef{ null<Transform>() };
+				Iter const it1{ ptStaXforms->find(loNdx) };
+				if (ptStaXforms->end() != it1)
+				{
+					x1wRef = it1->second;
+				}
+				Iter const it2{ ptStaXforms->find(hiNdx) };
+				if (ptStaXforms->end() != it2)
+				{
+					x2wRef = it2->second;
+				}
+
+std::cout << "::x1wRef: " << x1wRef << '\n';
+std::cout << "::x2wRef: " << x2wRef << '\n';
 				if (isValid(x1wRef))
 				{
 					// propagate from 1 forward into 2
 					Transform const x2w1{ useEdgeOri.xform() };
 					Transform const x2wRef{ x2w1 * x1wRef };
-					gotStas[hiNdx] = x2wRef;
+					(*ptStaXforms)[hiNdx] = x2wRef;
 				}
 				else
 				if (isValid(x2wRef))
@@ -262,25 +292,24 @@ Geometry :: propagateTransforms
 					// propagate from 2 back to 1
 					Transform const x1w2{ useEdgeOri.xform() };
 					Transform const x1wRef{ x1w2 * x2wRef };
-					gotStas[loNdx] = x1wRef;
+					(*ptStaXforms)[loNdx] = x1wRef;
 				}
 				else
 				{
 					std::cerr << "FATAL ERROR - bad Graph sort\n";
 					exit(1);
 				}
-*/
 			}
 
 		}; // Propagator;
 
 		VertId const vId0{ vertIdForStaKey(staKey0) };
-		Propagator const propagator{ *this, gotXforms};
+		Propagator const propagator{ *this, &staXforms};
 		graaf::algorithm::breadth_first_traverse
 			(theGraph, vId0, propagator);
 	}
 
-	return gotXforms;
+	return staXforms;
 }
 
 std::size_t

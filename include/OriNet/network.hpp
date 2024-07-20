@@ -460,7 +460,7 @@ namespace network
 		 * Example:
 	 	 * \snippet test_network.cpp DoxyExamplePropagate
 		 */
-		std::vector<rigibra::Transform>
+		std::map<StaKey, rigibra::Transform>
 		propagateTransforms
 			( StaKey const & staKey0
 			, rigibra::Transform const & staXform0
@@ -507,7 +507,6 @@ namespace network
 
 namespace
 {
-	/*
 	//! Put object info to stream
 	inline
 	std::ostream &
@@ -519,9 +518,55 @@ namespace
 		ostrm << staFrame.key();
 		return ostrm;
 	}
-	*/
 
-	//! Put geo::infoString() to stream.
+	//! Put instance to stream.
+	inline
+	std::ostream &
+	operator<<
+		( std::ostream & ostrm
+		, orinet::network::EdgeDir const & edgeDir
+		)
+	{
+		ostrm
+			<< "from: " << edgeDir.theFromKey
+			<< ' '
+			<< "into: " << edgeDir.theIntoKey
+			;
+		return ostrm;
+	}
+
+	//! Put instance to stream.
+	inline
+	std::ostream &
+	operator<<
+		( std::ostream & ostrm
+		, orinet::network::EdgeBase const & edge
+		)
+	{
+		ostrm
+			<< "edgeDir: " << edge.theEdgeDir;
+		return ostrm;
+	}
+
+	//! Put instance to stream.
+	inline
+	std::ostream &
+	operator<<
+		( std::ostream & ostrm
+		, orinet::network::EdgeOri const & edge
+		)
+	{
+		orinet::network::EdgeBase const * const ptBase
+			= static_cast<orinet::network::EdgeBase const *>(&edge);
+		ostrm
+			<< *ptBase
+			<< "  " << "xform: " << edge.xform()
+			<< "  " << "fitErr: " << edge.get_weight()
+			;
+		return ostrm;
+	}
+
+	//! Put instance to stream.
 	inline
 	std::ostream &
 	operator<<
