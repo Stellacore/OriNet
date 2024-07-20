@@ -217,8 +217,8 @@ std::cout << "::staXform0: " << staXform0 << '\n';
 
 		struct Propagator
 		{
-			Geometry const & theGeo;
-			std::map<StaKey, rigibra::Transform> * const ptStaXforms;
+			Geometry const * thePtGeo;
+			std::map<StaKey, rigibra::Transform> * const thePtStaXforms;
 
 			inline
 			void
@@ -228,14 +228,14 @@ std::cout << "::staXform0: " << staXform0 << '\n';
 			{
 				VertId const & vId1 = eId.first;
 				VertId const & vId2 = eId.second;
-				StaKey const staKey1{ theGeo.staKeyForVertId(vId1) };
-				StaKey const staKey2{ theGeo.staKeyForVertId(vId2) };
+				StaKey const staKey1{ thePtGeo->staKeyForVertId(vId1) };
+				StaKey const staKey2{ thePtGeo->staKeyForVertId(vId2) };
 std::cout << '\n';
 std::cout << "::staKey1: " << staKey1 << '\n';
 std::cout << "::staKey2: " << staKey2 << '\n';
 
 				std::shared_ptr<EdgeBase>
-					const & ptEdgeBase = theGeo.theGraph.get_edge(eId);
+					const & ptEdgeBase = thePtGeo->theGraph.get_edge(eId);
 				EdgeOri const * const ptEdgeOri
 					{ static_cast<EdgeOri const *>(ptEdgeBase.get()) };
 				EdgeOri const edgeOri{ *ptEdgeOri };
@@ -266,13 +266,13 @@ std::cout << "::useEdgeOri(b): " << useEdgeOri << '\n';
 					= std::map<StaKey, rigibra::Transform>::const_iterator;
 				Transform x1wRef{ null<Transform>() };
 				Transform x2wRef{ null<Transform>() };
-				Iter const it1{ ptStaXforms->find(loNdx) };
-				if (ptStaXforms->end() != it1)
+				Iter const it1{ thePtStaXforms->find(loNdx) };
+				if (thePtStaXforms->end() != it1)
 				{
 					x1wRef = it1->second;
 				}
-				Iter const it2{ ptStaXforms->find(hiNdx) };
-				if (ptStaXforms->end() != it2)
+				Iter const it2{ thePtStaXforms->find(hiNdx) };
+				if (thePtStaXforms->end() != it2)
 				{
 					x2wRef = it2->second;
 				}
@@ -284,7 +284,7 @@ std::cout << "::x2wRef: " << x2wRef << '\n';
 					// propagate from 1 forward into 2
 					Transform const x2w1{ useEdgeOri.xform() };
 					Transform const x2wRef{ x2w1 * x1wRef };
-					(*ptStaXforms)[hiNdx] = x2wRef;
+					(*thePtStaXforms)[hiNdx] = x2wRef;
 				}
 				else
 				if (isValid(x2wRef))
@@ -292,7 +292,7 @@ std::cout << "::x2wRef: " << x2wRef << '\n';
 					// propagate from 2 back to 1
 					Transform const x1w2{ useEdgeOri.xform() };
 					Transform const x1wRef{ x1w2 * x2wRef };
-					(*ptStaXforms)[loNdx] = x1wRef;
+					(*thePtStaXforms)[loNdx] = x1wRef;
 				}
 				else
 				{
@@ -304,7 +304,7 @@ std::cout << "::x2wRef: " << x2wRef << '\n';
 		}; // Propagator;
 
 		VertId const vId0{ vertIdForStaKey(staKey0) };
-		Propagator const propagator{ *this, &staXforms};
+		Propagator const propagator{ this, &staXforms};
 		graaf::algorithm::breadth_first_traverse
 			(theGraph, vId0, propagator);
 	}

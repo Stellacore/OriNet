@@ -51,6 +51,55 @@ namespace
 		( std::ostream & oss
 		)
 	{
+		using namespace orinet::network;
+		using namespace rigibra;
+		using namespace engabra::g3;
+
+		Geometry netGeo;
+
+		// create a simple network 
+		{
+		Transform const xform{ Vector{ 0., 0., 1. }, identity<Attitude>() };
+		std::shared_ptr<EdgeBase> const ptEdge
+			{ std::make_shared<EdgeOri>
+				( EdgeDir(100u, 101u)
+				, xform
+				, 1.
+				)
+			};
+		netGeo.addEdge(LoHiKeyPair{ 100u, 101u }, ptEdge);
+		}
+
+		{
+		Transform const xform{ Vector{ 0., 0., 2. }, identity<Attitude>() };
+		std::shared_ptr<EdgeBase> const ptEdge
+			{ std::make_shared<EdgeOri>
+				( EdgeDir(100u, 102u)
+				, xform
+				, 1.
+				)
+			};
+		netGeo.addEdge(LoHiKeyPair{ 100u, 102u }, ptEdge);
+		}
+
+
+		// check retrieval of orientation data
+		Transform const xform0{ Vector{ 1., 2., 101. }, identity<Attitude>() };
+		std::map<StaKey, Transform> const gotXforms
+			{ netGeo.propagateTransforms(101u, xform0) };
+
+std::cout << '\n';
+std::cout << '\n';
+std::cout << "netGeo: " << netGeo.infoStringContents() << '\n';
+		for (std::map<StaKey, Transform>::value_type
+			const & gotXform : gotXforms)
+		{
+			std::cout
+				<< "gotXform: "
+				<< gotXform.first
+				<< " "
+				<< gotXform.second << '\n';
+		}
 	}
 
 	//! Check StaKey (station id) vs VertId (graph node) distinctions
@@ -79,7 +128,7 @@ namespace
 				StaKey const & intoKey = staKeys[toNdx];
 				using namespace rigibra;
 				Transform const xIntoWrtFrom{ null<Transform>() };
-				std::shared_ptr<EdgeOri> const ptEdge
+				std::shared_ptr<EdgeBase> const ptEdge
 					{ std::make_shared<EdgeOri>
 						(EdgeDir{ fromKey, intoKey }, xIntoWrtFrom, fitErr)
 					};
@@ -210,7 +259,7 @@ namespace
 			using namespace orinet::network;
 			StaKey const & fromKey = edgeLoHi.first;
 			StaKey const & intoKey = edgeLoHi.second;
-			std::shared_ptr<EdgeOri> const ptEdge
+			std::shared_ptr<EdgeBase> const ptEdge
 				{ std::make_shared<EdgeOri>
 					( EdgeDir{ fromKey, intoKey }
 					, ro(expStas[fromKey], expStas[intoKey])
@@ -236,9 +285,10 @@ namespace
 		// [DoxyExamplePropagate]
 
 		// propagate relative orientations into station orientations
-		constexpr orinet::network::StaKey holdStaKey{ 3u };
+		using orinet::network::StaKey;
+		constexpr StaKey holdStaKey{ 3u };
 		Transform const holdStaOri{ expStas[holdStaKey] };
-		std::vector<Transform> const gotStas
+		std::map<StaKey, Transform> const gotStas
 			{ mstGeo.propagateTransforms(holdStaKey, holdStaOri) };
 
 		// [DoxyExamplePropagate]
@@ -255,8 +305,8 @@ namespace
 			std::size_t const numSta{ expStas.size() };
 			for (std::size_t nn{0u} ; nn < numSta ; ++nn)
 			{
-				Transform const & gotSta = gotStas[nn];
-				Transform const & expSta = expStas[nn];
+				Transform const & gotSta = gotStas.at(nn);
+				Transform const & expSta = expStas.at(nn);
 				// use nearly exact comparison since no noise in sim data
 				// adjust tolerance to range of station values
 				double const locMag
