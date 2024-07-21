@@ -90,7 +90,7 @@ namespace sim
 	//! Simulate distribution of random object space features
 	std::map<FeaKey, rigibra::Transform>
 	expFeaXforms
-		( std::size_t const & numFea = 20u
+		( std::size_t const & numFea
 		, double const & pmDist = 10.
 		)
 	{
@@ -124,7 +124,6 @@ namespace sim
 
 		return expFeaXforms;
 	}
-
 
 	/*! \brief Produce orientations as a function of time.
 	 *
@@ -160,14 +159,7 @@ namespace sim
 		rigibra::Transform
 		perturbedOrientation
 			( double const & tau // [s]
-//			, double const & locSigma = 1./100.
-//			, double const & angSigma = 5./1000.
-//			, double const & probErr = .2 // blunder probability
-, double const & locSigma = 0./100.
-, double const & angSigma = 0./1000.
-, double const & probErr = .0 // blunder probability
-			, std::pair<double, double> const & locMinMax = { -.5, .5 }
-			, std::pair<double, double> const & angMinMax = { -.5, .5 }
+			, orinet::random::NoiseModel const & noise
 			) const
 		{
 			rigibra::Transform xPathWrtRef{ pathOrientation(tau) };
@@ -175,19 +167,20 @@ namespace sim
 			// determine if return value should be measurement or blunder
 			static std::mt19937 gen(47686779u);
 			std::uniform_real_distribution<> dist(0., 1.);
-			bool const isBlunder{ (dist(gen) < probErr) };
+			bool const isBlunder{ (dist(gen) < noise.theProbErr) };
 
 			// simulate appropriate type of transform
 			rigibra::Transform xBodyWrtPath;
 			using namespace orinet::random;
 			if (isBlunder)
 			{
-				xBodyWrtPath = uniformTransform(locMinMax, angMinMax);
+				xBodyWrtPath = uniformTransform
+					(noise.theLocMinMax, noise.theAngMinMax);
 			}
 			else
 			{
 				xBodyWrtPath = perturbedTransform
-					(xPathWrtRef, locSigma, angSigma);
+					(xPathWrtRef, noise.theLocSigma, noise.theAngSigma);
 			}
 
 			return (xBodyWrtPath * xPathWrtRef);
@@ -224,7 +217,7 @@ namespace sim
 			Vector const loc{ theStart + theSpeed*tau*theDir0 };
 			using namespace rigibra;
 			return Transform{ loc, theAtt0 };
-		}
+		} 
 
 	}; // TrajectoryLine
 
@@ -264,6 +257,15 @@ namespace sim
 				{ engabra::g3::direction((thePlaneDir1*thePlaneDir2).theBiv) }
 		{ }
 
+		//! Period for a complete rotation (in seconds).
+		inline
+		double
+		period
+			() const
+		{
+			return ((engabra::g3::turnFull * theRadius) / theSpeed);
+		}
+
 		//! Orientation at time tau for deterministic trajectory model.
 		inline
 		virtual
@@ -294,14 +296,15 @@ namespace sim
 		( TrajectoryCircle const & trajCam
 		, double const & tau
 		, std::map<FeaKey, rigibra::Transform> const & expFeaXforms
-		, std::size_t const & numFeas = 3u
+		, std::size_t const & numFeas
+		, orinet::random::NoiseModel const & noise = {}
 		)
 	{
 		using rigibra::Transform;
 		std::map<std::pair<CamKey, FeaKey>, Transform> mapCamFeaXforms;
 
 		// get camera position
-		Transform const xCamWrtRef{ trajCam.perturbedOrientation(tau) };
+		Transform const xCamWrtRef{ trajCam.perturbedOrientation(tau, noise) };
 
 		// get relative transformations to several targets
 		while (mapCamFeaXforms.size() < numFeas)
@@ -396,6 +399,8 @@ namespace sim
 		( orinet::network::Geometry * const & ptNetGeo
 		, std::map<std::pair<sim::CamKey, sim::FeaKey>, rigibra::Transform>
 			const & mapCamFeaXforms
+		, std::size_t const & reserveSize
+		, orinet::random::NoiseModel const & feaNoise
 		)
 	{
 		using namespace rigibra;
@@ -404,58 +409,67 @@ namespace sim
 		using Iter = typename
 			std::map<std::pair<sim::CamKey, sim::FeaKey>, Transform>
 			::const_iterator;
+
+		// (arbitrarily) connect each feature to every other
 		for (Iter it1{mapCamFeaXforms.cbegin()}
 			; mapCamFeaXforms.cend() != it1 ; ++it1)
 		{
+			// starting feature (with lower feature key value)
 			Transform const & xCamWrtFea1 = it1->second;
 			sim::FeaKey const & feaKey1 = it1->first.second;
 			Iter it2{ it1 };
 			++it2;
 			for ( ; mapCamFeaXforms.cend() != it2 ; ++it2)
 			{
+				// ending feature (with higher feature key value)
 				Transform const & xCamWrtFea2 = it2->second;
 				sim::FeaKey const & feaKey2 = it2->first.second;
 				Transform const xFea2wrtCam{ inverse(xCamWrtFea2) };
-				Transform const x2w1 { xFea2wrtCam * xCamWrtFea1 };
+				Transform const x2w1Ideal{ xFea2wrtCam * xCamWrtFea1 };
 
-	/*
-	std::cout
-	<< "feaKey1,2: " << feaKey1 << ' ' << feaKey2
-	<< " x2w1: " << x2w1 << '\n';
-	*/
+				// [DoxyExample01]
 
+				// perturb transform with feature noise model
+				using orinet::random::noisyTransform;
+				Transform const x2w1{ noisyTransform(x2w1Ideal, feaNoise) };
+
+				// utilize a transformation network of robust edges
+				// to store and manage the feature connections
 				using namespace orinet::network;
 
+				// define network edge direction same as
+				// transformation convention here (lo to hi feature key)
 				EdgeDir const edgeDir{ feaKey1, feaKey2 };
 
+				// check if edge is already present
 				std::shared_ptr<EdgeBase> ptGraphEdge
 					{ ptNetGeo->edge(edgeDir) };
 				if (ptGraphEdge)
 				{
-					// accumulate into existing edge
+					// accumulate into already existing geometry network edge
 					EdgeRobust * const ptEdgeRobust
 						{ reinterpret_cast<EdgeRobust *>
 							(ptGraphEdge.get())
 						};
 					ptEdgeRobust->accumulateXform(x2w1);
-	//std::cout << " accumulating onto edge: " << feaKey1 << ' ' << feaKey2 << '\n';
-	////std::cout << " x2w1: " << x2w1 << '\n';
-	//std::cout << ptEdgeRobust->infoString("robustEdge") << '\n';
 				}
 				else
 				{
-					constexpr std::size_t reserveSize{ 4096u };
+					// create and insert new edge into geometry network
 					std::shared_ptr<EdgeBase> const ptEdge
 						{ std::make_shared<EdgeRobust>
 							(edgeDir, x2w1, reserveSize)
 						};
-					// insert new edge into geometry network
-	//std::cout << "adding new edge between: " << feaKey1 << ' ' << feaKey2 << '\n';
 					ptNetGeo->insertEdge(ptEdge);
 				}
-			}
-		}
-	}
+
+				// [DoxyExample01]
+
+			} // into feature loop
+
+		} // from feature loop
+
+	} // func
 
 namespace
 {
@@ -467,26 +481,50 @@ namespace
 	{
 		using namespace rigibra;
 
+		constexpr bool showInfo{ false };
+
+		// simulated run time (length and acquisition interval)
+		constexpr double tauMax{ 60.125 };
+		constexpr double tauDelta{ 1./32. };
+
+		// number of object space features to simulate
+		// constexpr std::size_t numFea{ 20u };
+		constexpr std::size_t numFea{ 7u }; // faster for automated testing
+
 		// count error values that exceed tolerance (used for test condition)
-		constexpr double tolErr{ 1.e-6 };
+		constexpr double tolErr{ .1 }; // empiricaly determined
 		std::set<double> maxErrValues;
+		std::set<double> allErrValues;
+
+		// Add noise to trajectory (not really relevant to this testing)
+		orinet::random::NoiseModel const trajNoise{};
+
+		// Noise model for relative orientation between features
+		orinet::random::NoiseModel const feaNoise
+			{ .theLocSigma =  5./100.
+			, .theAngSigma =  2./1000.
+			, .theProbErr =  .20
+			, .theLocMinMax = { -.5, .5 }
+			, .theAngMinMax = { -.5, .5 }
+			};
 
 		// simulate a number of object space features
-		std::size_t numFea{ 20u };
 		std::map<sim::FeaKey, Transform> const expFeaXforms
 			{ sim::expFeaXforms(numFea) };
 
 		// simulate on going camera trajectory
 		sim::TrajectoryCircle const trajCam{};
+		double const tauOneLoop{ trajCam.period() };
+		// start test data only after one trajectory loop
+		bool checkingActive{ false };
 
 		// update network geometry continously for a period of time
 		orinet::network::Geometry netGeo;
-		double tau{ 0. };
-		constexpr double dtau{ 1./32. };
+		double tauVal{ 0. };
 		for (;;)
 		{
-			tau = tau + dtau;
-			if (60.125 < tau)
+			tauVal = tauVal + tauDelta;
+			if (tauMax < tauVal)
 			{
 				break;
 			}
@@ -494,10 +532,13 @@ namespace
 			// simulate a single exposure and feature extraction operations
 			std::map<std::pair<sim::CamKey, sim::FeaKey>, Transform>
 				const mapCamFeaXforms
-				{ sim::xformCamWrtFeas(trajCam, tau, expFeaXforms) };
+				{ sim::xformCamWrtFeas
+					(trajCam, tauVal, expFeaXforms, numFea, trajNoise)
+				};
 
 			// update robust network
-			updateNetwork(&netGeo, mapCamFeaXforms);
+			constexpr std::size_t reserveSize{ 4096u }; // for performance
+			updateNetwork(&netGeo, mapCamFeaXforms, reserveSize, feaNoise);
 
 			// Lock-in first iteration's first camera station as reference
 			static sim::FeaKey const feaKey0
@@ -512,27 +553,40 @@ namespace
 			// asset the quality of the result
 			double const maxErr
 				{ maxMagErrBetween(gotFeaXforms, expFeaXforms) };
+			allErrValues.insert(maxErr);
 
-			// check max error against tolerance
-			if (! (maxErr < tolErr))
+			// only start testing after one trajectory loop
+			if (tauOneLoop < tauVal)
 			{
-				maxErrValues.insert(maxErr);
+				checkingActive = true;
+				// check max error against tolerance
+				if (! (maxErr < tolErr))
+				{
+					maxErrValues.insert(maxErr);
+				}
 			}
 
-using engabra::g3::io::fixed;
-std::cout
-	<< "tau,maxErr: " << fixed(tau)
-	<< ' ' << fixed(maxErr)
-	<< '\n';
+			/*
+			std::cout << '\n';
+			std::cout << infoString(gotFeaXforms, "gotFeaXforms") << '\n';
+			std::cout << '\n';
+			std::cout << infoString(expFeaXforms, "expFeaXforms") << '\n';
+			*/
 
 		} // over time
 
-//std::cout << "netGeo:\n" << netGeo.infoStringContents() << '\n';
+		if (showInfo)
+		{
+			std::cout << "netGeo:\n" << netGeo.infoStringContents() << '\n';
+		}
 
-		// [DoxyExample01]
-
-		// [DoxyExample01]
-
+		if (! checkingActive)
+		{
+			oss << "Failure of checkingActive test (run for more time)\n";
+			oss << "tauMax: " << tauMax << '\n';
+			oss << "tauVal: " << tauVal << '\n';
+		}
+		else
 		if (! maxErrValues.empty())
 		{
 			oss << "Failure of maxErr value test\n";
@@ -540,7 +594,15 @@ std::cout
 			oss << "got: " << maxErrValues.size() << '\n';
 		}
 
-std::cout << "\nmaxErrValues.size: " << maxErrValues.size() << '\n';
+		if (showInfo)
+		{
+			std::cout << '\n';
+			std::cout << "tauOneLoop: " << tauOneLoop << '\n';
+			std::cout << "maxErr.size: " << maxErrValues.size() << '\n';
+			std::cout << "allErr.size: " << allErrValues.size() << '\n';
+			std::cout << "allErr.max: " << *(allErrValues.cbegin()) << '\n';
+			std::cout << "allErr.min: " << *(allErrValues.cend()) << '\n';
+		}
 
 	}
 
