@@ -31,7 +31,7 @@ Example:
 
 */
 
-#include "OriNet/network.hpp"
+#include "OriNet/networkGeometry.hpp"
 
 #include "OriNet/compare.hpp"
 #include "OriNet/robust.hpp"
@@ -80,7 +80,7 @@ namespace network
 	std::string
 	edgeLabel
 		( graaf::edge_id_t const & eId
-		, EdgeOri const & edgeOri
+		, std::shared_ptr<EdgeBase> const & ptEdge
 		)
 	{
 		std::ostringstream lbl;
@@ -88,39 +88,26 @@ namespace network
 			<< '"'
 			<< eId.first << "-->" << eId.second
 			<< '\n'
-			<< edgeOri.get_weight()
+			<< ptEdge->get_weight()
 			<< '"';
 		return lbl.str();
 	}
 
 
-	EdgeOri
-	edgeOriMedianFit
-		( std::vector<rigibra::Transform> const & xHiWrtLos
-		)
-	{
-		// compute robust fit to collection of transforms
-		rigibra::Transform const fitXform
-			{ orinet::robust::transformViaEffect
-				(xHiWrtLos.cbegin(), xHiWrtLos.cend())
-			};
-		// estimate quality of the fit value
-		orinet::compare::Stats const stats
-			{ orinet::compare::differenceStats
-				(xHiWrtLos.cbegin(), xHiWrtLos.cend(), fitXform, false)
-			};
-		// generate weighted edge from the data
-		double const & fitErr = stats.theMedMagDiff;
-		return EdgeOri{fitXform, fitErr};
-	}
-
+bool
+Geometry :: hasStaKey
+	( StaKey const & staKey
+	) const
+{
+	return (theVertIdFromStaKey.end() != theVertIdFromStaKey.find(staKey));
+}
 
 void
 Geometry :: ensureStaFrameExists
 	( StaKey const & staKey
 	)
 {
-	if (theVertIdFromStaKey.end() == theVertIdFromStaKey.find(staKey))
+	if (! hasStaKey(staKey))
 	{
 		StaFrame const staFrame{ staKey };
 		VertId const vId{ theGraph.add_vertex(staFrame) };
@@ -133,7 +120,12 @@ Geometry :: vertIdForStaKey
 	( StaKey const & staKey
 	) const
 {
-	return theVertIdFromStaKey.at(staKey);
+	VertId id{ sNullKey };
+	if (hasStaKey(staKey))
+	{
+		id = theVertIdFromStaKey.at(staKey);
+	}
+	return id;
 }
 
 StaKey
@@ -141,49 +133,173 @@ Geometry :: staKeyForVertId
 	( VertId const & vertId
 	) const
 {
-	StaFrame const & staFrame = theGraph.get_vertex(vertId);
-	return staFrame.theStaKey;
+	StaKey staKey{ sNullKey };
+	if (theGraph.has_vertex(vertId))
+	{
+		StaFrame const & staFrame = theGraph.get_vertex(vertId);
+		staKey = staFrame.theStaKey;
+	}
+	return staKey;
+}
+
+std::shared_ptr<EdgeBase>
+Geometry :: edgeBaseForEdgeId
+	( graaf::edge_id_t const & eId
+	) const
+{
+	std::shared_ptr<EdgeBase> ptUseEdge{ nullptr };
+
+	VertId const & vId1 = eId.first;
+	VertId const & vId2 = eId.second;
+	if (theGraph.has_vertex(vId1) && theGraph.has_vertex(vId2))
+	{
+		StaKey const staKey1{ staKeyForVertId(vId1) };
+		StaKey const staKey2{ staKeyForVertId(vId2) };
+
+		// edge from graph traversal
+		std::shared_ptr<EdgeBase> const & ptGraphEdge = theGraph.get_edge(eId);
+
+		// check if edge needs to be reversed
+		EdgeDir const & haveDir = ptGraphEdge->edgeDir();
+		EdgeDir const wantDir{ staKey1, staKey2 };
+		EdgeDir::DirCompare const dirComp{ wantDir.compareTo(haveDir) };
+		if (EdgeDir::Forward == dirComp)
+		{
+			// edge for use in computation (may need reversing)
+			ptUseEdge = ptGraphEdge;
+		}
+		else
+		if (EdgeDir::Reverse == dirComp)
+		{
+			ptUseEdge = ptGraphEdge->reversedInstance();
+		}
+		else
+		// if (EdgeDir::Different == dirComp)
+		{
+			std::cerr << "Fatal: bad network construction\n"
+				<< "haveDir: " << haveDir << '\n'
+				<< "wantDir: " << wantDir << '\n'
+				;
+		}
+	}
+
+	// edge from graph traversal
+	return ptUseEdge;
+}
+
+void
+Geometry::Propagator :: operator()
+	( graaf::edge_id_t const & eId
+	) const
+{
+	// Obtain edge tranform matching graph traversal direction
+
+	std::shared_ptr<EdgeBase> const ptUseEdge
+		{ thePtGeo->edgeBaseForEdgeId(eId) };
+
+	//
+	// Propagate transform in graph traveral direction
+	//
+
+	using namespace rigibra;
+
+	// keys for accessing absolute orientation map being built
+	StaKey const fromKey{ ptUseEdge->fromKey() };
+	StaKey const intoKey{ ptUseEdge->intoKey() };
+
+	// get starting transform wrt Ref (from prior activity)
+	std::map<StaKey, Transform>::const_iterator
+		const itFrom{ thePtStaXforms->find(fromKey) };
+	Transform xFromWrtRef{ null<Transform>() };
+	if (thePtStaXforms->end() != itFrom)
+	{
+		xFromWrtRef = itFrom->second;
+	}
+	else
+	{
+		std::cerr << "FATAL ERROR - bad Graph xFromWrtRef\n";
+		// exit(1);
+	}
+
+	// get (re)directed edge transform Into wrt From
+	Transform xIntoWrtFrom{ null<Transform>() };
+	if (isValid(xFromWrtRef))
+	{
+		xIntoWrtFrom = ptUseEdge->xform();
+	}
+	else
+	{
+		std::cerr << "FATAL ERROR - bad Graph useEdge\n";
+		// exit(1);
+	}
+
+	// compute ending propagated transform
+	Transform xIntoWrtRef{ xIntoWrtFrom * xFromWrtRef };
+	(*thePtStaXforms)[intoKey] = xIntoWrtRef;
 }
 
 // public:
 
 void
-Geometry :: addEdge
-	( LoHiKeyPair const & staKeyLoHi
-	, EdgeOri const & edgeOri
+Geometry :: insertEdge
+	( std::shared_ptr<EdgeBase> const & ptEdge
 	)
 {
 	// check if vertices (station nodes) are already in the graph
-	StaKey const & sta1 = staKeyLoHi.first;
-	StaKey const & sta2 = staKeyLoHi.second;
+	StaKey const & sta1 = ptEdge->fromKey();
+	StaKey const & sta2 = ptEdge->intoKey();
 
 	ensureStaFrameExists(sta1);
 	ensureStaFrameExists(sta2);
 
 	VertId const vId1{ vertIdForStaKey(sta1) };
 	VertId const vId2{ vertIdForStaKey(sta2) };
-	theGraph.add_edge(vId1, vId2, edgeOri);
+	if (! (isValid(vId1) && isValid(vId2)))
+	{
+		std::cerr << "FATAL: Geometry::insertEdge bad vertex management\n"
+			<< " sta1: " << sta1
+			<< " sta2: " << sta2
+			<< " vId1: " << vId1
+			<< " vId2: " << vId2
+			<< '\n';
+		exit(1);
+	}
+	theGraph.add_edge(vId1, vId2, ptEdge);
+}
+
+std::shared_ptr<EdgeBase>
+Geometry :: edge
+	( EdgeDir const & edgeDir
+	) const
+{
+	std::shared_ptr<EdgeBase> ptEdge{ nullptr };
+
+	StaKey const & sta1 = edgeDir.fromKey();
+	StaKey const & sta2 = edgeDir.intoKey();
+
+	VertId const vId1{ vertIdForStaKey(sta1) };
+	VertId const vId2{ vertIdForStaKey(sta2) };
+	if (isValid(vId1) && isValid(vId2))
+	{
+		if (theGraph.has_edge(vId1, vId2))
+		{
+			ptEdge = theGraph.get_edge(vId1, vId2);
+		}
+		else
+		if (theGraph.has_edge(vId2, vId1))
+		{
+			ptEdge = theGraph.get_edge(vId2, vId1);
+		}
+	}
+
+	return ptEdge;
 }
 
 std::vector<graaf::edge_id_t>
-Geometry :: spanningEdgeOris
+Geometry :: spanningEdgeBases
 	() const
 {
 	return graaf::algorithm::kruskal_minimum_spanning_tree(theGraph);
-}
-
-std::size_t
-Geometry :: sizeVerts
-	() const
-{
-	return theGraph.vertex_count();
-}
-
-std::size_t
-Geometry :: sizeEdges
-	() const
-{
-	return theGraph.edge_count();
 }
 
 Geometry
@@ -200,7 +316,7 @@ Geometry :: networkTree
 		VertId const & vId2 = eId.second;
 
 		// get edge data
-		EdgeOri const & origEdge = theGraph.get_edge(eId);
+		std::shared_ptr<EdgeBase> const & ptOrigEdge = theGraph.get_edge(eId);
 
 		// get vertex data
 		StaFrame const & staFrame1 = theGraph.get_vertex(vId1);
@@ -210,116 +326,68 @@ Geometry :: networkTree
 		StaKey const & staKey2 = staFrame2.theStaKey;
 
 		// set transformation edge consistent with LoHiNdx convention
-		LoHiKeyPair staKeyLoHi;
-		EdgeOri useEdge{};
+		std::shared_ptr<EdgeBase> ptUseEdge{ std::make_shared<EdgeBase>() };
 		if (staKey1 < staKey2)
 		{
-			staKeyLoHi = { staKey1, staKey2 };
-			useEdge = origEdge;
+			ptUseEdge = ptOrigEdge;
 		}
 		else
 		if (staKey2 < staKey1)
 		{
-			staKeyLoHi = { staKey2, staKey1 };
-			useEdge = origEdge.inverse();
+			ptUseEdge = ptOrigEdge->reversedInstance();
 		}
 
-		network.addEdge(staKeyLoHi, useEdge);
+		network.insertEdge(ptUseEdge);
 	}
 
 	return network;
 }
 
-std::vector<rigibra::Transform>
+std::map<StaKey, rigibra::Transform>
 Geometry :: propagateTransforms
 	( StaKey const & staKey0
 	, rigibra::Transform const & staXform0
 	) const
 {
-	std::vector<rigibra::Transform> gotXforms;
-std::cout << "propagateTransforms\n";
-
-	using namespace rigibra;
+	std::map<StaKey, rigibra::Transform> staXforms;
 
 	std::size_t const numStaKeys{ theGraph.vertex_count() };
-std::cout << "numStaKeys: " << numStaKeys << '\n';
 	if (0u < numStaKeys)
 	{
-		gotXforms.resize(numStaKeys);
-		static Transform const nullXform{ null<Transform>() };
-		std::fill(gotXforms.begin(), gotXforms.end(), nullXform);
-
-std::cout << "1:\n";
-std::cout << "staKey0: " << staKey0 << '\n';
-std::cout << "staXform0: " << staXform0 << '\n';
 		// set first station orientation
-		gotXforms[staKey0] = staXform0;
-
-		struct Propagator
-		{
-			Geometry const & theGeo;
-			std::vector<rigibra::Transform> & gotStas;
-
-			inline
-			void
-			operator()
-				( graaf::edge_id_t const & eId
-				) const
-			{
-				VertId const & vId1 = eId.first;
-				VertId const & vId2 = eId.second;
-				StaKey const staKey1{ theGeo.staKeyForVertId(vId1) };
-				StaKey const staKey2{ theGeo.staKeyForVertId(vId2) };
-
-				EdgeOri const & edgeOri = theGeo.theGraph.get_edge(eId);
-
-				EdgeOri useEdgeOri{ edgeOri };
-				LoHiKeyPair lohiKeys{ staKey1, staKey2 };
-				if (staKey2 < staKey1)
-				{
-					useEdgeOri = edgeOri.inverse();
-					lohiKeys = LoHiKeyPair{ staKey2, staKey1 };
-				}
-
-				using namespace rigibra;
-				StaKey const loNdx = lohiKeys.first;
-				StaKey const hiNdx = lohiKeys.second;
-				Transform const & x1wRef = gotStas[loNdx];
-				Transform const & x2wRef = gotStas[hiNdx];
-
-				if (isValid(x1wRef))
-				{
-					// propagate from 1 forward into 2
-					Transform const x2w1{ useEdgeOri.xform() };
-					Transform const x2wRef{ x2w1 * x1wRef };
-					gotStas[hiNdx] = x2wRef;
-				}
-				else
-				if (isValid(x2wRef))
-				{
-					// propagate from 2 back to 1
-					Transform const x1w2{ useEdgeOri.xform() };
-					Transform const x1wRef{ x1w2 * x2wRef };
-					gotStas[loNdx] = x1wRef;
-				}
-				else
-				{
-					std::cerr << "FATAL ERROR - bad Graph sort\n";
-					exit(1);
-				}
-			}
-
-		}; // Propagator;
-std::cout << "2:\n";
+		staXforms[staKey0] = staXform0;
 
 		VertId const vId0{ vertIdForStaKey(staKey0) };
-std::cout << "vId0: " << vId0 << '\n';
-		Propagator const propagator{ *this, gotXforms};
-		graaf::algorithm::breadth_first_traverse
-			(theGraph, vId0, propagator);
+		if (isValid(vId0))
+		{
+			Propagator const propagator{ this, &staXforms };
+			graaf::algorithm::breadth_first_traverse
+				(theGraph, vId0, propagator);
+		}
+		else
+		{
+			std::cerr << "Invalid initial station reference:"
+				<< " staKey0: " << staKey0
+				<< " vId0: " << vId0
+				<< '\n';
+		}
 	}
 
-	return gotXforms;
+	return staXforms;
+}
+
+std::size_t
+Geometry :: sizeVerts
+	() const
+{
+	return theGraph.vertex_count();
+}
+
+std::size_t
+Geometry :: sizeEdges
+	() const
+{
+	return theGraph.edge_count();
 }
 
 std::string
@@ -347,7 +415,7 @@ Geometry :: infoStringContents
 {
 	std::ostringstream oss;
 	//
-	using GType = graaf::undirected_graph<StaFrame, EdgeOri>;
+	using GType = graaf::undirected_graph<StaFrame, std::shared_ptr<EdgeBase> >;
 	// Buffer results so that they can be sorted for output
 	// Wastes memory and time, but makes output *MUCH* easier to read.
 	std::vector<std::string> infoVerts;
@@ -376,18 +444,15 @@ Geometry :: infoStringContents
 	{
 		std::ostringstream tmpOss;
 		graaf::edge_id_t const & eId = iter->first;
-		GType::edge_t const & eType = eTypeById.at(eId);
-		tmpOss
-		//	<< "EdgeId:From,Into: "
-		//	<< "Ids: " << eId.first << ", " << eId.second
-		//	<< ' '
-			<< "EdgeKey:From,Into: "
-				<< std::setw(8u) << vTypeById.at(eId.first).key()
-				<< ' '
-				<< std::setw(8u) << vTypeById.at(eId.second).key()
-				<< ' '
-				<< std::setw(12u) << std::fixed << eType.get_weight()
-				;
+		std::shared_ptr<EdgeBase> const edgeBase{ edgeBaseForEdgeId(eId) };
+		if (edgeBase->fromKey() < edgeBase->intoKey())
+		{
+			tmpOss << "EdgeId: " << edgeBase->infoString();
+		}
+		else
+		{
+			tmpOss << "EdgeId: " << edgeBase->reversedInstance()->infoString();
+		}
 		infoEdges.emplace_back(tmpOss.str());
 	}
 
@@ -396,15 +461,16 @@ Geometry :: infoStringContents
 	std::sort(infoEdges.begin(), infoEdges.end());
 
 	oss << infoString(title);
-	oss << "vertices...\n";
+	oss << "vertices...";
 	for (std::string const & infoVert : infoVerts)
 	{
-		oss << infoVert << '\n';
+		oss << '\n' << infoVert;
 	}
-	oss << "edges...\n";
+	oss << '\n';
+	oss << "edges...";
 	for (std::string const & infoEdge : infoEdges)
 	{
-		oss << infoEdge << '\n';
+		oss << '\n' << infoEdge;
 	}
 
 	return oss.str();

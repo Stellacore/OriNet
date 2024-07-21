@@ -19,8 +19,8 @@ relative to a scene, positions of an autonomous vehicle, and so on.
 OriNet is an open source software project provided under the liberal
 MIT license that provides for varied uses including commercial ones.
 
-The code implementation is in C++20. The 20 standard is required
-by the graaflib dependency (used for implementation within network.hpp).
+The code implementation is in C++20. The 20 standard is required by the
+graaflib dependency (used for implementation within networkGeometry.hpp).
 The remainder of the OriNet code is compilable with C++17 or later.
 
 
