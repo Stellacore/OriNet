@@ -35,17 +35,170 @@
 #include <Engabra>
 #include <Rigibra>
 
-#include <limits>
 #include <cmath>
 #include <iostream>
+#include <limits>
+#include <set>
 #include <sstream>
+#include <string>
 
 
 namespace
 {
-	//! Examples for documentation
+	//! Check StaKey (station id) vs VertId (graph node) distinctions
 	void
 	test0
+		( std::ostream & oss
+		)
+	{
+		using namespace orinet::network;
+		using namespace rigibra;
+		using namespace engabra::g3;
+
+		Geometry netGeo;
+
+		// create a simple network 
+
+		// Edge 100->101
+		{
+		Transform const xform{ Vector{ 0., 0., 1. }, identity<Attitude>() };
+		std::shared_ptr<EdgeBase> const ptEdge
+			{ std::make_shared<EdgeOri> (EdgeDir(100u, 101u), xform, 1.) };
+		netGeo.insertEdge(ptEdge);
+		}
+
+		// Edge 100->102
+		{
+		Transform const xform{ Vector{ 0., 0., 2. }, identity<Attitude>() };
+		std::shared_ptr<EdgeBase> const ptEdge
+			{ std::make_shared<EdgeOri> (EdgeDir(100u, 102u), xform, 1.) };
+		netGeo.insertEdge(ptEdge);
+		}
+
+		// check retrieval of orientation data
+		Transform const xform0{ Vector{ 1., 2., 101. }, identity<Attitude>() };
+		std::map<StaKey, Transform> const gotXforms
+			{ netGeo.propagateTransforms(101u, xform0) };
+
+		Transform const expXform2
+			{ Vector{ 1., 2., 102. }, identity<Attitude>() };
+		Transform const gotXform2{ gotXforms.at(102u) };
+		if (! rigibra::nearlyEquals(gotXform2, expXform2))
+		{
+			oss << "Failure of simple propagation test\n";
+			oss << "exp: " << expXform2 << '\n';
+			oss << "got: " << gotXform2 << '\n';
+			oss << '\n';
+			oss << "netGeo: " << netGeo.infoStringContents() << '\n';
+			for (std::map<StaKey, Transform>::value_type
+				const & gotXform : gotXforms)
+			{
+				oss
+					<< "gotXform: "
+					<< gotXform.first
+					<< " "
+					<< gotXform.second << '\n';
+			}
+			oss << '\n';
+		}
+	}
+
+	//! Check StaKey (station id) vs VertId (graph node) distinctions
+	void
+	test1
+		( std::ostream & oss
+		)
+	{
+		std::vector<std::size_t> const staKeys
+			{ 1000u
+			, 1001u
+			, 1002u
+			, 1003u
+			, 1004u
+			};
+
+		using namespace orinet::network;
+		Geometry netGeo;
+		constexpr double fitErr{ 1. };
+		std::size_t const numSta{ staKeys.size() };
+		for (std::size_t fmNdx{0u} ; fmNdx < numSta ; ++fmNdx)
+		{
+			for (std::size_t toNdx{fmNdx + 1u} ; toNdx < numSta ; ++toNdx)
+			{
+				StaKey const & fromKey = staKeys[fmNdx];
+				StaKey const & intoKey = staKeys[toNdx];
+				using namespace rigibra;
+				Transform const xIntoWrtFrom{ null<Transform>() };
+				std::shared_ptr<EdgeBase> const ptEdge
+					{ std::make_shared<EdgeOri>
+						(EdgeDir{ fromKey, intoKey }, xIntoWrtFrom, fitErr)
+					};
+				netGeo.insertEdge(ptEdge);
+			}
+		}
+
+		// get descriptive information
+		std::string const info{ netGeo.infoStringContents("netGeo") };
+		// std::cout << info << '\n';
+
+		// check that keys showup in reported info
+		std::istringstream iss(info);
+		std::set<StaKey> gotVertKeys;
+		std::map<StaKey, std::size_t> gotEdgeKeyCounts;
+		std::string line;
+		std::string tmpLabel;
+		StaKey tmpStaKey;
+		while (iss.good())
+		{
+			line.clear();
+			std::getline(iss, line);
+			if (std::string::npos != line.find("VertKey"))
+			{
+				std::istringstream irec(line);
+				irec >> tmpLabel >> tmpStaKey;
+				gotVertKeys.insert(tmpStaKey);
+			}
+			else
+			if (std::string::npos != line.find("EdgeKey"))
+			{
+				std::istringstream irec(line);
+				// check from key
+				irec >> tmpLabel >> tmpStaKey;
+				++gotEdgeKeyCounts[tmpStaKey];
+				// check into key
+				irec >> tmpStaKey;
+				++gotEdgeKeyCounts[tmpStaKey];
+			}
+		}
+
+		// check number of unique vertices
+		if (! (gotVertKeys.size() == staKeys.size()))
+		{
+			oss << "Failure of infoStringContents vertex count test\n";
+			oss << "exp: " << staKeys.size() << '\n';
+			oss << "got: " << gotVertKeys.size() << '\n';
+		}
+
+		// check how many time each vertex occurs in an edge
+		for (std::map<StaKey, std::size_t>::value_type
+			const & gotEdgeKeyCount : gotEdgeKeyCounts)
+		{
+			constexpr std::size_t expCount{ 4u }; // true for all key values
+			StaKey const & gotKey = gotEdgeKeyCount.first;
+			std::size_t const & gotCount = gotEdgeKeyCount.second;
+			if (! (gotCount == expCount))
+			{
+				oss << "Failure of infoStringContents edge count test\n";
+				oss << "key: " << gotKey << '\n';
+				oss << "exp: " << expCount << '\n';
+				oss << "got: " << gotCount << '\n';
+			}
+		}
+	}
+
+	//! Examples for documentation
+	void
+	test2
 		( std::ostream & oss
 		)
 	{
@@ -93,24 +246,31 @@ namespace
 			};
 
 		// specify a few arbitrary relative orientations to define network
-		using orinet::network::LoHiPair;
-		std::vector<LoHiPair> const edgeLoHis
+		using LoHiKeyPair = std::pair<std::size_t, std::size_t>;
+		std::vector<LoHiKeyPair> const edgeLoHis
 			{ {0u, 1u}, {0u, 2u}, {0u, 4u}
 			, {1u, 2u}, {1u, 4u}
 			, {2u, 3u}, {2u, 5u}
 			, {3u, 4u}
 			, {4u, 5u}
 			};
+		constexpr orinet::network::StaKey holdStaKey{ 3u };
+		Transform const holdStaOri{ expStas[holdStaKey] };
+
 		double const fitErr{ .001 }; // assume all RelOri of equal quality
-		for (LoHiPair const & edgeLoHi : edgeLoHis)
+		for (LoHiKeyPair const & edgeLoHi : edgeLoHis)
 		{
-			using orinet::network::StaNdx;
-			using orinet::network::EdgeOri;
-			StaNdx const & fromNdx = edgeLoHi.first;
-			StaNdx const & intoNdx = edgeLoHi.second;
-			EdgeOri const edge
-				{ ro(expStas[fromNdx], expStas[intoNdx]), fitErr };
-			netGeo.addEdge(edgeLoHi, edge);
+			using namespace orinet::network;
+			StaKey const & fromKey = edgeLoHi.first;
+			StaKey const & intoKey = edgeLoHi.second;
+			std::shared_ptr<EdgeBase> const ptEdge
+				{ std::make_shared<EdgeOri>
+					( EdgeDir{ fromKey, intoKey }
+					, ro(expStas[fromKey], expStas[intoKey])
+					, fitErr
+					)
+				};
+			netGeo.insertEdge(ptEdge);
 		}
 
 		// [DoxyExampleEdges]
@@ -120,7 +280,7 @@ namespace
 		// compute minimum path spanning tree
 		// (along minimum relative orientation transform errors)
 		using orinet::network::EdgeId;
-		std::vector<EdgeId> const eIds{ netGeo.spanningEdgeOris() };
+		std::vector<EdgeId> const eIds{ netGeo.spanningEdgeBases() };
 
 		orinet::network::Geometry const mstGeo{ netGeo.networkTree(eIds) };
 
@@ -129,10 +289,9 @@ namespace
 		// [DoxyExamplePropagate]
 
 		// propagate relative orientations into station orientations
-		constexpr orinet::network::StaNdx holdStaNdx{ 3u };
-		Transform const holdStaOri{ expStas[holdStaNdx] };
-		std::vector<Transform> const gotStas
-			{ mstGeo.propagateTransforms(holdStaNdx, holdStaOri) };
+		using orinet::network::StaKey;
+		std::map<StaKey, Transform> const gotStas
+			{ mstGeo.propagateTransforms(holdStaKey, holdStaOri) };
 
 		// [DoxyExamplePropagate]
 
@@ -148,8 +307,8 @@ namespace
 			std::size_t const numSta{ expStas.size() };
 			for (std::size_t nn{0u} ; nn < numSta ; ++nn)
 			{
-				Transform const & gotSta = gotStas[nn];
-				Transform const & expSta = expStas[nn];
+				Transform const & gotSta = gotStas.at(nn);
+				Transform const & expSta = expStas.at(nn);
 				// use nearly exact comparison since no noise in sim data
 				// adjust tolerance to range of station values
 				double const locMag
@@ -180,6 +339,8 @@ main
 	std::stringstream oss;
 
 	test0(oss);
+	test1(oss);
+	test2(oss);
 
 	if (oss.str().empty()) // Only pass if no errors were encountered
 	{

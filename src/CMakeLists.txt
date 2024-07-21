@@ -39,7 +39,7 @@ set(srcFiles
 
 	OriNet.cpp
 
-	network.cpp
+	networkGeometry.cpp
 
 	)
 
@@ -63,7 +63,8 @@ target_sources(
 			FILES
 				../include/OriNet/align.hpp
 				../include/OriNet/compare.hpp
-				../include/OriNet/network.hpp
+				../include/OriNet/networkEdge.hpp
+				../include/OriNet/networkGeometry.hpp
 				../include/OriNet/OriNet
 				../include/OriNet/random.hpp
 				../include/OriNet/robust.hpp

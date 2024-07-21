@@ -184,7 +184,7 @@ namespace random
 		, double const & sigmaLoc
 		, double const & sigmaAng
 		)
-	{	
+	{
 		rigibra::Transform xform{ rigibra::null<rigibra::Transform>() };
 		if (! ((sigmaLoc < 0.) || (sigmaAng < 0.)) )
 		{
@@ -195,6 +195,21 @@ namespace random
 				};
 		}
 		return xform;
+	}
+
+	//! \brief A transformation with uniformly distributed parameters values
+	inline
+	rigibra::Transform
+	perturbedTransform
+		( rigibra::Transform const & expXform
+		, double const & sigmaLoc
+		, double const & sigmaAng
+		)
+	{	
+		engabra::g3::Vector const expLoc = expXform.theLoc;
+		rigibra::PhysAngle const expAng{ expXform.theAtt.physAngle() };
+
+		return perturbedTransform(expLoc, expAng, sigmaLoc, sigmaAng);
 	}
 
 	//! \brief A transformation with uniformly distributed parameters values
@@ -267,6 +282,63 @@ namespace random
 			, uniformAttitude(angMinMax)
 			};
 	}
+
+	//! Constants defining noise added to trajectories
+	struct NoiseModel
+	{
+		//! Perturb location coordinates by this amount 1-sigma Gaussian
+		double const theLocSigma{ 0./100. };
+
+		//! Perturb angle coordinates by this amount 1-sigma Gaussian
+		double const theAngSigma{ 0./1000. };
+
+		//! Probability of making blunders
+		double const theProbErr{ .0 };
+
+		//! Range of blunderous location coordinate values
+		std::pair<double, double> const theLocMinMax{ -.5, .5 };
+
+		//! Range of blunderous angle coordinate values
+		std::pair<double, double> const theAngMinMax{ -.5, .5 };
+
+	}; // NoiseModel
+
+
+	/*! \brief Transformation that may be perturbed or blunderous
+	 *
+	 *
+	 */
+	inline
+	rigibra::Transform
+	noisyTransform
+		( rigibra::Transform const & expXform
+		, NoiseModel const & noise
+		)
+	{
+		rigibra::Transform xform;
+
+		engabra::g3::Vector const expLoc = expXform.theLoc;
+		rigibra::PhysAngle const expAng{ expXform.theAtt.physAngle() };
+
+		// determine if blunder or not
+		static std::mt19937 gen(62525462u);
+		std::uniform_real_distribution<double> dist(0., 1.);
+		bool const blunder{ (dist(gen) < noise.theProbErr) };
+
+		if (blunder)
+		{
+			xform = uniformTransform
+				(noise.theLocMinMax, noise.theAngMinMax);
+		}
+		else
+		{
+			xform = perturbedTransform
+				(expLoc, expAng, noise.theLocSigma, noise.theAngSigma);
+		}
+
+		return xform;
+	}
+
 
 	/*! \brief Simulate observation data including measurements and blunders
 	 *

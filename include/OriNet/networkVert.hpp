@@ -23,11 +23,11 @@
 //
 
 
-#ifndef OriNet_network_INCL_
-#define OriNet_network_INCL_
+#ifndef OriNet_network_Vert_INCL_
+#define OriNet_network_Vert_INCL_
 
 /*! \file
-\brief Includes headers for transform network graph operations.
+\brief Contains Classes and functions for network graph vertex management.
 
 Example:
 \snippet test_network.cpp DoxyExample01
@@ -35,8 +35,55 @@ Example:
 */
 
 
-#include "OriNet/networkEdge.hpp"
-#include "OriNet/networkGeometry.hpp"
+#include <graaflib/graph.h>
+
+#include <limits>
 
 
-#endif // OriNet_network_INCL_
+namespace orinet
+{
+namespace network
+{
+
+	//! Vertex type - used in graph structure library
+	using VertId = graaf::vertex_id_t;
+
+	//! Station orientations referenced by index (e.g. to external collection)
+	using StaKey = std::size_t;
+
+	//! Indicate a null key (or index type) type
+	constexpr StaKey sNullKey{ std::numeric_limits<StaKey>::max() };
+
+	//! \brief True if key is not null
+	inline
+	bool
+	isValid
+		( StaKey const & keyOrId
+		)
+	{
+		return (keyOrId < sNullKey);
+	}
+
+	/*! \brief Station Frame - i.e. associated with a rigid body pose.
+	 *
+	 */
+	struct StaFrame
+	{
+		StaKey const theStaKey{ sNullKey };
+
+		inline
+		StaKey
+		key
+			() const
+		{
+			return theStaKey;
+		}
+
+	}; // StaFrame
+
+} // [network]
+
+} // [orinet]
+
+
+#endif // OriNet_network_Vert_INCL_
