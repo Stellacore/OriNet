@@ -46,6 +46,7 @@ OriNet is providing continuously updated object space model information.
 
 
 #include "OriNet/OriNet"
+#include "OriNet/compare.hpp"
 #include "OriNet/random.hpp"
 
 #include <Engabra>
@@ -54,6 +55,7 @@ OriNet is providing continuously updated object space model information.
 #include <iostream>
 #include <map>
 #include <random>
+#include <set>
 #include <sstream>
 #include <vector>
 
@@ -84,6 +86,45 @@ namespace sim
 		std::uniform_int_distribution<> dist(0u, size-1u);
 		return dist(gen);
 	}
+
+	//! Simulate distribution of random object space features
+	std::map<FeaKey, rigibra::Transform>
+	expFeaXforms
+		( std::size_t const & numFea = 20u
+		, double const & pmDist = 10.
+		)
+	{
+		using rigibra::Transform;
+		std::map<FeaKey, Transform> expFeaXforms;
+
+		// simulate object feature body distribution
+		constexpr std::size_t numMea{ 0u }; // no impact here
+		constexpr double locSigma{ 0. }; // no impact here
+		constexpr double angSigma{ 0. }; // no impact here
+		std::pair<double, double> locMinMax{ -pmDist, pmDist };
+		constexpr std::pair<double, double> angMinMax{ -1., 1. };
+
+		// generate a collection of feature orientations
+		std::vector<Transform> const feaXforms
+			{ orinet::random::noisyTransforms
+				( rigibra::identity<Transform>()
+				, numMea, numFea
+				, locSigma, angSigma // unused for 0 measurements
+				, locMinMax, angMinMax
+				)
+			};
+
+		// assign key values to each (arbitrarily)
+		FeaKey feaKey{ sim::sFeaKey0 };
+		for (Transform const & feaXform : feaXforms)
+		{
+			expFeaXforms[feaKey] = feaXform;
+			++feaKey;
+		}
+
+		return expFeaXforms;
+	}
+
 
 	/*! \brief Produce orientations as a function of time.
 	 *
@@ -266,7 +307,8 @@ namespace sim
 		while (mapCamFeaXforms.size() < numFeas)
 		{
 			// select a pseudo-random feature to be "observed" next
-			std::size_t const randNdx{ randomIndexInto(expFeaXforms.size()) };
+			std::size_t const randNdx
+				{ randomIndexInto(expFeaXforms.size()) };
 			std::map<FeaKey, Transform>::const_iterator
 				itFeaXform{ expFeaXforms.cbegin() };
 			std::advance(itFeaXform, randNdx);
@@ -290,6 +332,130 @@ namespace sim
 
 } // [sim]
 
+	//! get the maximum magnitude (hexad) error between the two collections
+	inline
+	double
+	maxMagErrBetween
+		( std::map<sim::FeaKey, rigibra::Transform> const & gotFeaXforms
+		, std::map<sim::FeaKey, rigibra::Transform> const & expFeaXforms
+		)
+	{
+		double maxMagErr{ -1. };
+
+		using rigibra::Transform;
+		for (std::map<sim::FeaKey, Transform>::value_type
+			const & gotFeaXform : gotFeaXforms)
+		{
+			sim::FeaKey const & feaKey = gotFeaXform.first;
+			Transform const & gotXform = gotFeaXform.second;
+
+			std::map<sim::FeaKey, Transform>::const_iterator const itExp
+				{ expFeaXforms.find(feaKey) };
+			if (expFeaXforms.cend() == itExp)
+			{
+				std::cerr << "FATAL Error" << std::endl;
+				exit(1);
+			}
+			Transform const & expXform = itExp->second;
+
+			constexpr bool useNorm{ false };
+			using orinet::compare::maxMagResultDifference;
+			double const maxErr
+				{ maxMagResultDifference(gotXform, expXform, useNorm) };
+
+			maxMagErr = std::max(maxMagErr, maxErr);
+		}
+		return maxMagErr;
+	}
+
+	//! Description of feaXforms content
+	inline
+	std::string
+	infoString
+		( std::map<sim::FeaKey, rigibra::Transform> const & feaXforms
+		, std::string const & title = {}
+		)
+	{
+		std::ostringstream oss;
+		oss << '\n';
+		for (std::map<sim::FeaKey, rigibra::Transform>::value_type
+			const & feaXform : feaXforms)
+		{
+			oss << title
+				<< ' ' << feaXform.first
+				<< ' ' << feaXform.second
+				<< '\n';
+		}
+		return oss.str();
+	}
+
+	//! Update robust transform network with one exposure's worth of features.
+	inline
+	void
+	updateNetwork
+		( orinet::network::Geometry * const & ptNetGeo
+		, std::map<std::pair<sim::CamKey, sim::FeaKey>, rigibra::Transform>
+			const & mapCamFeaXforms
+		)
+	{
+		using namespace rigibra;
+
+		// generate network edges
+		using Iter = typename
+			std::map<std::pair<sim::CamKey, sim::FeaKey>, Transform>
+			::const_iterator;
+		for (Iter it1{mapCamFeaXforms.cbegin()}
+			; mapCamFeaXforms.cend() != it1 ; ++it1)
+		{
+			Transform const & xCamWrtFea1 = it1->second;
+			sim::FeaKey const & feaKey1 = it1->first.second;
+			Iter it2{ it1 };
+			++it2;
+			for ( ; mapCamFeaXforms.cend() != it2 ; ++it2)
+			{
+				Transform const & xCamWrtFea2 = it2->second;
+				sim::FeaKey const & feaKey2 = it2->first.second;
+				Transform const xFea2wrtCam{ inverse(xCamWrtFea2) };
+				Transform const x2w1 { xFea2wrtCam * xCamWrtFea1 };
+
+	/*
+	std::cout
+	<< "feaKey1,2: " << feaKey1 << ' ' << feaKey2
+	<< " x2w1: " << x2w1 << '\n';
+	*/
+
+				using namespace orinet::network;
+
+				EdgeDir const edgeDir{ feaKey1, feaKey2 };
+
+				std::shared_ptr<EdgeBase> ptGraphEdge
+					{ ptNetGeo->edge(edgeDir) };
+				if (ptGraphEdge)
+				{
+					// accumulate into existing edge
+					EdgeRobust * const ptEdgeRobust
+						{ reinterpret_cast<EdgeRobust *>
+							(ptGraphEdge.get())
+						};
+					ptEdgeRobust->accumulateXform(x2w1);
+	//std::cout << " accumulating onto edge: " << feaKey1 << ' ' << feaKey2 << '\n';
+	////std::cout << " x2w1: " << x2w1 << '\n';
+	//std::cout << ptEdgeRobust->infoString("robustEdge") << '\n';
+				}
+				else
+				{
+					constexpr std::size_t reserveSize{ 4096u };
+					std::shared_ptr<EdgeBase> const ptEdge
+						{ std::make_shared<EdgeRobust>
+							(edgeDir, x2w1, reserveSize)
+						};
+					// insert new edge into geometry network
+	//std::cout << "adding new edge between: " << feaKey1 << ' ' << feaKey2 << '\n';
+					ptNetGeo->insertEdge(ptEdge);
+				}
+			}
+		}
+	}
 
 namespace
 {
@@ -301,29 +467,14 @@ namespace
 	{
 		using namespace rigibra;
 
-		// simulate object feature body distribution
-		constexpr std::size_t numMea{ 0u }; // no impact here
-		constexpr double locSigma{ 0. }; // no impact here
-		constexpr double angSigma{ 0. }; // no impact here
-		constexpr std::pair<double, double> locMinMax{ -10., 10. };
-		constexpr std::pair<double, double> angMinMax{ -1., 1. };
-//		std::size_t numFea{ 20u };
-std::size_t numFea{ 5u };
-		std::vector<Transform> const feaXforms
-			{ orinet::random::noisyTransforms
-				( identity<Transform>()
-				, numMea, numFea
-				, locSigma, angSigma // unused for 0 measurements
-				, locMinMax, angMinMax
-				)
-			};
-		std::map<sim::FeaKey, Transform> expFeaXforms;
-		sim::FeaKey feaKey{ sim::sFeaKey0 };
-		for (Transform const & feaXform : feaXforms)
-		{
-			expFeaXforms[feaKey] = feaXform;
-			++feaKey;
-		}
+		// count error values that exceed tolerance (used for test condition)
+		constexpr double tolErr{ 1.e-6 };
+		std::set<double> maxErrValues;
+
+		// simulate a number of object space features
+		std::size_t numFea{ 20u };
+		std::map<sim::FeaKey, Transform> const expFeaXforms
+			{ sim::expFeaXforms(numFea) };
 
 		// simulate on going camera trajectory
 		sim::TrajectoryCircle const trajCam{};
@@ -334,120 +485,63 @@ std::size_t numFea{ 5u };
 		constexpr double dtau{ 1./32. };
 		for (;;)
 		{
-std::cout << '\n';
 			tau = tau + dtau;
-			if (0.125 < tau)
+			if (60.125 < tau)
 			{
 				break;
 			}
 
-			//
-			// simulate a single exposure along with feature extraction
-			//
-
+			// simulate a single exposure and feature extraction operations
 			std::map<std::pair<sim::CamKey, sim::FeaKey>, Transform>
 				const mapCamFeaXforms
 				{ sim::xformCamWrtFeas(trajCam, tau, expFeaXforms) };
 
-			// generate network edges
-			using Iter = typename
-				std::map<std::pair<sim::CamKey, sim::FeaKey>, Transform>
-				::const_iterator;
-			for (Iter it1{mapCamFeaXforms.cbegin()}
-				; mapCamFeaXforms.cend() != it1 ; ++it1)
-			{
-				Transform const & xCamWrtFea1 = it1->second;
-				sim::FeaKey const & feaKey1 = it1->first.second;
-				Iter it2{ it1 };
-				++it2;
-				for ( ; mapCamFeaXforms.cend() != it2 ; ++it2)
-				{
-					Transform const & xCamWrtFea2 = it2->second;
-					sim::FeaKey const & feaKey2 = it2->first.second;
-					Transform const xFea2wrtCam{ inverse(xCamWrtFea2) };
-					Transform const x2w1 { xFea2wrtCam * xCamWrtFea1 };
-
-/*
-std::cout
-	<< "feaKey1,2: " << feaKey1 << ' ' << feaKey2
-	<< " x2w1: " << x2w1 << '\n';
-*/
-
-					using namespace orinet::network;
-
-					EdgeDir const edgeDir{ feaKey1, feaKey2 };
-
-					std::shared_ptr<EdgeBase> ptGraphEdge
-						{ netGeo.edge(edgeDir) };
-					if (ptGraphEdge)
-					{
-						// accumulate into existing edge
-						EdgeRobust * const ptEdgeRobust
-							{ reinterpret_cast<EdgeRobust *>
-								(ptGraphEdge.get())
-							};
-						ptEdgeRobust->accumulateXform(x2w1);
-//std::cout << " accumulating onto edge: " << feaKey1 << ' ' << feaKey2 << '\n';
-////std::cout << " x2w1: " << x2w1 << '\n';
-//std::cout << ptEdgeRobust->infoString("robustEdge") << '\n';
-					}
-					else
-					{
-						constexpr std::size_t reserveSize{ 4096u };
-						std::shared_ptr<EdgeBase> const ptEdge
-							{ std::make_shared<EdgeRobust>
-								(edgeDir, x2w1, reserveSize)
-							};
-						// insert new edge into geometry network
-//std::cout << "adding new edge between: " << feaKey1 << ' ' << feaKey2 << '\n';
-						netGeo.insertEdge(ptEdge);
-					}
-				}
-			}
+			// update robust network
+			updateNetwork(&netGeo, mapCamFeaXforms);
 
 			// Lock-in first iteration's first camera station as reference
 			static sim::FeaKey const feaKey0
-				{ mapCamFeaXforms.cbegin()->first.second };
+				{ expFeaXforms.cbegin()->first };
 			static Transform const xform0
-				{ mapCamFeaXforms.cbegin()->second };
+				{ expFeaXforms.cbegin()->second };
 
-/*
-std::cout
-	<< "feaKey0: " << feaKey0
-	<< " xform0: " << xform0
-	<< '\n';
-*/
-
-			using orinet::network::StaKey;
-			std::map<StaKey, Transform> const fitGeos
+			// propagate features through current robust network
+			std::map<sim::FeaKey, Transform> const gotFeaXforms
 				{ netGeo.propagateTransforms(feaKey0, xform0) };
 
-std::cout << '\n';
-for (std::map<StaKey, Transform>::value_type const & fitGeo : fitGeos)
-{
-	std::cout << "** fitGeo: " << fitGeo.first << ' ' << fitGeo.second << '\n';
-}
-/*
-*/
+			// asset the quality of the result
+			double const maxErr
+				{ maxMagErrBetween(gotFeaXforms, expFeaXforms) };
+
+			// check max error against tolerance
+			if (! (maxErr < tolErr))
+			{
+				maxErrValues.insert(maxErr);
+			}
+
+using engabra::g3::io::fixed;
+std::cout
+	<< "tau,maxErr: " << fixed(tau)
+	<< ' ' << fixed(maxErr)
+	<< '\n';
 
 		} // over time
 
-std::cout << "netGeo:\n" << netGeo.infoStringContents() << '\n';
+//std::cout << "netGeo:\n" << netGeo.infoStringContents() << '\n';
 
 		// [DoxyExample01]
 
 		// [DoxyExample01]
 
-		// TODO replace this with real test code
-		std::string gotName{ __FILE__ };
-		std::string expName{"_.cpp"};
-		bool const isTemplate{ std::string::npos != gotName.find(expName) };
-		if (! isTemplate)
+		if (! maxErrValues.empty())
 		{
-			oss << "Failure: Implement template test case\n";
-			oss << "exp: " << expName << '\n';
-			oss << "got: " << gotName << '\n';
+			oss << "Failure of maxErr value test\n";
+			oss << "exp: " << 0. << '\n';
+			oss << "got: " << maxErrValues.size() << '\n';
 		}
+
+std::cout << "\nmaxErrValues.size: " << maxErrValues.size() << '\n';
+
 	}
 
 }
