@@ -31,7 +31,7 @@ setReleaseTag(aSourceIdentity)
 
 project(
 	OriNet
-	VERSION 0.2.0
+	VERSION 0.2.1
 	DESCRIPTION "OriNet - Computations for rigid body orientation networks."
 	HOMEPAGE_URL
 		"https://github.com/Stellacore/OriNet"
