@@ -32,7 +32,7 @@
 */
 
 
-#include "OriNet/align.hpp"
+#include "align.hpp"
 
 #include <Engabra>
 #include <Rigibra>

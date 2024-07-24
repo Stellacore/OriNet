@@ -34,8 +34,8 @@ Example:
 */
 
 
-#include "OriNet/align.hpp"
-#include "OriNet/random.hpp"
+#include "align.hpp"
+#include "random.hpp"
 
 #include <Engabra>
 #include <Rigibra>

@@ -27,7 +27,7 @@
 #define OriNet_compare_INCL_
 
 
-#include "OriNet/robust.hpp" // for medianOf() - probably should factor out
+#include "robust.hpp" // for medianOf() - probably should factor out
 
 #include <Rigibra>
 
