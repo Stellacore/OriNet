@@ -35,8 +35,8 @@ Example:
 */
 
 
-#include "OriNet/networkEdge.hpp"
-#include "OriNet/networkGeometry.hpp"
+#include "networkEdge.hpp"
+#include "networkGeometry.hpp"
 
 
 #endif // OriNet_network_INCL_

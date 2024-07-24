@@ -65,10 +65,13 @@ target_sources(
 				../include/OriNet/compare.hpp
 				../include/OriNet/networkEdge.hpp
 				../include/OriNet/networkGeometry.hpp
+				../include/OriNet/network.hpp
+				../include/OriNet/networkVert.hpp
 				../include/OriNet/OriNet
 				../include/OriNet/random.hpp
 				../include/OriNet/robust.hpp
 				../include/OriNet/sim.hpp
+				../include/OriNet/stat.hpp
 	)
 
 target_compile_options(

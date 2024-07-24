@@ -28,7 +28,7 @@
 */
 
 
-#include <OriNet/OriNet>
+#include "OriNet/OriNet"
 
 #include <iostream>
 

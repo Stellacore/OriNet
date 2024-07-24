@@ -45,11 +45,11 @@
 
 // [DoxyExample01]
 
-#include <OriNet/network.hpp>
+#include "network.hpp"
 
-#include <OriNet/align.hpp>
-#include <OriNet/compare.hpp>
-#include <OriNet/robust.hpp>
+#include "align.hpp"
+#include "compare.hpp"
+#include "robust.hpp"
 
 // [DoxyExample01]
 
