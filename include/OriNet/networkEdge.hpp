@@ -554,8 +554,23 @@ namespace network
 		get_weight
 			() const noexcept override
 		{
-			// TODO compute
-			constexpr double weight{ 1. };
+			double weight{ engabra::g3::null<double>() };
+			std::size_t const numXforms{ theXformTracker.size() };
+			if (0u < numXforms) // 0u shouldn't be possible if edge exists
+			{
+				if (1u == numXforms)
+				{
+					// value to use for edges having *NO* available
+					// quality estimate.
+					constexpr double veryUncertain{ 1024.*1024. };
+					weight = veryUncertain;
+				}
+				else
+				{
+					constexpr bool normComp{ false };
+					weight = theXformTracker.medianErrorEstimate(normComp);
+				}
+			}
 			return weight;
 		}
 
