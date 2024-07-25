@@ -63,7 +63,7 @@ namespace
 		{
 		Transform const xform{ Vector{ 0., 0., 1. }, identity<Attitude>() };
 		std::shared_ptr<EdgeBase> const ptEdge
-			{ std::make_shared<EdgeOri> (EdgeDir(100u, 101u), xform, 1.) };
+			{ std::make_shared<EdgeOri> (EdgeDir{ 100u, 101u }, xform, 1.) };
 		netGeo.insertEdge(ptEdge);
 		}
 
@@ -71,7 +71,7 @@ namespace
 		{
 		Transform const xform{ Vector{ 0., 0., 2. }, identity<Attitude>() };
 		std::shared_ptr<EdgeBase> const ptEdge
-			{ std::make_shared<EdgeOri> (EdgeDir(100u, 102u), xform, 1.) };
+			{ std::make_shared<EdgeOri> (EdgeDir{ 100u, 102u }, xform, 1.) };
 		netGeo.insertEdge(ptEdge);
 		}
 

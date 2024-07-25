@@ -391,11 +391,6 @@ namespace network
 			, theFitErr{ fitErr }
 		{ }
 
-		//! Construct with null/invalid member values.
-		inline
-		EdgeOri
-			() = default;
-
 		//! No-op dtor.
 		virtual
 		inline
@@ -420,7 +415,7 @@ namespace network
 		inline
 		rigibra::Transform
 		xform
-			() const
+			() const override
 		{
 			return theXform;
 		}
@@ -441,7 +436,7 @@ namespace network
 		inline
 		std::shared_ptr<EdgeBase>
 		reversedInstance
-			() const
+			() const override
 		{
 			return std::make_shared<EdgeOri>
 				( edgeDir().reverseEdgeDir()
@@ -456,7 +451,7 @@ namespace network
 		std::string
 		infoString
 			( std::string const & title = {}
-			) const
+			) const override
 		{
 			std::ostringstream oss;
 			if (isValid())
@@ -502,11 +497,6 @@ namespace network
 			accumulateXform(xform);
 		}
 
-		//! Construct with null/invalid member values.
-		inline
-		EdgeRobust
-			() = default;
-
 		//! No-op dtor.
 		virtual
 		inline
@@ -540,7 +530,7 @@ namespace network
 		inline
 		rigibra::Transform
 		xform
-			() const
+			() const override
 		{
 			return theXformTracker.median();
 		}
@@ -579,7 +569,7 @@ namespace network
 		inline
 		std::shared_ptr<EdgeBase>
 		reversedInstance
-			() const
+			() const override
 		{
 			return std::make_shared<EdgeOri>
 				( edgeDir().reverseEdgeDir()
@@ -594,7 +584,7 @@ namespace network
 		std::string
 		infoString
 			( std::string const & title = {}
-			) const
+			) const override
 		{
 			std::ostringstream oss;
 			if (isValid())

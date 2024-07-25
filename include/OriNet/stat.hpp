@@ -342,7 +342,7 @@ namespace track
 			)
 		{
 			using namespace engabra::g3;
-			constexpr align::DirPair fromDirPair{ e1, e2 };
+			static  align::DirPair fromDirPair{ e1, e2 };
 			align::DirPair const intoDirPair{ into_e1, into_e2 };
 			return align::attitudeFromDirPairs(fromDirPair, intoDirPair);
 		}
