@@ -36,6 +36,7 @@ Example:
 
 
 #include "align.hpp"
+#include "compare.hpp"
 
 #include <Engabra>
 #include <Rigibra>
@@ -133,6 +134,48 @@ namespace track
 			return med;
 		}
 
+		/*! \brief Value before the median value.
+		 */
+		inline
+		double
+		medianPrev
+			() const
+		{
+			double next{ engabra::g3::null<double>() };
+			std::size_t const numElem{ theValues.size() };
+			if (1u < numElem)
+			{
+				std::size_t const ndxHalf{ numElem / 2u };
+				next = theValues[ndxHalf - 1];
+			}
+			return next;
+		}
+
+		/*! \brief Value after the median value.
+		 */
+		inline
+		double
+		medianNext
+			() const
+		{
+			double prev{ engabra::g3::null<double>() };
+			std::size_t const numElem{ theValues.size() };
+			if (1u < numElem)
+			{
+				bool const isOdd{ 1u == (numElem % 2u) };
+				std::size_t const ndxHalf{ numElem / 2u };
+				if (isOdd)
+				{
+					prev = theValues[ndxHalf + 1];
+				}
+				else // isEven
+				{
+					prev = theValues[ndxHalf];
+				}
+			}
+			return prev;
+		}
+
 	}; // Values
 
 	//! Track running statistics for individual data values.
@@ -204,6 +247,34 @@ namespace track
 				};
 		}
 
+		/*! \brief Vector composed of values immediately before median value.
+		 */
+		inline
+		engabra::g3::Vector
+		medianPrev
+			() const
+		{
+			return engabra::g3::Vector
+				{ theValues[0].medianPrev()
+				, theValues[1].medianPrev()
+				, theValues[2].medianPrev()
+				};
+		}
+
+		/*! \brief Vector composed of values immediately after median value.
+		 */
+		inline
+		engabra::g3::Vector
+		medianNext
+			() const
+		{
+			return engabra::g3::Vector
+				{ theValues[0].medianNext()
+				, theValues[1].medianNext()
+				, theValues[2].medianNext()
+				};
+		}
+
 	}; // Vectors
 
 	//! Track running statistics for individual Attitudes.
@@ -261,6 +332,21 @@ namespace track
 			theIntoVecs[1].insert(into1);
 		}
 
+		//! Attitude that 'best' transforms {e1,e2} to into_{e1,e2} pair.
+		inline
+		static
+		rigibra::Attitude
+		attitudeFrom_e1e2
+			( engabra::g3::Vector const & into_e1
+			, engabra::g3::Vector const & into_e2
+			)
+		{
+			using namespace engabra::g3;
+			static  align::DirPair fromDirPair{ e1, e2 };
+			align::DirPair const intoDirPair{ into_e1, into_e2 };
+			return align::attitudeFromDirPairs(fromDirPair, intoDirPair);
+		}
+
 		/*! \brief Vector comprised of median of all coordinate values.
 		 *
 		 * Returns engabra::g3::null<Vector>() if empty. Otherwise
@@ -277,11 +363,33 @@ namespace track
 			using namespace engabra::g3;
 			Vector const intoA{ theIntoVecs[0].median() };
 			Vector const intoB{ theIntoVecs[1].median() };
+			return attitudeFrom_e1e2(intoA, intoB);
+		}
 
-			constexpr align::DirPair fromDirPair{ e1, e2 };
-			align::DirPair const intoDirPair{ intoA, intoB };
+		/*! \brief Attitude from values immediately before median value.
+		 */
+		inline
+		rigibra::Attitude
+		medianPrev
+			() const
+		{
+			using namespace engabra::g3;
+			Vector const intoA{ theIntoVecs[0].medianPrev() };
+			Vector const intoB{ theIntoVecs[1].medianPrev() };
+			return attitudeFrom_e1e2(intoA, intoB);
+		}
 
-			return align::attitudeFromDirPairs(fromDirPair, intoDirPair);
+		/*! \brief Attitude from values immediately after median value.
+		 */
+		inline
+		rigibra::Attitude
+		medianNext
+			() const
+		{
+			using namespace engabra::g3;
+			Vector const intoA{ theIntoVecs[0].medianNext() };
+			Vector const intoB{ theIntoVecs[1].medianNext() };
+			return attitudeFrom_e1e2(intoA, intoB);
 		}
 
 	}; // Attitudes
@@ -351,6 +459,71 @@ namespace track
 		{
 			// result composed of median position and median attitude
 			return rigibra::Transform{ theLocs.median(), theAtts.median() };
+		}
+
+		/*! \brief Transform from values immediately before median value.
+		 */
+		inline
+		rigibra::Transform
+		medianPrev
+			() const
+		{
+			return rigibra::Transform
+				{ theLocs.medianPrev(), theAtts.medianPrev() };
+		}
+
+		/*! \brief Transform from values immediately after median value.
+		 */
+		inline
+		rigibra::Transform
+		medianNext
+			() const
+		{
+			return rigibra::Transform
+				{ theLocs.medianNext(), theAtts.medianNext() };
+		}
+
+		/*! \brief Estimate the error in median transform.
+		 *
+		 * If three or more items have been inserted, then the error is
+		 * estimated by comparing the items adjacent to the median value.
+		 * For an even number of elements, the error is estimated by
+		 * comparing the two transforms on either side of the median.
+		 * For an odd number of elements, the error is estimated as
+		 * one half the difference of the two transforms on either side
+		 * of the median.
+		 *
+		 * The error estimate is computed using the function
+		 * compare::maxMagResultDifference() which evaluates the maximum
+		 * error of transformed basis vectors.
+		 *
+		 * If there is only one (or zero) transforms in the collection
+		 * a null values (nan) is returned.
+		 */
+		inline
+		double
+		medianErrorEstimate
+			( bool const & useNormalizedCompare
+			) const
+		{
+			double err{ engabra::g3::null<double>() };
+			using namespace rigibra;
+			Transform const xPrevWrtX{ medianPrev() };
+			Transform const xNextWrtX{ medianNext() };
+			err = compare::maxMagResultDifference
+				(xPrevWrtX, xNextWrtX, useNormalizedCompare);
+			// For odd number of elements, the Prev/Next are "2 units"
+			// apart, whereas for even number of elements, the Prev/Next
+			// are adjacent. Therefore, if odd number of elements,
+			// divide the estimated error by half to approximate the
+			// average of compare(prev,median) and compare(median,next)
+			// without having to compute the two independent comparisons.
+			bool const isOdd{ 1u == (size() % 2u) };
+			if (isOdd)
+			{
+				err = .5 * err;
+			}
+			return err;
 		}
 
 	}; // Transforms
