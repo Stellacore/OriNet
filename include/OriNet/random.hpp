@@ -283,6 +283,26 @@ namespace random
 			};
 	}
 
+	//! \brief A transformation with uniformly distributed parameters values
+	inline
+	rigibra::Transform
+	blunderTransform
+		( rigibra::Transform const & expXform
+		, std::pair<double, double> const & locMinMax
+		, std::pair<double, double> const & angMinMax
+			= { -engabra::g3::pi, engabra::g3::pi }
+		)
+	{
+		using namespace rigibra;
+		Transform const & xExpWrtRef = expXform;
+		// error amount relative to expected transformation
+		Transform const xErrWrtExp{ uniformTransform(locMinMax, angMinMax) };
+		// observed transform is error on top of expected
+		Transform const xObsWrtRef{ xErrWrtExp * xExpWrtRef };
+		return xObsWrtRef;
+	}
+
+
 	//! Constants defining noise added to trajectories
 	struct NoiseModel
 	{
@@ -327,8 +347,8 @@ namespace random
 
 		if (blunder)
 		{
-			xform = uniformTransform
-				(noise.theLocMinMax, noise.theAngMinMax);
+			xform = blunderTransform
+				(expXform, noise.theLocMinMax, noise.theAngMinMax);
 		}
 		else
 		{
@@ -373,23 +393,25 @@ namespace random
 		std::vector<rigibra::Transform> xforms;
 		xforms.reserve(numMea + numErr);
 
+		using namespace rigibra;
+
 		engabra::g3::Vector const expLoc = expXform.theLoc;
-		rigibra::PhysAngle const expAng{ expXform.theAtt.physAngle() };
+		PhysAngle const expAng{ expXform.theAtt.physAngle() };
 
 		// ... a number of typical measurements - with Gaussian noise
 		for (std::size_t nn{0u} ; nn < numMea ; ++nn)
 		{
-			rigibra::Transform const meaXform
-				{ perturbedTransform (expLoc, expAng, sigmaLoc, sigmaAng) };
+			Transform const meaXform
+				{ perturbedTransform(expLoc, expAng, sigmaLoc, sigmaAng) };
 			xforms.emplace_back(meaXform);
 		}
 
 		// ... a few 'blunderous' measurements - from uniform probability
 		for (std::size_t nn{0u} ; nn < numErr ; ++nn)
 		{
-			rigibra::Transform const errXform
-				{ uniformTransform(locMinMax, angMinMax) };
-			xforms.emplace_back(errXform);
+			Transform const meaXform
+				{ blunderTransform(expXform, locMinMax, angMinMax) };
+			xforms.emplace_back(meaXform);
 		}
 
 		return xforms;
