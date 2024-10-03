@@ -119,7 +119,7 @@ namespace
 
 		using namespace orinet::network;
 		Geometry netGeo;
-		constexpr double fitErr{ 1. };
+		constexpr double fitErr{ 99.999 };
 		std::size_t const numSta{ staKeys.size() };
 		for (std::size_t fmNdx{0u} ; fmNdx < numSta ; ++fmNdx)
 		{
@@ -128,6 +128,7 @@ namespace
 				StaKey const & fromKey = staKeys[fmNdx];
 				StaKey const & intoKey = staKeys[toNdx];
 				using namespace rigibra;
+				// null transform okay sine only Edge/Vert IDs are tested
 				Transform const xIntoWrtFrom{ null<Transform>() };
 				std::shared_ptr<EdgeBase> const ptEdge
 					{ std::make_shared<EdgeOri>
@@ -159,14 +160,14 @@ namespace
 				gotVertKeys.insert(tmpStaKey);
 			}
 			else
-			if (std::string::npos != line.find("EdgeKey"))
+			if (std::string::npos != line.find("EdgeId"))
 			{
 				std::istringstream irec(line);
 				// check from key
-				irec >> tmpLabel >> tmpStaKey;
+				irec >> tmpLabel >> tmpLabel >> tmpStaKey;
 				++gotEdgeKeyCounts[tmpStaKey];
 				// check into key
-				irec >> tmpStaKey;
+				irec >> tmpLabel >> tmpStaKey;
 				++gotEdgeKeyCounts[tmpStaKey];
 			}
 		}

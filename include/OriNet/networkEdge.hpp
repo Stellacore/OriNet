@@ -95,7 +95,7 @@ namespace network
 		//! Vertex key interpreted as edge domain.
 		inline
 		StaKey const &
-		fromKey
+		fromKey  // EdgeDir::
 			() const
 		{
 			return theFromKey;
@@ -104,7 +104,7 @@ namespace network
 		//! Vertex key interpreted as edge range.
 		inline
 		StaKey const &
-		intoKey
+		intoKey  // EdgeDir::
 			() const
 		{
 			return theIntoKey;
@@ -113,7 +113,7 @@ namespace network
 		//! True if this edge is potentially valid (keys are different)
 		inline
 		bool
-		isValid
+		isValid  // EdgeDir::
 			() const
 		{
 			return
@@ -126,7 +126,7 @@ namespace network
 		//! Compare this direction iterpretation with that of testDir.
 		inline
 		DirCompare
-		compareTo
+		compareTo  // EdgeDir::
 			( EdgeDir const & testDir
 			) const
 		{
@@ -153,7 +153,7 @@ namespace network
 		//! True if this edge is in the "forward" direction (FromKey < IntoKey)
 		inline
 		bool
-		isForward
+		isForward  // EdgeDir::
 			() const
 		{
 			return (theFromKey < theIntoKey);
@@ -162,7 +162,7 @@ namespace network
 		//! True if this edge is in the "reverse" direction (IntoKey < FromKey)
 		inline
 		bool
-		isReverse
+		isReverse  // EdgeDir::
 			() const
 		{
 			return (theIntoKey < theFromKey);
@@ -171,7 +171,7 @@ namespace network
 		//! Swap domain and range node keys
 		inline
 		EdgeDir
-		reverseEdgeDir
+		reverseEdgeDir  // EdgeDir::
 			() const
 		{
 			// invert interpretation of keys
@@ -185,7 +185,7 @@ namespace network
 		//! Descriptive information about this instance
 		inline
 		std::string
-		infoString
+		infoString  // EdgeDir::
 			( std::string const & title = {}
 			) const
 		{
@@ -204,7 +204,7 @@ namespace network
 			}
 			else
 			{
-				std::cout << "<null>";
+				oss << "<null>";
 			}
 			return oss.str();
 		}
@@ -224,7 +224,7 @@ namespace network
 		//! Value ctor.
 		inline
 		explicit
-		EdgeBase
+		EdgeBase  // EdgeBase::
 			( EdgeDir const & edgeDir
 			)
 			: theEdgeDir{ edgeDir }
@@ -232,19 +232,19 @@ namespace network
 
 		//! Construct with null/invalid member values.
 		inline
-		EdgeBase
+		EdgeBase  // EdgeBase::
 			() = default;
 
 		//! No-op dtor.
 		virtual
 		inline
-		~EdgeBase
+		~EdgeBase  // EdgeBase::
 			() = default;
 
 		//! Edge direction information
 		inline
 		EdgeDir
-		edgeDir
+		edgeDir  // EdgeBase::
 			() const
 		{
 			return theEdgeDir;
@@ -253,7 +253,7 @@ namespace network
 		//! Starting point of directed edge
 		inline
 		StaKey
-		fromKey
+		fromKey  // EdgeBase::
 			() const
 		{
 			return theEdgeDir.fromKey();
@@ -262,7 +262,7 @@ namespace network
 		//! Ending point of directed edge
 		inline
 		StaKey
-		intoKey
+		intoKey  // EdgeBase::
 			() const
 		{
 			return theEdgeDir.intoKey();
@@ -271,7 +271,7 @@ namespace network
 		//! True if this instance has valid data
 		inline
 		bool
-		isValid
+		isValid  // EdgeBase::
 			() const
 		{
 			return
@@ -286,7 +286,7 @@ namespace network
 		inline
 		virtual
 		double
-		get_weight
+		get_weight // EdgeBase
 			() const noexcept override
 		{
 			constexpr double wgt{ engabra::g3::null<double>() };
@@ -296,7 +296,7 @@ namespace network
 		//! Sort in order of increasing edge weight (transformation error)
 		inline
 		bool
-		operator<
+		operator<  // EdgeBase::
 			( EdgeBase const & other
 			) const noexcept
 		{
@@ -306,7 +306,7 @@ namespace network
 		//! True if this and other have different edge weights
 		inline
 		bool
-		operator!=
+		operator!=  // EdgeBase::
 			( EdgeBase const & other
 			) const noexcept
 		{
@@ -317,7 +317,7 @@ namespace network
 		virtual
 		inline
 		rigibra::Transform
-		xform
+		xform  // EdgeBase::
 			() const
 		{
 			using namespace rigibra;
@@ -329,7 +329,7 @@ namespace network
 		virtual
 		inline
 		std::shared_ptr<EdgeBase>
-		reversedInstance
+		reversedInstance  // EdgeBase::
 			() const
 		{
 			return std::make_shared<EdgeBase>(theEdgeDir.reverseEdgeDir());
@@ -339,27 +339,15 @@ namespace network
 		virtual
 		inline
 		std::string
-		infoString
+		infoString // EdgeBase::
 			( std::string const & title = {}
 			) const
 		{
 			std::ostringstream oss;
-			if (! title.empty())
-			{
-				oss << title << ' ';
-			}
-			if (isValid())
-			{
-				oss
-					<< theEdgeDir.infoString()
-					<< ' '
-					<< "xform: " << xform()
-					;
-			}
-			else
-			{
-				std::cout << "<null>";
-			}
+			oss << theEdgeDir.infoString(title)
+				<< ' '
+				<< "wgt: " << engabra::g3::io::fixed(get_weight());
+				;
 			return oss.str();
 		}
 
@@ -381,7 +369,7 @@ namespace network
 		//! Value ctor.
 		inline
 		explicit
-		EdgeOri
+		EdgeOri  // EdgeOri::
 			( EdgeDir const & edgeDir
 			, rigibra::Transform const & xform
 			, double const & fitErr
@@ -394,13 +382,13 @@ namespace network
 		//! No-op dtor.
 		virtual
 		inline
-		~EdgeOri
+		~EdgeOri  // EdgeOri::
 			() = default;
 
 		//! True if this instance has valid data
 		inline
 		bool
-		isValid
+		isValid  // EdgeOri::
 			() const
 		{
 			return
@@ -414,7 +402,7 @@ namespace network
 		virtual
 		inline
 		rigibra::Transform
-		xform
+		xform  // EdgeOri::
 			() const override
 		{
 			return theXform;
@@ -425,7 +413,7 @@ namespace network
 		inline
 		virtual
 		double
-		get_weight
+		get_weight // EdgeOri::
 			() const noexcept override
 		{
 			return theFitErr;
@@ -435,7 +423,7 @@ namespace network
 		virtual
 		inline
 		std::shared_ptr<EdgeBase>
-		reversedInstance
+		reversedInstance  // EdgeOri::
 			() const override
 		{
 			return std::make_shared<EdgeOri>
@@ -449,22 +437,15 @@ namespace network
 		virtual
 		inline
 		std::string
-		infoString
+		infoString // EdgeOri::
 			( std::string const & title = {}
 			) const override
 		{
 			std::ostringstream oss;
-			if (isValid())
-			{
-				oss << EdgeBase::infoString(title);
-				oss << ' '
-					<< "fitErr: " << get_weight()
-					;
-			}
-			else
-			{
-				std::cout << "<null>";
-			}
+			oss << EdgeBase::infoString(title)
+				<< ' '
+				<< "xform: " << xform()
+				;
 			return oss.str();
 		}
 
@@ -486,7 +467,7 @@ namespace network
 		//! Value ctor.
 		inline
 		explicit
-		EdgeRobust
+		EdgeRobust  // EdgeRobust::
 			( EdgeDir const & edgeDir
 			, rigibra::Transform const & xform
 			, std::size_t const & reserveSize
@@ -500,13 +481,13 @@ namespace network
 		//! No-op dtor.
 		virtual
 		inline
-		~EdgeRobust
+		~EdgeRobust  // EdgeRobust::
 			() = default;
 
 		//! True if this instance has valid data
 		inline
 		bool
-		isValid
+		isValid  // EdgeRobust::
 			() const
 		{
 			return
@@ -518,7 +499,7 @@ namespace network
 		//! Insert xform into transform accumulation tracker's running total
 		inline
 		void
-		accumulateXform
+		accumulateXform  // EdgeRobust::
 			( rigibra::Transform const & xform
 			)
 		{
@@ -529,7 +510,7 @@ namespace network
 		virtual
 		inline
 		rigibra::Transform
-		xform
+		xform  // EdgeRobust::
 			() const override
 		{
 			return theXformTracker.median();
@@ -541,7 +522,7 @@ namespace network
 		inline
 		virtual
 		double
-		get_weight
+		get_weight // EdgeRobust::
 			() const noexcept override
 		{
 			double weight{ engabra::g3::null<double>() };
@@ -568,7 +549,7 @@ namespace network
 		virtual
 		inline
 		std::shared_ptr<EdgeBase>
-		reversedInstance
+		reversedInstance  // EdgeRobust::
 			() const override
 		{
 			return std::make_shared<EdgeOri>
@@ -582,22 +563,15 @@ namespace network
 		virtual
 		inline
 		std::string
-		infoString
+		infoString // EdgeRobust::
 			( std::string const & title = {}
 			) const override
 		{
 			std::ostringstream oss;
-			if (isValid())
-			{
-				oss << EdgeBase::infoString(title);
-				oss << ' '
-					<< "trackSize: " << theXformTracker.size()
-					;
-			}
-			else
-			{
-				std::cout << "<null>";
-			}
+			oss << EdgeBase::infoString(title)
+				<< ' '
+				<< "trackSize: " << theXformTracker.size()
+				;
 			return oss.str();
 		}
 
