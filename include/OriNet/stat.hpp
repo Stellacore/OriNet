@@ -54,6 +54,27 @@ namespace stat
 
 namespace track
 {
+	//! Descriptive information about item
+	template <typename Type>
+	inline
+	std::string
+	infoStringFor
+		( Type const & item
+		, std::string const & title
+		)
+	{
+		std::ostringstream oss;
+		if (! title.empty())
+		{
+			oss << title << ' ';
+		}
+		oss
+			<< "size: " << item.size()
+			<< " median: " << item.median ()
+			;
+		return oss.str();
+	}
+
 
 	//! Track running statistics for individual data values.
 	class Values
@@ -176,6 +197,16 @@ namespace track
 			return prev;
 		}
 
+		//! Descriptive information about this instance
+		inline
+		std::string
+		infoString
+			( std::string const & title = {}
+			) const
+		{
+			return infoStringFor<Values>(*this, title);
+		}
+
 	}; // Values
 
 	//! Track running statistics for individual data values.
@@ -273,6 +304,16 @@ namespace track
 				, theValues[1].medianNext()
 				, theValues[2].medianNext()
 				};
+		}
+
+		//! Descriptive information about this instance
+		inline
+		std::string
+		infoString
+			( std::string const & title = {}
+			) const
+		{
+			return infoStringFor<Vectors>(*this, title);
 		}
 
 	}; // Vectors
@@ -390,6 +431,16 @@ namespace track
 			Vector const intoA{ theIntoVecs[0].medianNext() };
 			Vector const intoB{ theIntoVecs[1].medianNext() };
 			return attitudeFrom_e1e2(intoA, intoB);
+		}
+
+		//! Descriptive information about this instance
+		inline
+		std::string
+		infoString
+			( std::string const & title = {}
+			) const
+		{
+			return infoStringFor<Attitudes>(*this, title);
 		}
 
 	}; // Attitudes
@@ -526,6 +577,16 @@ namespace track
 			return err;
 		}
 
+		//! Descriptive information about this instance
+		inline
+		std::string
+		infoString
+			( std::string const & title = {}
+			) const
+		{
+			return infoStringFor<Transforms>(*this, title);
+		}
+
 	}; // Transforms
 
 
@@ -534,6 +595,58 @@ namespace track
 } // [stat]
 
 } // [orinet]
+
+namespace
+{
+	//! Put item to stream
+	inline
+	std::ostream &
+	operator<<
+		( std::ostream & ostrm
+		, orinet::stat::track::Values const & item
+		)
+	{
+		ostrm << item.infoString();
+		return ostrm;
+	}
+
+	//! Put item to stream
+	inline
+	std::ostream &
+	operator<<
+		( std::ostream & ostrm
+		, orinet::stat::track::Vectors const & item
+		)
+	{
+		ostrm << item.infoString();
+		return ostrm;
+	}
+
+	//! Put item to stream
+	inline
+	std::ostream &
+	operator<<
+		( std::ostream & ostrm
+		, orinet::stat::track::Attitudes const & item
+		)
+	{
+		ostrm << item.infoString();
+		return ostrm;
+	}
+
+	//! Put item to stream
+	inline
+	std::ostream &
+	operator<<
+		( std::ostream & ostrm
+		, orinet::stat::track::Transforms const & item
+		)
+	{
+		ostrm << item.infoString();
+		return ostrm;
+	}
+
+} // [anon/global]
 
 
 #endif // OriNet_stat_INCL_
