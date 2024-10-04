@@ -570,7 +570,7 @@ namespace network
 			std::ostringstream oss;
 			oss << EdgeBase::infoString(title)
 				<< ' '
-				<< "trackSize: " << theXformTracker.size()
+				<< "trackSize: " << theXformTracker
 				;
 			return oss.str();
 		}
