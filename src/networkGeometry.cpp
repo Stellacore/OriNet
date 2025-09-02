@@ -351,6 +351,10 @@ Geometry :: propagateTransforms
 {
 	std::map<StaKey, rigibra::Transform> staXforms;
 
+// TODO - add check on staXform0 validity - same indie propagator
+//if (rigibra::isValid(staXform0))
+//{
+//}
 	std::size_t const numStaKeys{ theGraph.vertex_count() };
 	if (0u < numStaKeys)
 	{
@@ -404,7 +408,7 @@ Geometry :: infoString
 		<< "sizeVerts: " << sizeVerts()
 		<< ' '
 		<< "sizeEdges: " << sizeEdges()
-		<< '\n';
+		;
 	return oss.str();
 }
 
