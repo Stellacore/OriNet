@@ -93,6 +93,16 @@ namespace compare
 	 * of a "hexad" comprising six basis vectors (i.e. +/- e_{1,2,3}).
 	 * Vector differences are computed between corresponding hexad entities
 	 * and returnedin the array.
+	 *
+	 * If the flag, useNormalizedCompare, is set to true, then the attitude
+	 * errors (e.g. differences between corresponding unit basis vectors
+	 * is multiplied by the average magnitude of transform location vectors.
+	 *
+	 * E.g.: If xfm1 and xfm2 have location magnitudes of 100 and 120, and
+	 * the attitude difference produces an average difference in basis
+	 * vectors of .1 (about 1/10 rad ~ 6 deg), then that .1 basis vector
+	 * difference is multiplied by 110 (average of 100 and 120) before
+	 * being incorporated into the return array.
 	 */
 	inline
 	std::array<engabra::g3::Vector, 6u>
@@ -204,6 +214,9 @@ namespace compare
 	 * of six basis vectors (i.e. +/- e_{1,2,3}). Vector differences are
 	 * computed between corresponding entities, and the expected (mean)
 	 * magnitude of the six difference vectors is returned.
+	 *
+	 * The useNormalizedCompare flag, determines if values will be
+	 * normalized by location magnitude - for details, ref: hexadDeltaVectors().
 	 */
 	inline
 	double
@@ -242,6 +255,9 @@ namespace compare
 	 * of six basis vectors (i.e. +/- e_{1,2,3}). Vector differences are
 	 * computed between corresponding entities, and the maximum magnitude
 	 * of the six difference vectors is returned.
+	 *
+	 * The useNormalizedCompare flag, determines if values will be
+	 * normalized by location magnitude - for details, ref: hexadDeltaVectors().
 	 */
 	inline
 	double
