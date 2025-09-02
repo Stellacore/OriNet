@@ -236,8 +236,8 @@ namespace network
 			() = default;
 
 		//! No-op dtor.
-		virtual
 		inline
+		virtual
 		~EdgeBase  // EdgeBase::
 			() = default;
 
@@ -270,6 +270,7 @@ namespace network
 
 		//! True if this instance has valid data
 		inline
+		virtual
 		bool
 		isValid  // EdgeBase::
 			() const
@@ -314,8 +315,8 @@ namespace network
 		}
 
 		//! Transformation (Hi-Ndx w.r.t. Lo-Ndx)
-		virtual
 		inline
+		virtual
 		rigibra::Transform
 		xform  // EdgeBase::
 			() const
@@ -326,8 +327,8 @@ namespace network
 		}
 
 		//! An instance associated with edge in reverse direction.
-		virtual
 		inline
+		virtual
 		std::shared_ptr<EdgeBase>
 		reversedInstance  // EdgeBase::
 			() const
@@ -336,8 +337,8 @@ namespace network
 		}
 
 		//! Descriptive information about this instance
-		virtual
 		inline
+		virtual
 		std::string
 		infoString // EdgeBase::
 			( std::string const & title = {}
@@ -380,13 +381,14 @@ namespace network
 		{ }
 
 		//! No-op dtor.
-		virtual
 		inline
+		virtual
 		~EdgeOri  // EdgeOri::
 			() = default;
 
 		//! True if this instance has valid data
 		inline
+		virtual
 		bool
 		isValid  // EdgeOri::
 			() const
@@ -399,8 +401,8 @@ namespace network
 		}
 
 		//! Transformation (Hi-Ndx w.r.t. Lo-Ndx)
-		virtual
 		inline
+		virtual
 		rigibra::Transform
 		xform  // EdgeOri::
 			() const override
@@ -420,8 +422,8 @@ namespace network
 		}
 
 		//! An instance associated with edge in reverse direction.
-		virtual
 		inline
+		virtual
 		std::shared_ptr<EdgeBase>
 		reversedInstance  // EdgeOri::
 			() const override
@@ -434,8 +436,8 @@ namespace network
 		}
 
 		//! Descriptive information about this instance
-		virtual
 		inline
+		virtual
 		std::string
 		infoString // EdgeOri::
 			( std::string const & title = {}
@@ -479,13 +481,14 @@ namespace network
 		}
 
 		//! No-op dtor.
-		virtual
 		inline
+		virtual
 		~EdgeRobust  // EdgeRobust::
 			() = default;
 
 		//! True if this instance has valid data
 		inline
+		virtual
 		bool
 		isValid  // EdgeRobust::
 			() const
@@ -507,8 +510,8 @@ namespace network
 		}
 
 		//! Transformation (Hi-Ndx w.r.t. Lo-Ndx)
-		virtual
 		inline
+		virtual
 		rigibra::Transform
 		xform  // EdgeRobust::
 			() const override
@@ -546,8 +549,8 @@ namespace network
 		}
 
 		//! An instance associated with edge in reverse direction.
-		virtual
 		inline
+		virtual
 		std::shared_ptr<EdgeBase>
 		reversedInstance  // EdgeRobust::
 			() const override
@@ -560,8 +563,8 @@ namespace network
 		}
 
 		//! Descriptive information about this instance
-		virtual
 		inline
+		virtual
 		std::string
 		infoString // EdgeRobust::
 			( std::string const & title = {}
