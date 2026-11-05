@@ -426,13 +426,14 @@ Geometry :: infoStringContents
 	std::vector<std::string> infoEdges;
 	//
 	// report vertices
-	GType::vertex_id_to_vertex_t const & vTypeById = theGraph.get_vertices();
-	for (GType::vertex_id_to_vertex_t ::const_iterator
-		iter{vTypeById.cbegin()} ; vTypeById.cend() != iter ; ++iter)
+//	GType::vertex_id_to_vertex_t const & vTypeById = theGraph.get_vertices();
+//	for (GType::vertex_id_to_vertex_t ::const_iterator
+	auto const & vTypeById = theGraph.get_vertices();
+	for (auto rangeIter : vTypeById)
 	{
 		std::ostringstream tmpOss;
-		graaf::vertex_id_t const & vId = iter->first;
-		GType::vertex_t const & vType = vTypeById.at(vId);
+		graaf::vertex_id_t const & vId = rangeIter.first;
+		GType::vertex_t const & vType = rangeIter.second;
 		tmpOss
 		//	<< "VertId: " << vId
 		//	<< ' '
