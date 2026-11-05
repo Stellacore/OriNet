@@ -58,6 +58,7 @@ foreach(ProgName ${ProgNames})
 			${CMAKE_CURRENT_SOURCE_DIR}/../src # project source
 		PRIVATE
 			${CMAKE_CURRENT_SOURCE_DIR}  # local test code includes
+			${CMAKE_PREFIX_PATH}/include # development env install area
 		)
 
 	target_link_libraries(

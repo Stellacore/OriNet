@@ -89,6 +89,7 @@ target_include_directories(
 		$<INSTALL_INTERFACE:include/${PROJECT_NAME}>
 	PRIVATE
 		${CMAKE_CURRENT_SOURCE_DIR}/ # local source headers
+		${CMAKE_PREFIX_PATH}/include # development env install area
 	)
 
 target_link_libraries(
